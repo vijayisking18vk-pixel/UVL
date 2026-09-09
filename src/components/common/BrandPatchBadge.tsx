@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { sound } from '../../utils/sound';
 
 interface BrandPatchBadgeProps {
@@ -25,7 +25,7 @@ export const BrandPatchBadge: React.FC<BrandPatchBadgeProps> = ({
   return (
     <div
       onClick={handleClick}
-      className={`relative inline-flex items-center justify-center select-none ${interactive ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''} transition-all duration-150 group`}
+      className={`relative inline-flex items-center justify-center select-none ${interactive ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''} transition-all duration-150 group brand-logo-intact`}
       title="Unfounded Venture Lab — Identity Patch"
     >
       {/* Embroidered Chamfered Container */}
@@ -48,12 +48,12 @@ export const BrandPatchBadge: React.FC<BrandPatchBadgeProps> = ({
           }}
         />
 
-        {/* Pixel Monospace Lettering */}
+        {/* Pixel Monospace Lettering - Kept Intact */}
         <div className="relative flex flex-col items-center justify-center leading-[1.05] tracking-widest text-[#EDE8DB] group-hover:text-white transition-colors">
-          <span className="font-patch text-[15px] sm:text-[17px] font-bold uppercase tracking-[0.18em] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+          <span className="font-brand-logo text-[15px] sm:text-[17px] font-bold uppercase tracking-[0.18em] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
             unfounded
           </span>
-          <span className="font-patch text-[13px] sm:text-[14px] font-medium uppercase tracking-[0.22em] text-[#D8D2C2] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
+          <span className="font-brand-logo text-[13px] sm:text-[14px] font-medium uppercase tracking-[0.22em] text-[#D8D2C2] drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]">
             venture lab
           </span>
         </div>

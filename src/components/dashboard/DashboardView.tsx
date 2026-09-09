@@ -86,19 +86,19 @@ export const DashboardView: React.FC = () => {
             <PatchAvatar user={currentUser} size="xl" showStatus />
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-patch text-2xl font-bold tracking-wider text-[#EDE8DB] uppercase">
-                  OPERATOR {currentUser.name}
-                </span>
-                <span className="font-mono text-xs px-2 py-0.5 bg-[#E5B869] text-[#0B0C0E] font-bold patch-chamfer-sm">
+                <h1 className="headline text-2xl font-normal tracking-wide text-[#FFFFFF]">
+                  Operator <em className="accent-italic">{currentUser.name}</em>
+                </h1>
+                <span className="text-xs px-2 py-0.5 bg-[#E5B869] text-[#0D0D0D] font-bold patch-chamfer-sm">
                   {currentUser.callsign}
                 </span>
-                <span className="font-mono text-xs text-[#9E9A8E] px-2 py-0.5 border border-[#323945]">
+                <span className="text-xs text-[#B3B3B3] px-2 py-0.5 border border-[#333333]">
                   ROLE: {currentUser.role.toUpperCase()}
                 </span>
               </div>
-              <p className="font-mono text-xs text-[#9E9A8E] mt-1 flex items-center gap-2">
+              <p className="text-xs text-[#B3B3B3] mt-1 flex items-center gap-2">
                 <span className="w-2 h-2 bg-[#5EBA7D] rounded-none inline-block animate-pulse" />
-                Current Focus: <span className="text-[#EDE8DB] italic">"{currentUser.statusMessage}"</span>
+                Current Focus: <span className="text-[#FFFFFF] italic">"{currentUser.statusMessage}"</span>
               </p>
             </div>
           </div>
@@ -134,52 +134,52 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-3">
               <div className="flex items-center gap-2">
                 <CheckSquare size={16} className="text-[#E5B869]" />
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#EDE8DB]">
+                <h2 className="headline text-sm font-normal uppercase tracking-wider text-[#FFFFFF]">
                   My Assigned Tasks ({myTasks.length})
-                </h3>
+                </h2>
               </div>
               <button
                 onClick={() => setActiveTab('tasks')}
-                className="font-mono text-[11px] text-[#E5B869] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[#E5B869] hover:underline flex items-center gap-1 font-semibold"
               >
                 Board <ArrowRight size={12} />
               </button>
             </div>
 
             {myTasks.length === 0 ? (
-              <div className="p-8 text-center border border-dashed border-[#282F3B] bg-[#0C0E11]">
+              <div className="p-8 text-center border border-dashed border-[#333333] bg-[#0D0D0D]">
                 <CheckCircle2 size={24} className="mx-auto text-[#5EBA7D] mb-2" />
-                <p className="font-mono text-xs text-[#EDE8DB]">All assigned tasks clear!</p>
-                <p className="font-mono text-[10px] text-[#9E9A8E] mt-1">Take a breather or pick a new task from the board.</p>
+                <p className="text-xs text-[#FFFFFF]">All assigned tasks clear!</p>
+                <p className="text-[10px] text-[#B3B3B3] mt-1">Take a breather or pick a new task from the board.</p>
               </div>
             ) : (
               <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
                 {myTasks.map(t => (
                   <div
                     key={t.id}
-                    className="p-3 bg-[#191D22] border border-[#2B323D] hover:border-[#E5B869]/50 transition-colors patch-chamfer-sm group"
+                    className="p-3 bg-[#1A1A1A] border border-[#333333] hover:border-[#E5B869]/50 transition-colors patch-chamfer-sm group"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-start gap-2.5">
                         <button
                           onClick={() => updateTaskStatus(t.id, 'done')}
-                          className="mt-0.5 w-4 h-4 border border-[#9E9A8E] hover:border-[#5EBA7D] hover:bg-[#5EBA7D]/20 flex items-center justify-center transition-colors"
+                          className="mt-0.5 w-4 h-4 border border-[#B3B3B3] hover:border-[#5EBA7D] hover:bg-[#5EBA7D]/20 flex items-center justify-center transition-colors"
                           title="Mark complete"
                         />
                         <div>
-                          <h4 className="font-mono text-xs font-semibold text-[#EDE8DB] leading-snug group-hover:text-[#E5B869] transition-colors">
+                          <h4 className="text-xs font-semibold text-[#FFFFFF] leading-snug group-hover:text-[#E5B869] transition-colors">
                             {t.title}
                           </h4>
                           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <span className={`text-[9px] px-1.5 py-0.2 border uppercase font-mono ${priorityBadges[t.priority]}`}>
+                            <span className={`text-[9px] px-1.5 py-0.2 border uppercase ${priorityBadges[t.priority]}`}>
                               {t.priority}
                             </span>
-                            <span className="font-mono text-[10px] text-[#9E9A8E] flex items-center gap-1">
+                            <span className="text-[10px] text-[#B3B3B3] flex items-center gap-1">
                               <Clock size={10} />
                               Due {t.dueDate}
                             </span>
                             {t.subtasks.length > 0 && (
-                              <span className="font-mono text-[10px] text-[#9E9A8E]">
+                              <span className="text-[10px] text-[#B3B3B3]">
                                 [{t.subtasks.filter(s => s.completed).length}/{t.subtasks.length} subtasks]
                               </span>
                             )}
@@ -193,10 +193,10 @@ export const DashboardView: React.FC = () => {
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#242930] mt-4">
+          <div className="pt-3 border-t border-[#333333] mt-4">
             <button
               onClick={() => setActiveTab('tasks')}
-              className="w-full py-1.5 bg-[#1C2026] hover:bg-[#252B33] border border-[#323945] font-mono text-xs text-[#EDE8DB] flex items-center justify-center gap-2 transition-colors patch-chamfer-sm"
+              className="w-full py-1.5 bg-[#222222] hover:bg-[#2B2B2B] border border-[#333333] text-xs text-[#FFFFFF] flex items-center justify-center gap-2 transition-colors patch-chamfer-sm"
             >
               <Plus size={13} />
               Add or Reassign Tasks
@@ -205,18 +205,18 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* WIDGET 2: CALENDAR & UPCOMING ENGAGEMENTS */}
-        <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md flex flex-col justify-between shadow-md">
+        <div className="bg-[#1A1A1A] border border-[#333333] p-4 patch-chamfer-md flex flex-col justify-between shadow-md">
           <div>
-            <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-3">
+            <div className="flex items-center justify-between pb-3 border-b border-[#333333] mb-3">
               <div className="flex items-center gap-2">
                 <Calendar size={16} className="text-[#4EC5D4]" />
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#EDE8DB]">
+                <h2 className="headline text-sm font-normal uppercase tracking-wider text-[#FFFFFF]">
                   Upcoming Engagements
-                </h3>
+                </h2>
               </div>
               <button
                 onClick={() => setActiveTab('calendar')}
-                className="font-mono text-[11px] text-[#4EC5D4] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[#4EC5D4] hover:underline flex items-center gap-1 font-semibold"
               >
                 Calendar <ArrowRight size={12} />
               </button>
@@ -298,13 +298,13 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-3">
               <div className="flex items-center gap-2">
                 <Activity size={16} className="text-[#5EBA7D]" />
-                <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#EDE8DB]">
+                <h2 className="headline text-sm font-normal uppercase tracking-wider text-[#FFFFFF]">
                   Team Pulse & Status
-                </h3>
+                </h2>
               </div>
               <button
                 onClick={() => setActiveTab('checkins')}
-                className="font-mono text-[11px] text-[#5EBA7D] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[#5EBA7D] hover:underline flex items-center gap-1 font-semibold"
               >
                 Check-in <ArrowRight size={12} />
               </button>
@@ -316,25 +316,25 @@ export const DashboardView: React.FC = () => {
                 return (
                   <div
                     key={u.id}
-                    className="p-2.5 bg-[#181B20] border border-[#282F3B] patch-chamfer-sm flex items-start gap-2.5"
+                    className="p-2.5 bg-[#1A1A1A] border border-[#333333] patch-chamfer-sm flex items-start gap-2.5"
                   >
                     <PatchAvatar user={u} size="sm" showStatus />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-semibold text-[#EDE8DB] truncate">
+                        <span className="text-xs font-semibold text-[#FFFFFF] truncate">
                           {u.name}
                         </span>
-                        <span className="font-mono text-[9px] uppercase px-1 border border-[#323945] text-[#9E9A8E]">
+                        <span className="text-[9px] uppercase px-1 border border-[#333333] text-[#B3B3B3]">
                           {u.status}
                         </span>
                       </div>
-                      <p className="font-mono text-[10px] text-[#9E9A8E] truncate mt-0.5">
+                      <p className="text-[10px] text-[#B3B3B3] truncate mt-0.5">
                         {u.statusMessage || 'Standby'}
                       </p>
                       {latestCheckin && (
-                        <div className="mt-1 flex items-center gap-1.5 font-mono text-[9px] text-[#D8D2C2] bg-[#0C0E11] px-1.5 py-0.5 border border-[#242930]">
+                        <div className="mt-1 flex items-center gap-1.5 text-[9px] text-[#FFFFFF] bg-[#0D0D0D] px-1.5 py-0.5 border border-[#333333]">
                           <span>{latestCheckin.mood}</span>
-                          <span className="text-[#9E9A8E] truncate">Next: {latestCheckin.workingOnNext}</span>
+                          <span className="text-[#B3B3B3] truncate">Next: {latestCheckin.workingOnNext}</span>
                         </div>
                       )}
                     </div>
@@ -344,10 +344,10 @@ export const DashboardView: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-3 border-t border-[#242930] mt-4">
+          <div className="pt-3 border-t border-[#333333] mt-4">
             <button
               onClick={() => setActiveTab('checkins')}
-              className="w-full py-1.5 bg-[#5EBA7D]/15 hover:bg-[#5EBA7D]/25 border border-[#5EBA7D]/40 font-mono text-xs text-[#5EBA7D] flex items-center justify-center gap-2 transition-colors patch-chamfer-sm font-semibold"
+              className="w-full py-1.5 bg-[#5EBA7D]/15 hover:bg-[#5EBA7D]/25 border border-[#5EBA7D]/40 text-xs text-[#5EBA7D] flex items-center justify-center gap-2 transition-colors patch-chamfer-sm font-semibold"
             >
               Submit Today's Pulse
             </button>
@@ -360,20 +360,20 @@ export const DashboardView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* QUICK CAPTURE / SCRATCHPAD WIDGET */}
-        <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-          <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-3">
+        <div className="bg-[#1A1A1A] border border-[#333333] p-4 patch-chamfer-md shadow-md">
+          <div className="flex items-center justify-between pb-3 border-b border-[#333333] mb-3">
             <div className="flex items-center gap-2">
               <Zap size={16} className="text-[#E5B869]" />
-              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Operator Quick-Capture Scratchpad
-              </h3>
+              <h2 className="headline text-sm font-normal uppercase tracking-wider text-[#FFFFFF]">
+                Operator Quick-Capture <em className="accent-italic text-[#E5B869]">Scratchpad</em>
+              </h2>
             </div>
-            <span className="font-mono text-[10px] text-[#9E9A8E] border border-[#2E3541] px-1.5 py-0.5">
+            <span className="text-[10px] text-[#B3B3B3] border border-[#333333] px-1.5 py-0.5">
               AUTO-SAVES TO WIKI
             </span>
           </div>
 
-          <p className="font-mono text-xs text-[#9E9A8E] mb-2">
+          <p className="text-xs text-[#B3B3B3] mb-2">
             Jot down rapid thoughts, terminal outputs, deal leads, or snippets. One click archives them straight into the Knowledge Base.
           </p>
 
@@ -381,24 +381,24 @@ export const DashboardView: React.FC = () => {
             value={scratchContent}
             onChange={(e) => setScratchContent(e.target.value)}
             placeholder="Type fast here... e.g. 'Founder email: ken@photonmatrix.io. Discussed 800 Gbps optical transceiver demo.'"
-            className="w-full h-28 bg-[#0C0E11] border border-[#2D3440] p-3 text-xs font-mono text-[#EDE8DB] placeholder-[#666B75] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-none"
+            className="w-full h-28 bg-[#0D0D0D] border border-[#333333] p-3 text-xs text-[#FFFFFF] placeholder-[#666666] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-none"
           />
 
           <div className="mt-3 flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[#5EBA7D]">
+            <span className="text-[10px] text-[#5EBA7D]">
               {scratchSaved && '✓ Archived to Notes & Wiki!'}
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setQuickCaptureOpen(true)}
-                className="px-3 py-1.5 bg-[#1C2026] hover:bg-[#252B33] border border-[#323945] font-mono text-xs text-[#9E9A8E] hover:text-[#EDE8DB] patch-chamfer-sm"
+                className="px-3 py-1.5 bg-[#222222] hover:bg-[#2B2B2B] border border-[#333333] text-xs text-[#B3B3B3] hover:text-[#FFFFFF] patch-chamfer-sm"
               >
                 Expand Modal
               </button>
               <button
                 onClick={handleSaveScratch}
                 disabled={!scratchContent.trim()}
-                className="px-4 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] disabled:opacity-40 disabled:pointer-events-none text-[#0B0C0E] font-mono text-xs font-bold patch-chamfer-sm"
+                className="px-4 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] disabled:opacity-40 disabled:pointer-events-none text-[#0D0D0D] text-xs font-bold patch-chamfer-sm"
               >
                 Save Brain Dump
               </button>
@@ -407,24 +407,24 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* CHAT MENTIONS & ACTIONABLE PINGS */}
-        <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-          <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-3">
+        <div className="bg-[#1A1A1A] border border-[#333333] p-4 patch-chamfer-md shadow-md">
+          <div className="flex items-center justify-between pb-3 border-b border-[#333333] mb-3">
             <div className="flex items-center gap-2">
               <MessageSquare size={16} className="text-[#9D7BFF]" />
-              <h3 className="font-mono text-sm font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Direct Mentions & Tactical Pings ({myMentions.length})
-              </h3>
+              <h2 className="headline text-sm font-normal uppercase tracking-wider text-[#FFFFFF]">
+                Direct Mentions <em className="accent-italic text-[#9D7BFF]">& Tactical Pings</em> ({myMentions.length})
+              </h2>
             </div>
             <button
               onClick={() => setActiveTab('chat')}
-              className="font-mono text-[11px] text-[#9D7BFF] hover:underline flex items-center gap-1"
+              className="text-[11px] text-[#9D7BFF] hover:underline flex items-center gap-1 font-semibold"
             >
               Open Comms <ArrowRight size={12} />
             </button>
           </div>
 
           {myMentions.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-[#282F3B] bg-[#0C0E11]">
+            <div className="p-8 text-center border border-dashed border-[#333333] bg-[#0D0D0D]">
               <MessageSquare size={24} className="mx-auto text-[#666B75] mb-2" />
               <p className="font-mono text-xs text-[#EDE8DB]">No pending @mentions</p>
               <p className="font-mono text-[10px] text-[#9E9A8E] mt-1">You are all caught up on tactical team comms.</p>

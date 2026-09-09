@@ -43,7 +43,7 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-twill text-[#EDE8DB] flex flex-col selection:bg-[#E5B869] selection:text-[#0B0C0E]">
+    <div className="min-h-screen bg-twill text-[#FFFFFF] flex flex-col selection:bg-[#E5B869] selection:text-[#0D0D0D]">
       {/* Top Tactical Command Header */}
       <Header />
 
@@ -58,19 +58,19 @@ const AppContent: React.FC = () => {
       <AccessControlModal />
 
       {/* Retro Status Footer */}
-      <footer className="border-t border-[#1F242C] bg-[#0C0E10]/90 py-3 px-4 text-xs font-mono text-[#9E9A8E]">
+      <footer className="border-t border-[#333333] bg-[#0D0D0D]/95 py-3 px-4 text-xs text-[#B3B3B3]">
         <div className="max-w-[1700px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 bg-[#5EBA7D] rounded-none animate-pulse" />
-            <span className="font-patch text-xs uppercase tracking-widest text-[#D8D2C2]">
-              UNFOUNDED VENTURE LAB // DEFENSE GRADE AUTONOMOUS PROTOCOLS
+            <span className="headline text-xs tracking-wider text-[#FFFFFF] font-normal">
+              Unfounded Venture Lab <em className="accent-italic text-[#B3B3B3]">// Autonomous Protocols</em>
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-[10px]">
-            <span>SHORTCUTS: <kbd className="border border-[#2C333F] px-1 bg-[#14171B] text-[#EDE8DB]">Ctrl+K</kbd> Search</span>
-            <span><kbd className="border border-[#2C333F] px-1 bg-[#14171B] text-[#EDE8DB]">Ctrl+Shift+N</kbd> Brain Dump</span>
-            <span className="text-[#E5B869]">SESSION ACTIVE // LOCAL AIRGAP SYNC</span>
+          <div className="flex items-center gap-4 text-[11px]">
+            <span>SHORTCUTS: <kbd className="border border-[#333333] px-1.5 py-0.5 bg-[#222222] text-[#FFFFFF] font-mono-tech text-[10px]">Ctrl+K</kbd> Search</span>
+            <span><kbd className="border border-[#333333] px-1.5 py-0.5 bg-[#222222] text-[#FFFFFF] font-mono-tech text-[10px]">Ctrl+Shift+N</kbd> Brain Dump</span>
+            <span className="text-[#E5B869] font-normal">SESSION ACTIVE <em className="accent-italic">// LOCAL AIRGAP SYNC</em></span>
           </div>
         </div>
       </footer>
