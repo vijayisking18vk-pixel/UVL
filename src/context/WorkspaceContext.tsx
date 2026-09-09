@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   User, Project, Task, CalendarEvent, Meeting, Note, FileItem,
   ChatChannel, ChatMessage, Checkin, WorkspaceConfig, TaskStatus
@@ -92,7 +92,7 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_V1';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_CLEAN_V2';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 

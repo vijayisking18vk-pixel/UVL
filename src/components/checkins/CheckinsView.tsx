@@ -316,7 +316,14 @@ export const CheckinsView: React.FC = () => {
         </h3>
 
         <div className="space-y-3">
-          {checkins.map(chk => {
+          {checkins.length === 0 ? (
+            <div className="p-8 text-center border border-dashed border-[#282F3B] bg-[#0C0E11] font-mono">
+              <Activity size={24} className="mx-auto text-[#5EBA7D] mb-2 opacity-60" />
+              <p className="text-xs text-[#EDE8DB] font-semibold">No Check-in Transmissions Today</p>
+              <p className="text-[10px] text-[#9E9A8E] mt-1">Submit your standup telemetry above to broadcast to the team.</p>
+            </div>
+          ) : (
+            checkins.map(chk => {
             const user = users.find(u => u.id === chk.userId);
             const isBlocked = chk.blockers.toLowerCase() !== 'none' && chk.blockers.trim().length > 0;
 
@@ -357,7 +364,7 @@ export const CheckinsView: React.FC = () => {
                 )}
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
     </div>

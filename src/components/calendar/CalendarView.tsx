@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { CalendarEvent, CalendarLayer } from '../../types';
 import { PatchAvatar } from '../common/PatchAvatar';
@@ -584,6 +584,7 @@ export const CalendarView: React.FC = () => {
                     onChange={(e) => setNewProjectId(e.target.value)}
                     className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
                   >
+                    <option value="">None / General</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
                     ))}

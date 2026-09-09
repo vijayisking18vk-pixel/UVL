@@ -418,6 +418,7 @@ export const NotesView: React.FC = () => {
                     onChange={(e) => setNewProjectId(e.target.value)}
                     className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
                   >
+                    <option value="">General / Lab-wide</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
                     ))}

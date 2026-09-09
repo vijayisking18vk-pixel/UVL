@@ -102,6 +102,7 @@ export const QuickCaptureModal: React.FC = () => {
                 onChange={(e) => setProjectId(e.target.value)}
                 className="w-full bg-[#0C0E11] border border-[#2D3440] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
               >
+                <option value="">None / General</option>
                 {projects.map(p => (
                   <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
                 ))}

@@ -148,7 +148,12 @@ export const MeetingsView: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            {meetings.map(m => {
+            {meetings.length === 0 ? (
+              <div className="p-8 text-center border border-dashed border-[#262C36] bg-[#0C0E11] font-mono text-xs text-[#9E9A8E]">
+                No scheduled sessions. Click "Schedule War Room" to convene a session.
+              </div>
+            ) : (
+              meetings.map(m => {
               const isActive = m.id === activeMeetingId;
               const pendingActions = m.actionItems.filter(ai => !ai.convertedToTaskId).length;
               return (
@@ -192,12 +197,12 @@ export const MeetingsView: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
 
         {/* Right Column: Active Meeting Dossier & Collaborative Notes */}
-        {activeMeeting && (
+        {activeMeeting ? (
           <div className="lg:col-span-8 space-y-6">
             
             {/* Active Meeting Card */}
@@ -399,6 +404,16 @@ export const MeetingsView: React.FC = () => {
               </div>
 
             </div>
+          </div>
+        ) : (
+          <div className="lg:col-span-8 p-16 text-center border border-dashed border-[#2A303A] bg-[#14171B] patch-chamfer-md space-y-3 font-mono">
+            <div className="w-12 h-12 mx-auto bg-[#1F242C] border border-[#3A4250] flex items-center justify-center text-[#9E9A8E] patch-chamfer-sm">
+              <Users size={22} />
+            </div>
+            <h4 className="text-sm font-bold text-[#EDE8DB] uppercase">No War Room Briefings</h4>
+            <p className="text-xs text-[#9E9A8E] max-w-sm mx-auto">
+              No operational sessions scheduled. Click "Schedule War Room" to create agendas and action items.
+            </p>
           </div>
         )}
       </div>

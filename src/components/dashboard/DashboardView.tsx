@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { PatchAvatar } from '../common/PatchAvatar';
 import {
@@ -222,50 +222,58 @@ export const DashboardView: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
-              {todayEvents.map(ev => {
-                const isMeeting = ev.category === 'meeting';
-                const isDeadline = ev.category === 'task_deadline';
-                return (
-                  <div
-                    key={ev.id}
-                    className={`p-3 border patch-chamfer-sm transition-colors ${
-                      isMeeting
-                        ? 'bg-[#182126] border-[#2C414E]'
-                        : isDeadline
-                        ? 'bg-[#241B1B] border-[#4E2C2C]'
-                        : 'bg-[#191D22] border-[#2B323D]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className={`font-mono text-[9px] px-1.5 py-0.2 border uppercase ${
+            {todayEvents.length === 0 ? (
+              <div className="p-8 text-center border border-dashed border-[#282F3B] bg-[#0C0E11]">
+                <Calendar size={24} className="mx-auto text-[#4EC5D4] mb-2 opacity-60" />
+                <p className="font-mono text-xs text-[#EDE8DB]">No engagements scheduled</p>
+                <p className="font-mono text-[10px] text-[#9E9A8E] mt-1">Calendar schedule is currently open.</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
+                {todayEvents.map(ev => {
+                  const isMeeting = ev.category === 'meeting';
+                  const isDeadline = ev.category === 'task_deadline';
+                  return (
+                    <div
+                      key={ev.id}
+                      className={`p-3 border patch-chamfer-sm transition-colors ${
                         isMeeting
-                          ? 'border-[#4EC5D4]/40 text-[#4EC5D4] bg-[#4EC5D4]/10'
+                          ? 'bg-[#182126] border-[#2C414E]'
                           : isDeadline
-                          ? 'border-[#E05A47]/40 text-[#E05A47] bg-[#E05A47]/10'
-                          : 'border-[#E5B869]/40 text-[#E5B869] bg-[#E5B869]/10'
-                      }`}>
-                        {ev.category.replace('_', ' ')}
-                      </span>
-                      <span className="font-mono text-[11px] text-[#EDE8DB] font-semibold">
-                        {ev.startTime} - {ev.endTime}
-                      </span>
+                          ? 'bg-[#241B1B] border-[#4E2C2C]'
+                          : 'bg-[#191D22] border-[#2B323D]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className={`font-mono text-[9px] px-1.5 py-0.2 border uppercase ${
+                          isMeeting
+                            ? 'border-[#4EC5D4]/40 text-[#4EC5D4] bg-[#4EC5D4]/10'
+                            : isDeadline
+                            ? 'border-[#E05A47]/40 text-[#E05A47] bg-[#E05A47]/10'
+                            : 'border-[#E5B869]/40 text-[#E5B869] bg-[#E5B869]/10'
+                        }`}>
+                          {ev.category.replace('_', ' ')}
+                        </span>
+                        <span className="font-mono text-[11px] text-[#EDE8DB] font-semibold">
+                          {ev.startTime} - {ev.endTime}
+                        </span>
+                      </div>
+
+                      <h4 className="font-mono text-xs font-semibold text-[#EDE8DB]">
+                        {ev.title}
+                      </h4>
+
+                      {ev.location && (
+                        <p className="font-mono text-[10px] text-[#9E9A8E] mt-1 flex items-center gap-1">
+                          <Radio size={10} className="text-[#5EBA7D]" />
+                          {ev.location}
+                        </p>
+                      )}
                     </div>
-
-                    <h4 className="font-mono text-xs font-semibold text-[#EDE8DB]">
-                      {ev.title}
-                    </h4>
-
-                    {ev.location && (
-                      <p className="font-mono text-[10px] text-[#9E9A8E] mt-1 flex items-center gap-1">
-                        <Radio size={10} className="text-[#5EBA7D]" />
-                        {ev.location}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="pt-3 border-t border-[#242930] mt-4 flex gap-2">

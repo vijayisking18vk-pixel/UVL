@@ -230,7 +230,14 @@ export const FilesView: React.FC = () => {
         </div>
 
         <div className="space-y-2">
-          {filteredFiles.map(file => {
+          {filteredFiles.length === 0 ? (
+            <div className="p-12 text-center border border-dashed border-[#282F3B] bg-[#0C0E11] font-mono">
+              <FolderArchive size={32} className="mx-auto text-[#666B75] mb-2" />
+              <p className="text-xs text-[#EDE8DB] font-semibold">Vault is empty</p>
+              <p className="text-[10px] text-[#9E9A8E] mt-1">No documents stored in this space. Drag and drop or click "Upload File" above.</p>
+            </div>
+          ) : (
+            filteredFiles.map(file => {
             const project = projects.find(p => p.id === file.projectId);
             const uploader = users.find(u => u.id === file.uploadedBy);
 
@@ -299,7 +306,7 @@ export const FilesView: React.FC = () => {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       </div>
 
@@ -536,6 +543,7 @@ export const FilesView: React.FC = () => {
                     onChange={(e) => setUploadProjectId(e.target.value)}
                     className="w-full bg-[#0C0E11] border border-[#2D3440] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
                   >
+                    <option value="">General / Shared</option>
                     {projects.map(p => (
                       <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
                     ))}
