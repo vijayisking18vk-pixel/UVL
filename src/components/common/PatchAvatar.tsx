@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { User } from '../../types';
 import { 
   Crosshair, Cpu, Radio, Zap, Compass, ShieldAlert, Sparkles
@@ -62,16 +62,27 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
     >
       <div className="relative">
         <div
-          className={`${dimensions.box} ${dimensions.chamfer} flex items-center justify-center relative shadow-md transition-transform`}
+          className={`${dimensions.box} ${dimensions.chamfer} flex items-center justify-center relative shadow-md transition-transform overflow-hidden`}
           style={{
             backgroundColor: user.avatarBg || '#16191D',
             boxShadow: `inset 0 0 0 1.5px ${user.avatarStitch || '#EDE8DB'}`
           }}
           title={`${user.name} (${user.callsign})`}
         >
+          {user.avatarUrl ? (
+            <img 
+              src={user.avatarUrl} 
+              alt={user.name} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = 'none';
+              }}
+            />
+          ) : (
+            getEmblemIcon(user.avatarEmblem, dimensions.icon)
+          )}
           {/* Subtle stitch dash pattern */}
-          <div className="absolute inset-[2px] border border-dashed border-white/20 pointer-events-none" />
-          {getEmblemIcon(user.avatarEmblem, dimensions.icon)}
+          <div className="absolute inset-[2px] border border-dashed border-white/30 pointer-events-none" />
         </div>
 
         {/* Status dot */}

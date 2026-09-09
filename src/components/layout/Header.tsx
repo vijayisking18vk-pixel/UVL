@@ -17,7 +17,8 @@ import {
   VolumeX,
   ShieldCheck,
   ChevronDown,
-  Plus
+  Plus,
+  LogOut
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -27,6 +28,7 @@ export const Header: React.FC = () => {
     currentUser,
     users,
     switchUserById,
+    logout,
     workspaceConfig,
     toggleSound,
     setQuickCaptureOpen,
@@ -190,10 +192,30 @@ export const Header: React.FC = () => {
                     <ShieldCheck size={13} />
                     Workspace Permissions
                   </button>
+                  <button
+                    onClick={() => {
+                      logout();
+                      setUserMenuOpen(false);
+                    }}
+                    className="w-full text-left px-2 py-1.5 text-xs text-[#E05A47] hover:bg-[#2A1717] flex items-center gap-2 font-semibold border-t border-[#333333] mt-1 pt-2"
+                  >
+                    <LogOut size={13} />
+                    Sign Out / Switch Operator
+                  </button>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Quick Sign Out Button */}
+          <button
+            onClick={logout}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#222222] hover:bg-[#2A1717] border border-[#333333] hover:border-[#E05A47] text-[#B3B3B3] hover:text-[#E05A47] text-xs transition-colors patch-chamfer-sm"
+            title="Sign Out / Lock Session"
+          >
+            <LogOut size={13} />
+            <span className="hidden xl:inline">Sign Out</span>
+          </button>
         </div>
       </div>
 

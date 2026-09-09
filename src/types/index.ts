@@ -1,4 +1,4 @@
-﻿export type Role = 'admin' | 'member';
+export type Role = 'admin' | 'member';
 
 export type UserStatus = 'active' | 'focus' | 'reviewing' | 'away' | 'leave';
 
@@ -10,7 +10,9 @@ export interface User {
   avatarEmblem: 'skull' | 'radar' | 'chip' | 'bolt' | 'compass' | 'crosshair' | 'dagger';
   avatarBg: string;
   avatarStitch: string;
+  avatarUrl?: string;
   callsign: string;
+  pin?: string;
   status: UserStatus;
   statusMessage: string;
   lastActive: string;

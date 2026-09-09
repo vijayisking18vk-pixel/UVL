@@ -13,9 +13,14 @@ import { PatchAvatarLab } from './components/personalization/PatchAvatarLab';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { AccessControlModal } from './components/access/AccessControlModal';
+import { LoginPortal } from './components/auth/LoginPortal';
 
 const AppContent: React.FC = () => {
-  const { activeTab, workspaceConfig } = useWorkspace();
+  const { activeTab, workspaceConfig, isAuthenticated } = useWorkspace();
+
+  if (!isAuthenticated) {
+    return <LoginPortal />;
+  }
 
   const renderActiveModule = () => {
     switch (activeTab) {

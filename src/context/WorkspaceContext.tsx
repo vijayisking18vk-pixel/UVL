@@ -22,6 +22,13 @@ interface WorkspaceContextType {
   accessModalOpen: boolean;
   setAccessModalOpen: (open: boolean) => void;
 
+  // Authentication & Session
+  isAuthenticated: boolean;
+  login: (userId: string, pin?: string) => boolean;
+  logout: () => void;
+  loginError: string | null;
+  clearLoginError: () => void;
+
   // Active User & Team
   currentUser: User;
   setCurrentUser: (user: User) => void;
@@ -92,7 +99,8 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_CLEAN_V2';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_MEMBERS_V4';
+const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
@@ -102,7 +110,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure all 5 real team members are always preserved
+        if (!parsed.users || parsed.users.length < 5) {
+          parsed.users = initialUsers;
+        }
+        return parsed;
       }
     } catch {
       // ignore
@@ -118,7 +131,61 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [accessModalOpen, setAccessModalOpen] = useState<boolean>(false);
 
   const [users, setUsers] = useState<User[]>(savedData?.users || initialUsers);
-  const [currentUserId, setCurrentUserId] = useState<string>(savedData?.currentUserId || 'u-1');
+
+  // Authentication & Separate Login Session Management
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      const sessionUser = localStorage.getItem(AUTH_SESSION_KEY);
+      return !!sessionUser;
+    } catch {
+      return false;
+    }
+  });
+
+  const [currentUserId, setCurrentUserId] = useState<string>(() => {
+    try {
+      const sessionUser = localStorage.getItem(AUTH_SESSION_KEY);
+      if (sessionUser) return sessionUser;
+    } catch {}
+    return savedData?.currentUserId || 'u-1';
+  });
+
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const clearLoginError = () => setLoginError(null);
+
+  const login = (userId: string, pin?: string): boolean => {
+    const targetUser = users.find(u => u.id === userId);
+    if (!targetUser) {
+      setLoginError('Operator ID not recognized in tactical roster.');
+      sound.alert();
+      return false;
+    }
+
+    if (pin && targetUser.pin && pin !== targetUser.pin) {
+      setLoginError('Authentication failed: Invalid security PIN code.');
+      sound.alert();
+      return false;
+    }
+
+    setLoginError(null);
+    setCurrentUserId(userId);
+    setIsAuthenticated(true);
+    try {
+      localStorage.setItem(AUTH_SESSION_KEY, userId);
+    } catch {}
+    sound.patchStamp();
+    return true;
+  };
+
+  const logout = () => {
+    sound.click();
+    setIsAuthenticated(false);
+    try {
+      localStorage.removeItem(AUTH_SESSION_KEY);
+    } catch {}
+  };
+
   const [projects, setProjects] = useState<Project[]>(savedData?.projects || initialProjects);
   const [tasks, setTasks] = useState<Task[]>(savedData?.tasks || initialTasks);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(savedData?.calendarEvents || initialCalendarEvents);
@@ -683,6 +750,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCommandPaletteOpen,
         accessModalOpen,
         setAccessModalOpen,
+        isAuthenticated,
+        login,
+        logout,
+        loginError,
+        clearLoginError,
         currentUser,
         setCurrentUser,
         switchUserById,
