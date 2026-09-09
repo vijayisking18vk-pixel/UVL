@@ -99,7 +99,7 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_MEMBERS_V4';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_MEMBERS_V5';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -111,9 +111,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure all 5 real team members are always preserved
+        // Ensure all 5 real team members are always preserved and sanitized
         if (!parsed.users || parsed.users.length < 5) {
           parsed.users = initialUsers;
+        } else {
+          parsed.users = parsed.users.map((u: User) => {
+            const seed = initialUsers.find(su => su.id === u.id);
+            return {
+              ...u,
+              role: 'member',
+              statusMessage: (u.statusMessage?.includes('Lab operations') || u.statusMessage?.includes('Core engine') || u.statusMessage?.includes('Deep tech') || u.statusMessage?.includes('telemetry') || u.statusMessage?.includes('Airgapped')) ? '' : u.statusMessage,
+              avatarUrl: seed?.avatarUrl || u.avatarUrl
+            };
+          });
         }
         return parsed;
       }

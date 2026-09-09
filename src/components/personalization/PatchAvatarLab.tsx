@@ -223,8 +223,8 @@ export const PatchAvatarLab: React.FC = () => {
               <span className="text-[#E5B869] font-bold">{handle}</span>
             </div>
             <div className="p-3 bg-[#0C0E11] border border-[#262C36] patch-chamfer-sm">
-              <span className="text-[10px] text-[#9E9A8E] uppercase block">Security Role</span>
-              <span className="text-[#5EBA7D] font-bold">{currentUser.role.toUpperCase()}</span>
+              <span className="text-[10px] text-[#9E9A8E] uppercase block">Callsign</span>
+              <span className="text-[#5EBA7D] font-bold">{currentUser.callsign}</span>
             </div>
           </div>
         </div>

@@ -87,19 +87,18 @@ export const DashboardView: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="headline text-2xl font-normal tracking-wide text-[#FFFFFF]">
-                  Operator <em className="accent-italic">{currentUser.name}</em>
+                  <em className="accent-italic">{currentUser.name}</em>
                 </h1>
-                <span className="text-xs px-2 py-0.5 bg-[#E5B869] text-[#0D0D0D] font-bold patch-chamfer-sm">
+                <span className="text-xs px-2 py-0.5 bg-[#E5B869] text-[#0D0D0D] font-bold patch-chamfer-sm font-mono-tech">
                   {currentUser.callsign}
                 </span>
-                <span className="text-xs text-[#B3B3B3] px-2 py-0.5 border border-[#333333]">
-                  ROLE: {currentUser.role.toUpperCase()}
-                </span>
               </div>
-              <p className="text-xs text-[#B3B3B3] mt-1 flex items-center gap-2">
-                <span className="w-2 h-2 bg-[#5EBA7D] rounded-none inline-block animate-pulse" />
-                Current Focus: <span className="text-[#FFFFFF] italic">"{currentUser.statusMessage}"</span>
-              </p>
+              {currentUser.statusMessage ? (
+                <p className="text-xs text-[#B3B3B3] mt-1 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-[#5EBA7D] rounded-none inline-block animate-pulse" />
+                  Current Focus: <span className="text-[#FFFFFF] italic">"{currentUser.statusMessage}"</span>
+                </p>
+              ) : null}
             </div>
           </div>
 

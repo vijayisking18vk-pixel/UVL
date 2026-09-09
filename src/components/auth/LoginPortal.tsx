@@ -121,13 +121,12 @@ export const LoginPortal: React.FC = () => {
                             <span className="text-[10px] px-1.5 py-0.2 bg-[#E5B869]/15 border border-[#E5B869]/40 text-[#E5B869] font-bold patch-chamfer-sm font-mono-tech">
                               {user.callsign}
                             </span>
-                            <span className="text-[9px] px-1.5 py-0.2 border border-[#333333] text-[#B3B3B3] uppercase">
-                              {user.role}
-                            </span>
                           </div>
-                          <p className="text-xs text-[#B3B3B3] mt-1 line-clamp-1">
-                            {user.statusMessage}
-                          </p>
+                          {user.statusMessage ? (
+                            <p className="text-xs text-[#B3B3B3] mt-1 line-clamp-1">
+                              {user.statusMessage}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
 
@@ -279,7 +278,7 @@ export const LoginPortal: React.FC = () => {
           <span>AIRGAPPED SESSION ENCRYPTION // UNFOUNDED VENTURE LAB</span>
         </div>
         <div>
-          <span>Role-Based Access Control • Localhost Private Instance</span>
+          <span>Team Command Center • Localhost Private Instance</span>
         </div>
       </div>
     </div>

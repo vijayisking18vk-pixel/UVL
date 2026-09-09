@@ -127,8 +127,8 @@ export const Header: React.FC = () => {
                 <span className="text-xs font-semibold text-[#FFFFFF] leading-tight">
                   {currentUser.name}
                 </span>
-                <span className="text-[9px] text-[#E5B869] tracking-wider uppercase font-semibold">
-                  {currentUser.role}
+                <span className="text-[9px] text-[#E5B869] tracking-wider font-mono-tech">
+                  {currentUser.callsign}
                 </span>
               </div>
               <ChevronDown size={14} className="text-[#B3B3B3]" />
@@ -142,10 +142,10 @@ export const Header: React.FC = () => {
               >
                 <div className="px-2 py-1.5 border-b border-[#333333] mb-2">
                   <span className="text-[10px] uppercase text-[#B3B3B3] tracking-wider block font-semibold">
-                    Switch Active Member View
+                    Switch Active Member
                   </span>
                   <span className="text-xs text-[#FFFFFF]">
-                    Test different permissions & views
+                    Switch between team members
                   </span>
                 </div>
 
@@ -164,9 +164,6 @@ export const Header: React.FC = () => {
                       }`}
                     >
                       <PatchAvatar user={u} size="sm" showStatus showCallsign />
-                      <span className="text-[10px] px-1 py-0.5 border border-[#333333] uppercase text-[#B3B3B3]">
-                        {u.role}
-                      </span>
                     </button>
                   ))}
                 </div>

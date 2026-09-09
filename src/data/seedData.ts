@@ -5,7 +5,7 @@ export const initialUsers: User[] = [
     id: 'u-1',
     name: 'Vijayrajkumar',
     handle: '@vijayrajkumar',
-    role: 'admin',
+    role: 'member',
     avatarUrl: '/avatars/vijayrajkumar.png',
     avatarEmblem: 'crosshair',
     avatarBg: '#1C2128',
@@ -13,14 +13,14 @@ export const initialUsers: User[] = [
     callsign: 'VIJAY-01',
     pin: '1001',
     status: 'active',
-    statusMessage: 'Lab operations & autonomous defense protocols',
+    statusMessage: '',
     lastActive: 'Just now'
   },
   {
     id: 'u-2',
     name: 'Saai',
     handle: '@saai',
-    role: 'admin',
+    role: 'member',
     avatarUrl: '/avatars/saai.jpg',
     avatarEmblem: 'chip',
     avatarBg: '#182229',
@@ -28,7 +28,7 @@ export const initialUsers: User[] = [
     callsign: 'SAAI-02',
     pin: '1002',
     status: 'active',
-    statusMessage: 'Core engine architecture & consensus security',
+    statusMessage: '',
     lastActive: '5m ago'
   },
   {
@@ -43,7 +43,7 @@ export const initialUsers: User[] = [
     callsign: 'HARISH-03',
     pin: '1003',
     status: 'active',
-    statusMessage: 'Deep tech exploration & intelligence nodes',
+    statusMessage: '',
     lastActive: '12m ago'
   },
   {
@@ -58,7 +58,7 @@ export const initialUsers: User[] = [
     callsign: 'SUBA-04',
     pin: '1004',
     status: 'active',
-    statusMessage: 'Hardware telemetry & zero-knowledge circuits',
+    statusMessage: '',
     lastActive: '25m ago'
   },
   {
@@ -73,7 +73,7 @@ export const initialUsers: User[] = [
     callsign: 'VINA-05',
     pin: '1005',
     status: 'active',
-    statusMessage: 'Airgapped hardware enclave & root-of-trust',
+    statusMessage: '',
     lastActive: '40m ago'
   }
 ];

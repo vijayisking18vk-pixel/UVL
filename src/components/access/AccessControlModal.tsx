@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { Role } from '../../types';
 import { PatchAvatar } from '../common/PatchAvatar';
 import { sound } from '../../utils/sound';
 import {
@@ -49,14 +48,6 @@ export const AccessControlModal: React.FC = () => {
     navigator.clipboard.writeText(`https://unfoundedlab.internal/join?code=${workspaceConfig.inviteCode}`);
     setCopiedInvite(true);
     setTimeout(() => setCopiedInvite(false), 2000);
-  };
-
-  const handleRoleChange = (userId: string, newRole: Role) => {
-    sound.click();
-    const userToUpdate = users.find(u => u.id === userId);
-    if (userToUpdate) {
-      updateUser({ ...userToUpdate, role: newRole });
-    }
   };
 
   const handleFileImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,11 +158,11 @@ export const AccessControlModal: React.FC = () => {
             </div>
           </div>
 
-          {/* ROLE MANAGEMENT TABLE */}
+          {/* TEAM ROSTER TABLE */}
           <div>
             <div className="flex items-center justify-between pb-1.5 border-b border-[#242930] mb-2 text-[10px] font-mono text-[#9E9A8E] uppercase">
-              <span>Team Permissions Matrix ({users.length} Operators)</span>
-              <span>Role Privilege Level</span>
+              <span>Team Roster ({users.length} Members)</span>
+              <span>Status</span>
             </div>
 
             <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
@@ -189,18 +180,9 @@ export const AccessControlModal: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-                      className={`bg-[#0C0E11] border text-xs px-2 py-1 patch-chamfer-sm font-bold ${
-                        u.role === 'admin'
-                          ? 'text-[#E5B869] border-[#E5B869]/50'
-                          : 'text-[#9E9A8E] border-[#2D333F]'
-                      }`}
-                    >
-                      <option value="admin">ADMIN (Root)</option>
-                      <option value="member">MEMBER (Core)</option>
-                    </select>
+                    <span className="text-[10px] font-mono text-[#5EBA7D] px-2 py-0.5 bg-[#5EBA7D]/10 border border-[#5EBA7D]/30 patch-chamfer-sm uppercase font-semibold">
+                      {u.status}
+                    </span>
                   </div>
                 </div>
               ))}

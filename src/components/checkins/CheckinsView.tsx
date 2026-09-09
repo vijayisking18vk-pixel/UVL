@@ -161,7 +161,7 @@ export const CheckinsView: React.FC = () => {
                           {u.name}
                         </h4>
                         <span className="font-mono text-[10px] text-[#9E9A8E] mt-0.5 block">
-                          [{u.callsign}] • {u.role.toUpperCase()}
+                          [{u.callsign}]
                         </span>
                       </div>
                     </div>

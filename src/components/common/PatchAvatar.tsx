@@ -96,13 +96,8 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
 
       {showCallsign && (
         <div className="flex flex-col text-left">
-          <span className="font-mono text-xs font-semibold text-[#EDE8DB] leading-tight flex items-center gap-1">
+          <span className="font-mono text-xs font-semibold text-[#EDE8DB] leading-tight">
             {user.name}
-            {user.role === 'admin' && (
-              <span className="text-[9px] px-1 py-0.2 bg-[#E5B869]/20 text-[#E5B869] border border-[#E5B869]/40 font-mono">
-                ADM
-              </span>
-            )}
           </span>
           <span className="font-mono text-[10px] text-[#9E9A8E] tracking-wider">
             [{user.callsign}]
