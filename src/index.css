@@ -1,23 +1,15 @@
-/* Font Import */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,500&display=swap');
+/* Font Import: Rounded geometric sans-serif (soft terminals, uniform stroke width, friendly-but-modern character) */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300..800;1,300..800&family=Quicksand:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
-/* Typography */
-h1, h2, .headline {
-  font-family: 'Playfair Display', serif;
-  font-weight: 400;
-}
-.headline em, .accent-italic {
-  font-style: italic;
-  font-weight: 400;
-}
-
-/* Color System */
+/* Color System & Typography Foundation */
 :root {
   --color-primary-text: #FFFFFF;   /* Primary font color: white */
-  --color-background: #1A1A1A;      /* Dark background (adjust to your brand — could be deep green/black like the image) */
+  --color-background: #1A1A1A;      /* Dark background */
   --color-background-alt: #0D0D0D;  /* Secondary darker section */
+
+  --font-rounded-geometric: 'Quicksand', 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   --color-surface: #222222;
   --color-surface-hover: #2B2B2B;
@@ -43,29 +35,51 @@ h1, h2, .headline {
   --uvl-purple: #9D7BFF;
 }
 
+/* Base Typography — Rounded Geometric Sans-Serif across FULL PAGE, EVERY PAGE */
+html,
 body {
   background-color: var(--color-background);
   color: var(--color-primary-text);
-  font-family: 'Playfair Display', serif;
+  font-family: var(--font-rounded-geometric);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Playfair Display applied throughout the app */
-button, input, select, textarea, p, span, div, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', Georgia, serif;
+/* Headings */
+h1, h2, h3, h4, h5, h6, .headline {
+  font-family: var(--font-rounded-geometric);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.headline em, .accent-italic {
+  font-family: 'Nunito', var(--font-rounded-geometric);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* Applied throughout full page, every page, all components */
+button, input, select, textarea, p, span, div, a, label, li, td, th {
+  font-family: var(--font-rounded-geometric);
 }
 
 .font-patch,
 .font-serif,
-.font-playfair {
-  font-family: 'Playfair Display', Georgia, serif;
+.font-playfair,
+.font-sans,
+.font-rounded {
+  font-family: var(--font-rounded-geometric);
 }
 
-/* Map font-mono to Playfair Display across components */
+/* Map font-mono to rounded geometric sans across layout elements */
 .font-mono {
-  font-family: 'Playfair Display', Georgia, serif;
+  font-family: var(--font-rounded-geometric);
 }
 
-/* Technical elements retain crisp monospace */
+/* Technical elements retain crisp monospace for PINs & telemetry */
 .font-mono-tech,
 kbd,
 code,
