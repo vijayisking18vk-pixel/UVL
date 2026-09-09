@@ -1,0 +1,167 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --uvl-black: #0B0C0E;
+    --uvl-charcoal: #141619;
+    --uvl-surface: #1B1E23;
+    --uvl-surface-light: #242930;
+    --uvl-surface-border: #323842;
+    --uvl-cream: #EDE8DB;
+    --uvl-cream-dim: #9E9A8E;
+    --uvl-cream-faint: rgba(237, 232, 219, 0.08);
+    --uvl-amber: #E5B869;
+    --uvl-emerald: #5EBA7D;
+    --uvl-crimson: #E05A47;
+    --uvl-cyan: #4EC5D4;
+    --uvl-purple: #9D7BFF;
+  }
+
+  body {
+    background-color: #0B0C0E;
+    color: #EDE8DB;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Custom Typography Helpers */
+.font-pixel {
+  font-family: 'Silkscreen', monospace;
+}
+
+.font-patch {
+  font-family: 'VT323', monospace;
+  letter-spacing: 0.05em;
+}
+
+.font-arcade {
+  font-family: 'Press Start 2P', monospace;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.font-space {
+  font-family: 'Space Mono', monospace;
+}
+
+/* Fabric twill & patch textures */
+.bg-twill {
+  background-color: #0B0C0E;
+  background-image: 
+    radial-gradient(rgba(237, 232, 219, 0.04) 1px, transparent 0),
+    radial-gradient(rgba(237, 232, 219, 0.02) 1px, #0B0C0E 0);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+.bg-patch-fabric {
+  background-color: #14171B;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.015),
+    rgba(255, 255, 255, 0.015) 2px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+
+/* Embroidered Stitched Borders */
+.border-stitched {
+  border: 1.5px dashed rgba(237, 232, 219, 0.35);
+}
+
+.border-stitched-amber {
+  border: 1.5px dashed rgba(229, 184, 105, 0.5);
+}
+
+.border-stitched-green {
+  border: 1.5px dashed rgba(94, 186, 125, 0.5);
+}
+
+.border-stitched-crimson {
+  border: 1.5px dashed rgba(224, 90, 71, 0.5);
+}
+
+/* Patch Geometry - Chamfered Octagonal Corners */
+.patch-pill {
+  clip-path: polygon(
+    14px 0%, 
+    calc(100% - 14px) 0%, 
+    100% 14px, 
+    100% calc(100% - 14px), 
+    calc(100% - 14px) 100%, 
+    14px 100%, 
+    0% calc(100% - 14px), 
+    0% 14px
+  );
+}
+
+.patch-chamfer-sm {
+  clip-path: polygon(
+    6px 0%, 
+    calc(100% - 6px) 0%, 
+    100% 6px, 
+    100% calc(100% - 6px), 
+    calc(100% - 6px) 100%, 
+    6px 100%, 
+    0% calc(100% - 6px), 
+    0% 6px
+  );
+}
+
+.patch-chamfer-md {
+  clip-path: polygon(
+    10px 0%, 
+    calc(100% - 10px) 0%, 
+    100% 10px, 
+    100% calc(100% - 10px), 
+    calc(100% - 10px) 100%, 
+    10px 100%, 
+    0% calc(100% - 10px), 
+    0% 10px
+  );
+}
+
+/* Subtle embroidered embroidery ridge highlight */
+.patch-embroidery-shadow {
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
+    0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.patch-raised {
+  box-shadow: 
+    0 2px 0 #000,
+    0 4px 8px rgba(0,0,0,0.6);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+.patch-raised:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #000;
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0E1013;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2D333B;
+  border-radius: 0px;
+  border: 1px solid rgba(237, 232, 219, 0.15);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #E5B869;
+}
+
