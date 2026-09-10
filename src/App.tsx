@@ -12,6 +12,7 @@ import { ChatView } from './components/chat/ChatView';
 import { CheckinsView } from './components/checkins/CheckinsView';
 import { ExpenseView } from './components/expenses/ExpenseView';
 import { InvestorView } from './components/investors/InvestorView';
+import { HackathonsView } from './components/hackathons/HackathonsView';
 import { AgentView } from './components/agent/AgentView';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
 import { CommandPalette } from './components/common/CommandPalette';
@@ -70,6 +71,8 @@ const AppContent: React.FC = () => {
         return <ExpenseView />;
       case 'investors':
         return <InvestorView />;
+      case 'hackathons':
+        return <HackathonsView />;
       case 'agent':
         return <AgentView />;
       default:

@@ -296,6 +296,7 @@ export interface Investor {
   lastInteractionDate: string;
   nextFollowUpDate?: string;
   notes: string;
+  remarks?: string;
   interactions: InvestorInteraction[];
   documents: InvestorDocument[];
   createdAt: string;
@@ -385,5 +386,56 @@ export interface AgentChatMessage {
   text: string;
   timestamp: string;
   executedActions?: AgentExecutedAction[];
+}
+
+// ==========================================
+// HACKATHONS & COMPETITIVE EVENTS TYPES
+// ==========================================
+export type HackathonStatus =
+  | 'Upcoming'
+  | 'Registered'
+  | 'In Progress'
+  | 'Submitted'
+  | 'Finalist'
+  | 'Winner'
+  | 'Completed';
+
+export type EventType =
+  | 'Hackathon'
+  | 'Demo Day'
+  | 'Pitch Competition'
+  | 'Conference'
+  | 'Grant Program'
+  | 'Accelerator';
+
+export interface EventAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string; // 'document' | 'link' | 'image' | 'certificate'
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface HackathonEvent {
+  id: string;
+  title: string;
+  type: EventType;
+  organizer: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+  status: HackathonStatus;
+  projectName: string;
+  projectDescription: string;
+  demoUrl?: string;
+  repoUrl?: string;
+  presentationUrl?: string;
+  awardPrize?: string;
+  participantIds: string[];
+  remarks: string;
+  attachments: EventAttachment[];
+  createdAt: string;
+  updatedAt: string;
 }
 

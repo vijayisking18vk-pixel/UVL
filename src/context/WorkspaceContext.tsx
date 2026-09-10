@@ -4,13 +4,13 @@ import {
   ChatChannel, ChatMessage, Checkin, WorkspaceConfig, TaskStatus,
   Expense, ExpenseStatus, Investor, InvestorStage, InvestorInteraction,
   InvestorDocument, AgentTask, AgentActivityLog, AgentReport, AgentConfig, AgentActionStep,
-  AgentChatMessage, AgentExecutedAction
+  AgentChatMessage, AgentExecutedAction, HackathonEvent, EventAttachment
 } from '../types';
 import {
   initialUsers, initialProjects, initialTasks, initialCalendarEvents,
   initialMeetings, initialNotes, initialFiles, initialChannels,
   initialMessages, initialCheckins, initialWorkspaceConfig,
-  initialExpenses, initialInvestors, initialAgentLogs, initialAgentReports, initialAgentConfig,
+  initialExpenses, initialInvestors, initialHackathons, initialAgentLogs, initialAgentReports, initialAgentConfig,
   initialAgentChatMessages
 } from '../data/seedData';
 import { sound } from '../utils/sound';
@@ -116,10 +116,22 @@ interface WorkspaceContextType {
   investors: import('../types').Investor[];
   addInvestor: (data: Omit<import('../types').Investor, 'id' | 'createdAt' | 'interactions' | 'documents'>) => import('../types').Investor;
   updateInvestor: (data: import('../types').Investor) => void;
+  deleteInvestor: (investorId: string) => void;
   updateInvestorStage: (investorId: string, stage: import('../types').InvestorStage) => void;
   addInvestorInteraction: (investorId: string, interaction: Omit<import('../types').InvestorInteraction, 'id' | 'timestamp'>) => void;
   addInvestorDocument: (investorId: string, doc: Omit<import('../types').InvestorDocument, 'id' | 'uploadedAt'>) => void;
+  deleteInvestorDocument: (investorId: string, docId: string) => void;
+  updateInvestorRemarks: (investorId: string, remarks: string) => void;
   scheduleInvestorFollowUp: (investorId: string, date: string, note?: string) => void;
+
+  // Hackathons & Events Module
+  hackathons: HackathonEvent[];
+  addHackathon: (data: Omit<HackathonEvent, 'id' | 'createdAt' | 'updatedAt' | 'attachments'>) => HackathonEvent;
+  updateHackathon: (data: HackathonEvent) => void;
+  deleteHackathon: (id: string) => void;
+  updateHackathonRemarks: (id: string, remarks: string) => void;
+  addHackathonAttachment: (eventId: string, attachment: { name: string; url: string; type: string }) => Promise<void>;
+  deleteHackathonAttachment: (eventId: string, attachmentId: string) => void;
 
   // Agentic AI Task Executor Module
   agentTasks: import('../types').AgentTask[];
@@ -252,6 +264,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [workspaceConfig, setWorkspaceConfig] = useState<WorkspaceConfig>(savedData?.workspaceConfig || initialWorkspaceConfig);
   const [expenses, setExpenses] = useState<Expense[]>(savedData?.expenses || initialExpenses);
   const [investors, setInvestors] = useState<Investor[]>(savedData?.investors || initialInvestors);
+  const [hackathons, setHackathons] = useState<HackathonEvent[]>(savedData?.hackathons || initialHackathons);
   const [agentTasks, setAgentTasks] = useState<AgentTask[]>(savedData?.agentTasks || []);
   const [agentLogs, setAgentLogs] = useState<AgentActivityLog[]>(savedData?.agentLogs || initialAgentLogs);
   const [agentReports, setAgentReports] = useState<AgentReport[]>(savedData?.agentReports || initialAgentReports);
@@ -502,6 +515,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         workspaceConfig,
         expenses,
         investors,
+        hackathons,
         agentTasks,
         agentLogs,
         agentReports,
@@ -512,7 +526,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     } catch {
       // storage error
     }
-  }, [users, currentUserId, projects, tasks, calendarEvents, meetings, notes, files, channels, activeChannelId, messages, checkins, workspaceConfig, expenses, investors, agentTasks, agentLogs, agentReports, agentConfig, agentChatMessages]);
+  }, [users, currentUserId, projects, tasks, calendarEvents, meetings, notes, files, channels, activeChannelId, messages, checkins, workspaceConfig, expenses, investors, hackathons, agentTasks, agentLogs, agentReports, agentConfig, agentChatMessages]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -1538,6 +1552,115 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     });
   };
 
+  const deleteInvestor = (investorId: string) => {
+    sound.click();
+    setInvestors(prev => prev.filter(inv => inv.id !== investorId));
+  };
+
+  const deleteInvestorDocument = (investorId: string, docId: string) => {
+    sound.click();
+    setInvestors(prev => prev.map(inv => {
+      if (inv.id === investorId) {
+        return {
+          ...inv,
+          documents: (inv.documents || []).filter(d => d.id !== docId)
+        };
+      }
+      return inv;
+    }));
+  };
+
+  const updateInvestorRemarks = (investorId: string, remarks: string) => {
+    sound.click();
+    setInvestors(prev => prev.map(inv => inv.id === investorId ? { ...inv, notes: remarks, remarks } : inv));
+  };
+
+  // ==========================================
+  // HACKATHONS & COMPETITIVE EVENTS IMPLEMENTATION
+  // ==========================================
+  const addHackathon = (data: Omit<HackathonEvent, 'id' | 'createdAt' | 'updatedAt' | 'attachments'>): HackathonEvent => {
+    sound.patchStamp();
+    const newEvent: HackathonEvent = {
+      ...data,
+      id: `hack-${Date.now()}`,
+      attachments: [],
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0]
+    };
+
+    setHackathons(prev => [newEvent, ...prev]);
+
+    if (newEvent.status === 'Winner' || newEvent.status === 'Finalist') {
+      confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
+    }
+
+    return newEvent;
+  };
+
+  const updateHackathon = (data: HackathonEvent) => {
+    sound.click();
+    const updated: HackathonEvent = {
+      ...data,
+      updatedAt: new Date().toISOString().split('T')[0]
+    };
+    setHackathons(prev => prev.map(h => h.id === data.id ? updated : h));
+
+    if (data.status === 'Winner') {
+      confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+    }
+  };
+
+  const deleteHackathon = (id: string) => {
+    sound.click();
+    setHackathons(prev => prev.filter(h => h.id !== id));
+  };
+
+  const updateHackathonRemarks = (id: string, remarks: string) => {
+    sound.click();
+    setHackathons(prev => prev.map(h => h.id === id ? {
+      ...h,
+      remarks,
+      updatedAt: new Date().toISOString().split('T')[0]
+    } : h));
+  };
+
+  const addHackathonAttachment = async (eventId: string, attachment: { name: string; url: string; type: string }): Promise<void> => {
+    sound.patchStamp();
+    const newAttachment: EventAttachment = {
+      id: `att-${Date.now()}`,
+      name: attachment.name,
+      url: attachment.url,
+      type: attachment.type,
+      uploadedAt: new Date().toISOString().split('T')[0],
+      uploadedBy: currentUser.id
+    };
+
+    setHackathons(prev => prev.map(h => {
+      if (h.id === eventId) {
+        return {
+          ...h,
+          attachments: [newAttachment, ...(h.attachments || [])],
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return h;
+    }));
+  };
+
+  const deleteHackathonAttachment = (eventId: string, attachmentId: string) => {
+    sound.click();
+    setHackathons(prev => prev.map(h => {
+      if (h.id === eventId) {
+        return {
+          ...h,
+          attachments: (h.attachments || []).filter(a => a.id !== attachmentId),
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+      }
+      return h;
+    }));
+  };
+
   // ==========================================
   // AGENTIC AI TASK EXECUTOR IMPLEMENTATION
   // ==========================================
@@ -1888,6 +2011,8 @@ ${activeTasksSummary || 'None currently active.'}
 - Financials & Treasury: Total Lifetime Earnings +₹${totalEarnings.toLocaleString('en-IN')} INR, Total Operational Burn -₹${totalSpend.toLocaleString('en-IN')} INR, Net Cash Flow ${netCashPosition >= 0 ? '+' : ''}₹${netCashPosition.toLocaleString('en-IN')} INR. Current Month: +₹${monthEarnings.toLocaleString('en-IN')} earned, -₹${monthSpend.toLocaleString('en-IN')} burned.
 - Investor Pipeline (${investors.length} leads):
 ${investorsSummary || 'Clean baseline, no active leads.'}
+- Hackathons & Events (${hackathons.length} recorded):
+${hackathons.map(h => `- ${h.title} [${h.type}] | Status: ${h.status} | Project: "${h.projectName}" | Award: ${h.awardPrize || 'None'} | Remarks: ${h.remarks || 'None'}`).join('\n') || 'Clean baseline, no hackathons logged yet.'}
 
 Recent Conversation:
 ${conversationHistory}
@@ -2614,6 +2739,7 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
     setWorkspaceConfig(initialWorkspaceConfig);
     setExpenses(initialExpenses);
     setInvestors(initialInvestors);
+    setHackathons(initialHackathons);
     setAgentTasks([]);
     setAgentLogs(initialAgentLogs);
     setAgentReports(initialAgentReports);
@@ -2689,10 +2815,20 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         investors,
         addInvestor,
         updateInvestor,
+        deleteInvestor,
         updateInvestorStage,
         addInvestorInteraction,
         addInvestorDocument,
+        deleteInvestorDocument,
+        updateInvestorRemarks,
         scheduleInvestorFollowUp,
+        hackathons,
+        addHackathon,
+        updateHackathon,
+        deleteHackathon,
+        updateHackathonRemarks,
+        addHackathonAttachment,
+        deleteHackathonAttachment,
         agentTasks,
         agentLogs,
         agentReports,

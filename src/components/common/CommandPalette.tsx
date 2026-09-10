@@ -9,6 +9,7 @@ import {
   Users,
   Zap,
   Sparkles,
+  Trophy,
   X
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
@@ -24,6 +25,7 @@ export const CommandPalette: React.FC = () => {
     channels,
     expenses,
     investors,
+    hackathons,
     agentReports,
     setActiveTab,
     setQuickCaptureOpen
@@ -49,6 +51,7 @@ export const CommandPalette: React.FC = () => {
   const matchedMeetings = meetings.filter(m => m.title.toLowerCase().includes(q) || m.agenda.some(a => a.toLowerCase().includes(q))).slice(0, 2);
   const matchedExpenses = expenses.filter(e => e.vendor.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)).slice(0, 2);
   const matchedInvestors = investors.filter(i => i.name.toLowerCase().includes(q) || i.firm.toLowerCase().includes(q)).slice(0, 2);
+  const matchedHackathons = hackathons.filter(h => h.title.toLowerCase().includes(q) || h.projectName.toLowerCase().includes(q) || (h.remarks && h.remarks.toLowerCase().includes(q))).slice(0, 2);
 
   const quickActions = [
     {
@@ -59,6 +62,16 @@ export const CommandPalette: React.FC = () => {
       action: () => {
         setCommandPaletteOpen(false);
         setQuickCaptureOpen(true);
+      }
+    },
+    {
+      id: 'act-goto-hackathons',
+      title: 'Open Hackathons & Events',
+      category: 'Navigation',
+      icon: Trophy,
+      action: () => {
+        setCommandPaletteOpen(false);
+        setActiveTab('hackathons');
       }
     },
     {
@@ -320,7 +333,32 @@ export const CommandPalette: React.FC = () => {
             </div>
           )}
 
-          {q && matchedTasks.length === 0 && matchedNotes.length === 0 && matchedFiles.length === 0 && matchedMeetings.length === 0 && matchedExpenses.length === 0 && matchedInvestors.length === 0 && (
+          {/* Matched Hackathons & Events */}
+          {matchedHackathons.length > 0 && (
+            <div>
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <Trophy size={13} className="text-[#6E6E73]" /> Hackathons & Events
+              </span>
+              <div className="space-y-1">
+                {matchedHackathons.map(h => (
+                  <button
+                    key={h.id}
+                    onClick={() => {
+                      sound.click();
+                      setActiveTab('hackathons');
+                      setCommandPaletteOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
+                  >
+                    <span className="truncate font-medium">{h.title} ({h.projectName})</span>
+                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border border-[#E5E5E7] group-hover:border-white/30">{h.status}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {q && matchedTasks.length === 0 && matchedNotes.length === 0 && matchedFiles.length === 0 && matchedMeetings.length === 0 && matchedExpenses.length === 0 && matchedInvestors.length === 0 && matchedHackathons.length === 0 && (
             <div className="p-8 text-center text-[#6E6E73]">
               No lab artifacts matching "{query}"
             </div>

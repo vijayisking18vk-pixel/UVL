@@ -34,7 +34,12 @@ import {
   Mail,
   Building,
   Filter,
-  CheckSquare
+  CheckSquare,
+  Pencil,
+  Trash2,
+  Link2,
+  Paperclip,
+  Check
 } from 'lucide-react';
 
 const PIPELINE_STAGES: { id: InvestorStage; label: string; description: string }[] = [
@@ -63,9 +68,12 @@ export const InvestorView: React.FC = () => {
     investors,
     addInvestor,
     updateInvestor,
+    deleteInvestor,
     updateInvestorStage,
     addInvestorInteraction,
     addInvestorDocument,
+    deleteInvestorDocument,
+    updateInvestorRemarks,
     scheduleInvestorFollowUp,
     currentUser,
     users
@@ -78,9 +86,29 @@ export const InvestorView: React.FC = () => {
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLogInteractionOpen, setIsLogInteractionOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [isScheduleFollowUpOpen, setIsScheduleFollowUpOpen] = useState(false);
+
+  // Form State: Edit Investor
+  const [editName, setEditName] = useState('');
+  const [editFirm, setEditFirm] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [editRelationshipOwnerId, setEditRelationshipOwnerId] = useState(currentUser.id);
+  const [editStage, setEditStage] = useState<InvestorStage>('contacted');
+  const [editDealSize, setEditDealSize] = useState('2500000');
+  const [editValuation, setEditValuation] = useState('50000000');
+  const [editRoundType, setEditRoundType] = useState<InvestorRoundType>('Seed');
+  const [editTargetCloseDate, setEditTargetCloseDate] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editRemarks, setEditRemarks] = useState('');
+
+  // Inline Remarks Editing
+  const [isEditingRemarksInline, setIsEditingRemarksInline] = useState(false);
+  const [inlineRemarksText, setInlineRemarksText] = useState('');
 
   // Form State: Add Investor
   const [name, setName] = useState('');
@@ -102,6 +130,7 @@ export const InvestorView: React.FC = () => {
   const [interactionSummary, setInteractionSummary] = useState('');
 
   // Form State: Document Upload
+  const [docMode, setDocMode] = useState<'file' | 'link'>('file');
   const [docName, setDocName] = useState('');
   const [docType, setDocType] = useState('application/pdf');
   const [docFile, setDocFile] = useState<File | null>(null);
@@ -174,6 +203,94 @@ export const InvestorView: React.FC = () => {
     setNotes('');
   };
 
+  // Open Edit Modal
+  const openEditModal = (inv: Investor) => {
+    sound.click();
+    setSelectedInvestor(inv);
+    setEditName(inv.name);
+    setEditFirm(inv.firm);
+    setEditEmail(inv.email || '');
+    setEditPhone(inv.phone || '');
+    setEditWebsite(inv.website || '');
+    setEditStage(inv.stage);
+    setEditDealSize(inv.dealSize.toString());
+    setEditValuation(inv.valuation ? inv.valuation.toString() : '');
+    setEditRoundType(inv.roundType);
+    setEditRelationshipOwnerId(inv.relationshipOwnerId);
+    setEditTargetCloseDate(inv.targetCloseDate || '');
+    setEditNotes(inv.notes || '');
+    setEditRemarks(inv.remarks || inv.notes || '');
+    setIsEditOpen(true);
+  };
+
+  // Handle Edit Investor Submit
+  const handleEditInvestorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestor || !editName.trim() || !editFirm.trim()) {
+      alert('Please enter investor name and firm.');
+      return;
+    }
+
+    const updated: Investor = {
+      ...selectedInvestor,
+      name: editName.trim(),
+      firm: editFirm.trim(),
+      email: editEmail.trim(),
+      phone: editPhone.trim() || undefined,
+      website: editWebsite.trim() || undefined,
+      stage: editStage,
+      dealSize: parseFloat(editDealSize) || 0,
+      valuation: editValuation ? parseFloat(editValuation) : undefined,
+      roundType: editRoundType,
+      relationshipOwnerId: editRelationshipOwnerId,
+      targetCloseDate: editTargetCloseDate || undefined,
+      notes: editRemarks.trim() || editNotes.trim(),
+      remarks: editRemarks.trim()
+    };
+
+    updateInvestor(updated);
+    setSelectedInvestor(updated);
+    setIsEditOpen(false);
+  };
+
+  // Handle Save Inline Remarks
+  const handleSaveInlineRemarks = () => {
+    sound.patchStamp();
+    if (!selectedInvestor) return;
+    updateInvestorRemarks(selectedInvestor.id, inlineRemarksText.trim());
+    const updated: Investor = {
+      ...selectedInvestor,
+      remarks: inlineRemarksText.trim(),
+      notes: inlineRemarksText.trim()
+    };
+    setSelectedInvestor(updated);
+    setIsEditingRemarksInline(false);
+  };
+
+  // Handle Delete Investor
+  const handleDeleteInvestor = (investorId: string) => {
+    if (!confirm('Are you sure you want to delete this investor lead from the pipeline?')) return;
+    sound.click();
+    deleteInvestor(investorId);
+    if (selectedInvestor?.id === investorId) {
+      const remaining = investors.filter(i => i.id !== investorId);
+      setSelectedInvestor(remaining[0] || null);
+    }
+    setIsEditOpen(false);
+  };
+
+  // Handle Delete Document
+  const handleDeleteDocument = (docId: string) => {
+    if (!selectedInvestor) return;
+    sound.click();
+    deleteInvestorDocument(selectedInvestor.id, docId);
+    const updated: Investor = {
+      ...selectedInvestor,
+      documents: (selectedInvestor.documents || []).filter(d => d.id !== docId)
+    };
+    setSelectedInvestor(updated);
+  };
+
   // Handle Log Interaction
   const handleLogInteractionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,13 +313,20 @@ export const InvestorView: React.FC = () => {
   // Handle Document Upload
   const handleDocUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInvestor || (!docFile && !docUrl)) {
-      alert('Please select a file or provide a document name.');
+    if (!selectedInvestor) return;
+
+    if (docMode === 'file' && !docFile) {
+      alert('Please select a file to attach.');
       return;
     }
 
-    let finalUrl = docUrl;
-    if (docFile) {
+    if (docMode === 'link' && !docUrl.trim()) {
+      alert('Please enter a valid document or cloud URL.');
+      return;
+    }
+
+    let finalUrl = docUrl.trim();
+    if (docMode === 'file' && docFile) {
       setIsUploadingDoc(true);
       try {
         const uploadPath = `investors/${Date.now()}-${docFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
@@ -218,9 +342,9 @@ export const InvestorView: React.FC = () => {
 
     const versionNum = (selectedInvestor.documents?.length || 0) + 1;
     await addInvestorDocument(selectedInvestor.id, {
-      name: docName.trim() || docFile?.name || 'Investor Document.pdf',
+      name: docName.trim() || (docMode === 'file' ? docFile?.name : 'External Cloud Resource') || 'Investor Document',
       url: finalUrl,
-      type: docType,
+      type: docMode === 'link' ? 'link' : docType,
       version: versionNum,
       uploadedBy: currentUser.id
     });
@@ -533,16 +657,39 @@ export const InvestorView: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedInvestor(inv);
-                              setIsScheduleFollowUpOpen(true);
-                            }}
-                            className="px-3 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-xs font-medium text-black transition-all"
-                          >
-                            Follow Up
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditModal(inv);
+                              }}
+                              className="p-1.5 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-[#6E6E73] hover:text-black transition-all"
+                              title="Edit Investor Profile"
+                            >
+                              <Pencil size={12} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedInvestor(inv);
+                                setIsUploadDocOpen(true);
+                              }}
+                              className="p-1.5 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-[#6E6E73] hover:text-black transition-all"
+                              title="Attach Document or Link"
+                            >
+                              <Paperclip size={12} />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedInvestor(inv);
+                                setIsScheduleFollowUpOpen(true);
+                              }}
+                              className="px-2.5 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-xs font-medium text-black transition-all"
+                            >
+                              Follow Up
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -565,9 +712,19 @@ export const InvestorView: React.FC = () => {
                     <h2 className="font-serif text-2xl font-normal text-black mt-1">{selectedInvestor.name}</h2>
                     <span className="text-xs text-[#6E6E73] font-medium block mt-0.5">{selectedInvestor.firm}</span>
                   </div>
-                  <span className="text-xs px-3 py-1 rounded-full border border-black bg-black text-white font-medium uppercase">
-                    {selectedInvestor.stage.replace('_', ' ')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEditModal(selectedInvestor)}
+                      className="px-3 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-black text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs"
+                      title="Edit Investor Profile"
+                    >
+                      <Pencil size={11} />
+                      <span>Edit</span>
+                    </button>
+                    <span className="text-xs px-3 py-1 rounded-full border border-black bg-black text-white font-medium uppercase">
+                      {selectedInvestor.stage.replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Contact Strip */}
@@ -627,6 +784,88 @@ export const InvestorView: React.FC = () => {
                 )}
               </div>
 
+              {/* Remarks & Strategic Notes Card (Click to Edit) */}
+              <div className="p-4 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] space-y-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-xs uppercase tracking-wider text-black flex items-center gap-1.5">
+                    <FileText size={13} className="text-[#6E6E73]" /> Remarks & Strategy
+                  </span>
+                  {!isEditingRemarksInline ? (
+                    <button
+                      onClick={() => {
+                        sound.click();
+                        setInlineRemarksText(selectedInvestor.remarks || selectedInvestor.notes || '');
+                        setIsEditingRemarksInline(true);
+                      }}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium flex items-center gap-1 cursor-pointer"
+                      title="Edit remarks inline"
+                    >
+                      <Pencil size={11} />
+                      <span>Edit Remarks</span>
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setIsEditingRemarksInline(false)}
+                        className="px-2.5 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-[10px] text-[#6E6E73] hover:text-black font-medium cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveInlineRemarks}
+                        className="px-2.5 py-0.5 rounded-full bg-black text-white text-[10px] font-medium flex items-center gap-1 hover:bg-neutral-800 cursor-pointer"
+                      >
+                        <Check size={10} />
+                        <span>Save</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {!isEditingRemarksInline ? (
+                  <div
+                    onClick={() => {
+                      sound.click();
+                      setInlineRemarksText(selectedInvestor.remarks || selectedInvestor.notes || '');
+                      setIsEditingRemarksInline(true);
+                    }}
+                    className="p-3 bg-white rounded-xl border border-[#E5E5E7] hover:border-black/40 cursor-pointer transition-all min-h-[60px] group"
+                    title="Click here to edit remarks directly"
+                  >
+                    {selectedInvestor.remarks || selectedInvestor.notes ? (
+                      <p className="text-black text-xs leading-relaxed whitespace-pre-wrap">
+                        {selectedInvestor.remarks || selectedInvestor.notes}
+                      </p>
+                    ) : (
+                      <p className="text-[#8E8E93] italic text-xs flex items-center gap-1.5">
+                        <Pencil size={11} className="opacity-60 group-hover:opacity-100" />
+                        <span>No remarks logged yet. Click to add partner feedback, terms, or strategic notes...</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <textarea
+                      autoFocus
+                      rows={3}
+                      value={inlineRemarksText}
+                      onChange={e => setInlineRemarksText(e.target.value)}
+                      placeholder="Enter partner remarks, feedback on valuation, syndicate terms, check size commitment..."
+                      className="w-full bg-white border border-black rounded-xl p-3 text-xs text-black focus:outline-none focus:ring-1 focus:ring-black leading-relaxed resize-none"
+                    />
+                    <div className="flex items-center justify-between text-[10px] text-[#6E6E73]">
+                      <span>Click Save to commit changes directly to the live dossier.</span>
+                      <button
+                        onClick={handleSaveInlineRemarks}
+                        className="px-3 py-1 bg-black text-white rounded-full text-xs font-medium hover:bg-neutral-800 cursor-pointer transition-all"
+                      >
+                        Save Remarks
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-2.5">
                 <button
@@ -651,7 +890,7 @@ export const InvestorView: React.FC = () => {
                 </button>
               </div>
 
-              {/* Documents & Vault Attachments */}
+              {/* Documents & Vault Attachments (Attach at any time) */}
               <div className="space-y-3 pt-4 border-t border-[#E5E5E7]">
                 <div className="flex items-center justify-between">
                   <span className="text-xs uppercase font-semibold text-black tracking-wider flex items-center gap-1.5">
@@ -663,38 +902,59 @@ export const InvestorView: React.FC = () => {
                       sound.click();
                       setIsUploadDocOpen(true);
                     }}
-                    className="text-xs text-black font-medium hover:underline"
+                    className="px-2.5 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-xs font-medium text-black flex items-center gap-1 transition-all shadow-xs cursor-pointer"
+                    title="Attach file or external cloud link at any time"
                   >
-                    + Upload Doc
+                    <Plus size={12} />
+                    <span>Attach File / Link</span>
                   </button>
                 </div>
 
                 <div className="space-y-2">
                   {!selectedInvestor.documents || selectedInvestor.documents.length === 0 ? (
-                    <div className="p-4 border border-dashed border-[#E5E5E7] rounded-2xl text-center text-xs text-[#6E6E73] bg-[#F5F5F7]">
-                      No pitch decks or term sheets uploaded yet.
+                    <div
+                      onClick={() => {
+                        sound.click();
+                        setIsUploadDocOpen(true);
+                      }}
+                      className="p-4 border border-dashed border-[#E5E5E7] hover:border-black rounded-2xl text-center text-xs text-[#6E6E73] bg-[#F5F5F7] hover:bg-white cursor-pointer transition-all space-y-1"
+                    >
+                      <p className="font-medium text-black">No pitch decks or term sheets attached yet.</p>
+                      <p className="text-[11px] text-[#6E6E73]">+ Click here to attach documents or cloud links at any time</p>
                     </div>
                   ) : (
                     selectedInvestor.documents.map(doc => (
                       <div key={doc.id} className="p-3 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] flex items-center justify-between gap-2">
-                        <div className="truncate">
-                          <div className="text-xs font-semibold text-black truncate">{doc.name}</div>
-                          <span className="text-[10px] text-[#6E6E73] font-mono">
-                            v{doc.version}.0 · {doc.uploadedAt}
-                          </span>
+                        <div className="truncate flex items-center gap-2">
+                          <Paperclip size={13} className="text-[#6E6E73] shrink-0" />
+                          <div className="truncate">
+                            <div className="text-xs font-semibold text-black truncate">{doc.name}</div>
+                            <span className="text-[10px] text-[#6E6E73] font-mono">
+                              v{doc.version}.0 · {doc.uploadedAt}
+                            </span>
+                          </div>
                         </div>
-                        {doc.url && (
-                          <a
-                            href={doc.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            download={doc.name}
-                            className="p-1.5 rounded-full border border-[#E5E5E7] bg-white hover:border-black text-black transition-all"
-                            title="Download document"
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {doc.url && (
+                            <a
+                              href={doc.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={doc.name}
+                              className="p-1.5 rounded-full border border-[#E5E5E7] bg-white hover:border-black text-black transition-all"
+                              title="Download / View document"
+                            >
+                              <Download size={12} />
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="p-1.5 rounded-full border border-[#E5E5E7] bg-white hover:border-red-300 text-[#6E6E73] hover:text-red-600 transition-all cursor-pointer"
+                            title="Delete attachment"
                           >
-                            <Download size={13} />
-                          </a>
-                        )}
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -986,15 +1246,209 @@ export const InvestorView: React.FC = () => {
         </div>
       )}
 
-      {/* UPLOAD DOCUMENT MODAL */}
+      {/* EDIT INVESTOR PROFILE MODAL */}
+      {isEditOpen && selectedInvestor && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+              <div>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Edit Investor Profile</span>
+                <h3 className="font-serif text-2xl font-normal text-black mt-0.5">
+                  {selectedInvestor.name} ({selectedInvestor.firm})
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsEditOpen(false)}
+                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditInvestorSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Investor / Partner Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Firm / Syndicate *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editFirm}
+                    onChange={(e) => setEditFirm(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Email</label>
+                  <input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Phone</label>
+                  <input
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Website</label>
+                  <input
+                    type="url"
+                    value={editWebsite}
+                    onChange={(e) => setEditWebsite(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Pipeline Stage</label>
+                  <select
+                    value={editStage}
+                    onChange={(e) => setEditStage(e.target.value as InvestorStage)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  >
+                    {PIPELINE_STAGES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Round Structure</label>
+                  <select
+                    value={editRoundType}
+                    onChange={(e) => setEditRoundType(e.target.value as InvestorRoundType)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  >
+                    {ROUND_TYPES.map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Deal Size Allocation (₹ INR)</label>
+                  <input
+                    type="number"
+                    value={editDealSize}
+                    onChange={(e) => setEditDealSize(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Pre-Money Valuation (₹ INR)</label>
+                  <input
+                    type="number"
+                    value={editValuation}
+                    onChange={(e) => setEditValuation(e.target.value)}
+                    placeholder="Uncapped / TBD"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Relationship Lead</label>
+                  <select
+                    value={editRelationshipOwnerId}
+                    onChange={(e) => setEditRelationshipOwnerId(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  >
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Target Close Date</label>
+                  <input
+                    type="date"
+                    value={editTargetCloseDate}
+                    onChange={(e) => setEditTargetCloseDate(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Remarks & Strategic Notes</label>
+                <textarea
+                  rows={3}
+                  value={editRemarks}
+                  onChange={(e) => setEditRemarks(e.target.value)}
+                  placeholder="Strategic notes, partner feedback, syndicate terms, allocation requirements..."
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteInvestor(selectedInvestor.id)}
+                  className="px-3.5 py-2 rounded-full border border-red-200 text-red-600 hover:bg-red-50 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Trash2 size={13} />
+                  <span>Delete Lead</span>
+                </button>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditOpen(false)}
+                    className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD / ATTACH DOCUMENT MODAL */}
       {isUploadDocOpen && selectedInvestor && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-xs shadow-2xl">
             <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
               <div>
-                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Attach Document</span>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Dossier Vault • Attach Document</span>
                 <h3 className="font-serif text-xl font-normal text-black mt-0.5">
-                  {selectedInvestor.firm}
+                  {selectedInvestor.name} ({selectedInvestor.firm})
                 </h3>
               </div>
               <button
@@ -1005,66 +1459,110 @@ export const InvestorView: React.FC = () => {
               </button>
             </div>
 
+            {/* Mode Switcher: Local File vs Cloud URL */}
+            <div className="inline-flex p-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-full text-xs font-medium w-full">
+              <button
+                type="button"
+                onClick={() => setDocMode('file')}
+                className={`flex-1 py-1.5 rounded-full text-center transition-all cursor-pointer ${
+                  docMode === 'file'
+                    ? 'bg-white text-black shadow-xs font-semibold'
+                    : 'text-[#6E6E73] hover:text-black'
+                }`}
+              >
+                Upload Local File
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocMode('link')}
+                className={`flex-1 py-1.5 rounded-full text-center transition-all cursor-pointer ${
+                  docMode === 'link'
+                    ? 'bg-white text-black shadow-xs font-semibold'
+                    : 'text-[#6E6E73] hover:text-black'
+                }`}
+              >
+                Attach Cloud URL / Link
+              </button>
+            </div>
+
             <form onSubmit={handleDocUploadSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Document Title / Description</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Document Title / Label *</label>
                 <input
                   type="text"
                   required
                   value={docName}
                   onChange={(e) => setDocName(e.target.value)}
-                  placeholder="e.g. UVL_Term_Sheet_Apex_Draft.pdf"
+                  placeholder="e.g. UVL_PitchDeck_Q3_Seed.pdf"
                   className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">File Attachment (PDF, DOCX, Deck)</label>
-                <input
-                  ref={docFileInputRef}
-                  type="file"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      const f = e.target.files[0];
-                      setDocFile(f);
-                      if (!docName) setDocName(f.name);
-                    }
-                  }}
-                  className="hidden"
-                />
-                <div
-                  onClick={() => docFileInputRef.current?.click()}
-                  className="p-5 border border-dashed border-[#E5E5E7] hover:border-black rounded-2xl bg-[#F5F5F7] hover:bg-white text-center cursor-pointer transition-all"
-                >
-                  {docFile ? (
-                    <div className="flex items-center justify-center gap-2 text-black">
-                      <CheckCircle2 size={16} className="text-emerald-600" />
-                      <span className="font-medium truncate">{docFile.name}</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <UploadCloud size={22} className="mx-auto text-[#6E6E73]" />
-                      <span className="text-xs text-black font-medium block">Click to select pitch deck or NDA</span>
-                      <span className="text-[11px] text-[#6E6E73] block">Stored in Supabase central repository</span>
-                    </div>
-                  )}
+              {docMode === 'file' ? (
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Select File (PDF, Pitch Deck, Spreadsheet, NDA)</label>
+                  <input
+                    ref={docFileInputRef}
+                    type="file"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        const f = e.target.files[0];
+                        setDocFile(f);
+                        if (!docName) setDocName(f.name);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <div
+                    onClick={() => docFileInputRef.current?.click()}
+                    className="p-5 border border-dashed border-[#E5E5E7] hover:border-black rounded-2xl bg-[#F5F5F7] hover:bg-white text-center cursor-pointer transition-all"
+                  >
+                    {docFile ? (
+                      <div className="flex items-center justify-center gap-2 text-black">
+                        <CheckCircle2 size={16} className="text-emerald-600" />
+                        <span className="font-medium truncate">{docFile.name}</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <UploadCloud size={22} className="mx-auto text-[#6E6E73]" />
+                        <span className="text-xs text-black font-medium block">Click to browse file from device</span>
+                        <span className="text-[11px] text-[#6E6E73] block">Stored securely in Supabase storage</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Cloud Document URL *</label>
+                  <div className="relative">
+                    <Link2 size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6E6E73]" />
+                    <input
+                      type="url"
+                      required
+                      value={docUrl}
+                      onChange={(e) => setDocUrl(e.target.value)}
+                      placeholder="https://docsend.com/view/... or Google Drive link"
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl pl-9 pr-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all font-mono"
+                    />
+                  </div>
+                  <span className="text-[11px] text-[#6E6E73] block mt-1">DocSend, Google Drive, Notion, Figma, Pitch Deck link</span>
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E5E7]">
                 <button
                   type="button"
                   onClick={() => setIsUploadDocOpen(false)}
-                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUploadingDoc}
-                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all"
+                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all cursor-pointer"
                 >
-                  {isUploadingDoc ? 'Uploading...' : 'Save Document'}
+                  {isUploadingDoc ? 'Attaching...' : 'Attach to Dossier'}
                 </button>
               </div>
             </form>

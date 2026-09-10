@@ -24,7 +24,8 @@ import {
   X,
   IndianRupee,
   Briefcase,
-  Bot
+  Bot,
+  Trophy
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -55,6 +56,7 @@ export const Header: React.FC = () => {
     { id: 'chat', label: 'Chat', icon: MessageSquare },
     { id: 'expenses', label: 'Money Tracker', icon: IndianRupee },
     { id: 'investors', label: 'Investors', icon: Briefcase },
+    { id: 'hackathons', label: 'Hackathons & Events', icon: Trophy },
     { id: 'agent', label: 'Unfoundy AI', icon: Bot },
     { id: 'pulse', label: 'Pulse & Check-in', icon: Activity },
   ];
@@ -344,7 +346,7 @@ export const Header: React.FC = () => {
               }}
               className="px-3 py-1.5 rounded-full border border-[#E5E5E7] bg-white text-xs text-black font-medium"
             >
-              Switch
+              Profile
             </button>
           </div>
 

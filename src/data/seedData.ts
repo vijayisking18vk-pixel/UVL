@@ -125,6 +125,8 @@ export const initialExpenses: import('../types').Expense[] = [];
 
 export const initialInvestors: import('../types').Investor[] = [];
 
+export const initialHackathons: import('../types').HackathonEvent[] = [];
+
 export const initialAgentLogs: import('../types').AgentActivityLog[] = [];
 
 export const initialAgentReports: import('../types').AgentReport[] = [];
