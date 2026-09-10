@@ -10,8 +10,12 @@ import {
 } from '../data/seedData';
 import { sound } from '../utils/sound';
 import confetti from 'canvas-confetti';
+import { supabase } from '../lib/supabase';
 
 interface WorkspaceContextType {
+  // Live Supabase Database Connection
+  supabaseConnected: boolean;
+
   // Navigation & UI State
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -34,6 +38,8 @@ interface WorkspaceContextType {
   setCurrentUser: (user: User) => void;
   switchUserById: (userId: string) => void;
   users: User[];
+  isVijayrajkumar: boolean;
+  addMember: (user: Omit<User, 'id'>) => Promise<User>;
   updateUser: (updated: User) => void;
   updateUserStatus: (status: User['status'], message: string) => void;
 
@@ -69,7 +75,7 @@ interface WorkspaceContextType {
 
   // Files
   files: FileItem[];
-  uploadFile: (file: { name: string; size: string; type: string; projectId: string; folder: string; notes?: string }) => void;
+  uploadFile: (file: { name: string; size: string; type: string; projectId: string; folder: string; notes?: string; fileUrl?: string }) => Promise<FileItem>;
   addFileVersion: (fileId: string, versionData: { size: string; notes: string }) => void;
   deleteFile: (id: string) => void;
 
@@ -79,7 +85,12 @@ interface WorkspaceContextType {
   setActiveChannelId: (id: string) => void;
   addChannel: (c: Omit<ChatChannel, 'id'>) => void;
   messages: ChatMessage[];
-  sendMessage: (channelId: string, text: string, parentId?: string) => void;
+  sendMessage: (
+    channelId: string,
+    text: string,
+    parentId?: string,
+    attachment?: { url: string; type: 'image' | 'file' | 'audio'; name?: string; size?: string; duration?: string }
+  ) => void;
   togglePinMessage: (messageId: string) => void;
   addReaction: (messageId: string, emoji: string) => void;
   convertMessageToTask: (messageId: string) => void;
@@ -207,8 +218,226 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [messages, setMessages] = useState<ChatMessage[]>(savedData?.messages || initialMessages);
   const [checkins, setCheckins] = useState<Checkin[]>(savedData?.checkins || initialCheckins);
   const [workspaceConfig, setWorkspaceConfig] = useState<WorkspaceConfig>(savedData?.workspaceConfig || initialWorkspaceConfig);
+  const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
 
   const currentUser = users.find(u => u.id === currentUserId) || users[0];
+  const isVijayrajkumar = currentUser?.id === 'u-1' || currentUser?.name?.toLowerCase().includes('vijay') || currentUser?.handle?.toLowerCase().includes('vijay');
+
+  // Sync with Live Supabase Database
+  useEffect(() => {
+    let isMounted = true;
+
+    async function syncSupabase() {
+      try {
+        const { data: dbUsers, error: uErr } = await supabase.from('users').select('*');
+        if (!uErr && dbUsers && dbUsers.length > 0 && isMounted) {
+          setSupabaseConnected(true);
+          setUsers(dbUsers.map(u => ({
+            id: u.id,
+            name: u.name,
+            handle: u.handle || `@${u.name.toLowerCase()}`,
+            role: (u.role as any) || 'member',
+            avatarUrl: u.avatar_url || `/avatars/${u.name.toLowerCase()}.png`,
+            avatarEmblem: u.avatar_emblem || 'crosshair',
+            avatarBg: u.avatar_bg || '#000000',
+            avatarStitch: u.avatar_stitch || '#FFFFFF',
+            callsign: u.callsign || 'OPERATOR',
+            pin: u.pin,
+            status: u.status || 'active',
+            statusMessage: u.status_message || '',
+            lastActive: u.last_active || 'Just now'
+          })));
+        } else if (!uErr) {
+          setSupabaseConnected(true);
+        }
+
+        const { data: dbTasks, error: tErr } = await supabase.from('tasks').select('*');
+        if (!tErr && dbTasks && isMounted) {
+          setTasks(dbTasks.map(t => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || '',
+            assigneeId: t.assignee_id,
+            status: t.status as TaskStatus,
+            priority: t.priority as any,
+            dueDate: t.due_date,
+            projectId: t.project_id || 'p-1',
+            subtasks: t.subtasks || [],
+            dependencies: t.blocked_by ? [t.blocked_by] : [],
+            tags: [],
+            createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+          })));
+        }
+
+        const { data: dbMeetings, error: mErr } = await supabase.from('meetings').select('*');
+        if (!mErr && dbMeetings && isMounted) {
+          setMeetings(dbMeetings.map(m => ({
+            id: m.id,
+            title: m.title,
+            date: m.date,
+            time: m.time,
+            duration: m.duration,
+            attendeeIds: m.attendees || [],
+            agenda: m.agenda ? m.agenda.split(' • ') : [],
+            notes: m.notes || '',
+            actionItems: m.action_items || []
+          })));
+        }
+
+        const { data: dbNotes, error: nErr } = await supabase.from('notes').select('*');
+        if (!nErr && dbNotes && isMounted) {
+          setNotes(dbNotes.map(n => ({
+            id: n.id,
+            title: n.title,
+            content: n.content || '',
+            type: n.type as any,
+            updatedAt: n.updated_at ? n.updated_at.replace('T', ' ').slice(0, 16) : 'Just now',
+            authorId: n.author_id || currentUserId,
+            tags: n.tags || [],
+            pinned: n.is_pinned || false,
+            projectId: n.project_id
+          })));
+        }
+
+        const { data: dbCheckins, error: cErr } = await supabase.from('checkins').select('*');
+        if (!cErr && dbCheckins && isMounted) {
+          setCheckins(dbCheckins.map(c => ({
+            id: c.id,
+            userId: c.user_id,
+            date: c.date || new Date().toISOString().split('T')[0],
+            completedToday: c.completed_today || c.worked_on || '',
+            workingOnNext: c.working_on_next || c.next_up || '',
+            blockers: c.blockers || 'None',
+            mood: (c.mood || '🟢 Good') as any,
+            timestamp: c.timestamp || 'Today'
+          })));
+        }
+
+        const { data: dbMessages, error: msgErr } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+        if (!msgErr && dbMessages && isMounted) {
+          setMessages(dbMessages.map(m => {
+            let text = m.text;
+            let attachmentUrl: string | undefined;
+            let attachmentType: 'image' | 'file' | 'audio' | undefined;
+            let attachmentName: string | undefined;
+            let attachmentSize: string | undefined;
+            let audioDuration: string | undefined;
+
+            try {
+              if (typeof m.text === 'string' && m.text.startsWith('__UVL_ATTACHMENT__:')) {
+                const parsed = JSON.parse(m.text.slice('__UVL_ATTACHMENT__:'.length));
+                text = parsed.text || '';
+                attachmentUrl = parsed.attachmentUrl;
+                attachmentType = parsed.attachmentType;
+                attachmentName = parsed.attachmentName;
+                attachmentSize = parsed.attachmentSize;
+                audioDuration = parsed.audioDuration;
+              }
+            } catch {
+              // use standard text
+            }
+
+            return {
+              id: m.id,
+              channelId: m.channel_id,
+              senderId: m.user_id,
+              text,
+              attachmentUrl,
+              attachmentType,
+              attachmentName,
+              attachmentSize,
+              audioDuration,
+              timestamp: m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+              pinned: false,
+              parentId: m.parent_id,
+              replyCount: m.reply_count || 0,
+              reactions: m.reactions || [],
+              mentions: m.mentions || []
+            };
+          }));
+        }
+
+        const { data: dbProjects, error: pErr } = await supabase.from('projects').select('*');
+        if (!pErr && dbProjects && isMounted) {
+          setProjects(dbProjects.map(p => ({
+            id: p.id,
+            name: p.name,
+            code: p.code,
+            color: p.color || '#A1A1AA',
+            description: p.description || ''
+          })));
+        }
+
+        const { data: dbEvents, error: evErr } = await supabase.from('calendar_events').select('*');
+        if (!evErr && dbEvents && isMounted) {
+          setCalendarEvents(dbEvents.map(e => ({
+            id: e.id,
+            title: e.title,
+            description: e.description || '',
+            date: e.date,
+            startTime: e.start_time || '09:00',
+            endTime: e.end_time || '10:00',
+            category: e.category || 'team',
+            projectId: e.project_id,
+            memberId: e.user_id,
+            sourceTaskId: e.task_id
+          })));
+        }
+
+        const { data: dbFiles, error: fErr } = await supabase.from('files').select('*');
+        if (!fErr && dbFiles && isMounted) {
+          setFiles(dbFiles.map(f => ({
+            id: f.id,
+            name: f.name,
+            size: f.size || '1.0 MB',
+            type: f.type || 'document',
+            projectId: f.project_id || 'p-1',
+            folder: f.folder || 'Specs',
+            uploadedBy: f.uploaded_by || currentUserId,
+            uploadedAt: f.uploaded_at ? f.uploaded_at.split('T')[0] : 'Today',
+            version: typeof f.version === 'number' ? f.version : 1,
+            versions: f.version_history || [],
+            downloadUrl: f.file_url || undefined
+          })));
+        }
+
+        const { data: dbChannels, error: chErr } = await supabase.from('chat_channels').select('*');
+        if (!chErr && dbChannels && isMounted && dbChannels.length > 0) {
+          setChannels(dbChannels.map(c => ({
+            id: c.id,
+            name: c.name,
+            description: c.description || '',
+            isPrivate: c.is_private || false,
+            isDm: c.is_dm || false,
+            memberIds: c.member_ids || []
+          })));
+        }
+      } catch (err) {
+        console.warn('Supabase sync warning:', err);
+      }
+    }
+
+    syncSupabase();
+
+    const channel = supabase
+      .channel('uvl-live-data')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'checkins' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'files' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_channels' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => syncSupabase())
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [currentUserId]);
 
   // Sync sound settings with sound utility
   useEffect(() => {
@@ -271,13 +500,78 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setCurrentUserId(userId);
   };
 
+  const addMember = async (memberData: Omit<User, 'id'>): Promise<User> => {
+    if (!isVijayrajkumar) {
+      sound.alert();
+      throw new Error('Access Denied: Only Vijayrajkumar has authority to add members.');
+    }
+    sound.patchStamp();
+    const newId = `u-${Date.now().toString().slice(-4)}`;
+    const newMember: User = {
+      ...memberData,
+      id: newId,
+      status: memberData.status || 'active',
+      statusMessage: memberData.statusMessage || '',
+      lastActive: 'Just now',
+    };
+
+    setUsers(prev => [...prev, newMember]);
+
+    const { error } = await supabase.from('users').insert({
+      id: newMember.id,
+      name: newMember.name,
+      handle: newMember.handle || `@${newMember.name.toLowerCase().replace(/\s+/g, '')}`,
+      role: newMember.role || 'member',
+      avatar_url: newMember.avatarUrl || null,
+      avatar_emblem: newMember.avatarEmblem || 'crosshair',
+      avatar_bg: newMember.avatarBg || '#000000',
+      avatar_stitch: newMember.avatarStitch || '#A1A1AA',
+      callsign: newMember.callsign || `OP-${newMember.name.slice(0, 4).toUpperCase()}`,
+      pin: newMember.pin || '1000',
+      status: newMember.status,
+      status_message: newMember.statusMessage,
+      last_active: newMember.lastActive
+    });
+
+    if (error) {
+      console.error('Supabase addMember error:', error);
+      throw error;
+    }
+
+    return newMember;
+  };
+
   const updateUser = (updated: User) => {
     setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    supabase.from('users').upsert({
+      id: updated.id,
+      name: updated.name,
+      handle: updated.handle,
+      role: updated.role,
+      avatar_url: updated.avatarUrl,
+      avatar_emblem: updated.avatarEmblem,
+      avatar_bg: updated.avatarBg,
+      avatar_stitch: updated.avatarStitch,
+      callsign: updated.callsign,
+      pin: updated.pin,
+      status: updated.status,
+      status_message: updated.statusMessage,
+      last_active: updated.lastActive
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase updateUser error:', error);
+    });
   };
 
   const updateUserStatus = (status: User['status'], message: string) => {
     sound.click();
     setUsers(prev => prev.map(u => u.id === currentUserId ? { ...u, status, statusMessage: message, lastActive: 'Just now' } : u));
+    supabase.from('users').update({
+      status,
+      status_message: message,
+      last_active: 'Just now'
+    }).eq('id', currentUserId).then(({ error }) => {
+      if (error) console.warn('Supabase updateUserStatus error:', error);
+    });
   };
 
   const addProject = (p: Omit<Project, 'id'>) => {
@@ -287,6 +581,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `p-${Date.now()}`
     };
     setProjects(prev => [...prev, newProject]);
+    supabase.from('projects').insert({
+      id: newProject.id,
+      name: newProject.name,
+      code: newProject.code,
+      description: newProject.description,
+      color: newProject.color || '#A1A1AA'
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addProject error:', error);
+    });
   };
 
   const addTask = (t: Omit<Task, 'id' | 'createdAt'>): Task => {
@@ -297,6 +600,22 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString().split('T')[0]
     };
     setTasks(prev => [newTask, ...prev]);
+
+    // Persist to Supabase
+    supabase.from('tasks').insert({
+      id: newTask.id,
+      title: newTask.title,
+      description: newTask.description,
+      assignee_id: newTask.assigneeId,
+      status: newTask.status,
+      priority: newTask.priority,
+      due_date: newTask.dueDate,
+      project_id: newTask.projectId,
+      subtasks: newTask.subtasks,
+      blocked_by: (newTask as any).blockedBy || newTask.dependencies?.[0] || null
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addTask error:', error);
+    });
 
     // Auto-sync to calendar as a task deadline
     if (newTask.dueDate) {
@@ -313,6 +632,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         sourceTaskId: newTask.id
       };
       setCalendarEvents(prev => [...prev, deadlineEvent]);
+      supabase.from('calendar_events').insert({
+        id: deadlineEvent.id,
+        title: deadlineEvent.title,
+        date: deadlineEvent.date,
+        start_time: deadlineEvent.startTime,
+        end_time: deadlineEvent.endTime,
+        category: deadlineEvent.category,
+        project_id: deadlineEvent.projectId,
+        user_id: deadlineEvent.memberId,
+        task_id: deadlineEvent.sourceTaskId
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase addCalendarEvent error:', error);
+      });
     }
 
     return newTask;
@@ -321,6 +653,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateTask = (updated: Task) => {
     sound.click();
     setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+
+    supabase.from('tasks').update({
+      title: updated.title,
+      description: updated.description,
+      assignee_id: updated.assigneeId,
+      status: updated.status,
+      priority: updated.priority,
+      due_date: updated.dueDate,
+      project_id: updated.projectId,
+      subtasks: updated.subtasks,
+      blocked_by: (updated as any).blockedBy || updated.dependencies?.[0] || null
+    }).eq('id', updated.id).then(({ error }) => {
+      if (error) console.warn('Supabase updateTask error:', error);
+    });
 
     // Update synced calendar event if dueDate changed
     setCalendarEvents(prev => prev.map(ev => {
@@ -344,12 +690,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         particleCount: 40,
         spread: 60,
         origin: { y: 0.7 },
-        colors: ['#EDE8DB', '#E5B869', '#5EBA7D']
+        colors: ['#000000', '#FFFFFF', '#A1A1AA']
       });
     } else {
       sound.click();
     }
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status } : t));
+
+    supabase.from('tasks').update({ status }).eq('id', taskId).then(({ error }) => {
+      if (error) console.warn('Supabase updateTaskStatus error:', error);
+    });
   };
 
   const toggleSubtask = (taskId: string, subtaskId: string) => {
@@ -360,10 +710,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           st.id === subtaskId ? { ...st, completed: !st.completed } : st
         );
         const allCompleted = updatedSubtasks.length > 0 && updatedSubtasks.every(st => st.completed);
+        const nextStatus: TaskStatus = allCompleted ? 'done' : task.status;
+
+        supabase.from('tasks').update({
+          subtasks: updatedSubtasks,
+          status: nextStatus
+        }).eq('id', taskId).then(({ error }) => {
+          if (error) console.warn('Supabase toggleSubtask error:', error);
+        });
+
         return {
           ...task,
           subtasks: updatedSubtasks,
-          status: allCompleted ? 'done' : task.status
+          status: nextStatus
         };
       }
       return task;
@@ -374,6 +733,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     sound.click();
     setTasks(prev => prev.filter(t => t.id !== taskId));
     setCalendarEvents(prev => prev.filter(ev => ev.sourceTaskId !== taskId));
+
+    supabase.from('tasks').delete().eq('id', taskId).then(({ error }) => {
+      if (error) console.warn('Supabase deleteTask error:', error);
+    });
+    supabase.from('calendar_events').delete().eq('task_id', taskId).then(({ error }) => {
+      if (error) console.warn('Supabase deleteTask calendar link error:', error);
+    });
   };
 
   const addCalendarEvent = (event: Omit<CalendarEvent, 'id'>) => {
@@ -383,11 +749,29 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `ce-${Date.now().toString().slice(-4)}`
     };
     setCalendarEvents(prev => [...prev, newEvent]);
+
+    supabase.from('calendar_events').insert({
+      id: newEvent.id,
+      title: newEvent.title,
+      date: newEvent.date,
+      start_time: newEvent.startTime,
+      end_time: newEvent.endTime,
+      category: newEvent.category,
+      project_id: newEvent.projectId,
+      user_id: newEvent.memberId,
+      location: newEvent.location,
+      notes: newEvent.description
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addCalendarEvent error:', error);
+    });
   };
 
   const deleteCalendarEvent = (id: string) => {
     sound.click();
     setCalendarEvents(prev => prev.filter(e => e.id !== id));
+    supabase.from('calendar_events').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase deleteCalendarEvent error:', error);
+    });
   };
 
   const addMeeting = (m: Omit<Meeting, 'id'>): Meeting => {
@@ -397,6 +781,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: `m-${Date.now().toString().slice(-4)}`
     };
     setMeetings(prev => [newMeeting, ...prev]);
+
+    supabase.from('meetings').insert({
+      id: newMeeting.id,
+      title: newMeeting.title,
+      date: newMeeting.date,
+      time: newMeeting.time,
+      duration: newMeeting.duration,
+      attendees: newMeeting.attendeeIds,
+      agenda: newMeeting.agenda.join(' • '),
+      notes: newMeeting.notes,
+      action_items: newMeeting.actionItems
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addMeeting error:', error);
+    });
 
     // Auto-attach to calendar
     const meetingEvent: CalendarEvent = {
@@ -412,6 +810,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       sourceMeetingId: newMeeting.id
     };
     setCalendarEvents(prev => [...prev, meetingEvent]);
+    supabase.from('calendar_events').insert({
+      id: meetingEvent.id,
+      title: meetingEvent.title,
+      date: meetingEvent.date,
+      start_time: meetingEvent.startTime,
+      end_time: meetingEvent.endTime,
+      category: 'meeting',
+      location: meetingEvent.location,
+      notes: meetingEvent.description,
+      meeting_id: newMeeting.id
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addCalendarEvent for meeting error:', error);
+    });
 
     return newMeeting;
   };
@@ -419,6 +830,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateMeeting = (updated: Meeting) => {
     sound.click();
     setMeetings(prev => prev.map(m => m.id === updated.id ? updated : m));
+
+    supabase.from('meetings').update({
+      title: updated.title,
+      date: updated.date,
+      time: updated.time,
+      duration: updated.duration,
+      attendees: updated.attendeeIds,
+      agenda: updated.agenda.join(' • '),
+      notes: updated.notes,
+      action_items: updated.actionItems
+    }).eq('id', updated.id).then(({ error }) => {
+      if (error) console.warn('Supabase updateMeeting error:', error);
+    });
   };
 
   const convertActionItemToTask = (meetingId: string, actionItemId: string) => {
@@ -442,17 +866,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       originMeetingId: meetingId
     });
 
-    setMeetings(prev => prev.map(m => {
-      if (m.id === meetingId) {
-        return {
-          ...m,
-          actionItems: m.actionItems.map(ai =>
-            ai.id === actionItemId ? { ...ai, convertedToTaskId: spawnedTask.id } : ai
-          )
-        };
-      }
-      return m;
-    }));
+    const updatedActionItems = meeting.actionItems.map(ai =>
+      ai.id === actionItemId ? { ...ai, convertedToTaskId: spawnedTask.id } : ai
+    );
+
+    setMeetings(prev => prev.map(m => m.id === meetingId ? { ...m, actionItems: updatedActionItems } : m));
+
+    supabase.from('meetings').update({
+      action_items: updatedActionItems
+    }).eq('id', meetingId).then(({ error }) => {
+      if (error) console.warn('Supabase convertActionItem error:', error);
+    });
   };
 
   const addNote = (n: Omit<Note, 'id' | 'updatedAt'>): Note => {
@@ -463,36 +887,85 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       updatedAt: new Date().toISOString().split('T')[0]
     };
     setNotes(prev => [newNote, ...prev]);
+
+    const validProjectId = projects.some(p => p.id === newNote.projectId) ? newNote.projectId : (projects[0]?.id || null);
+
+    supabase.from('notes').insert({
+      id: newNote.id,
+      title: newNote.title,
+      content: newNote.content,
+      author_id: newNote.authorId || currentUserId,
+      type: newNote.type,
+      tags: newNote.tags || [],
+      project_id: validProjectId,
+      is_pinned: newNote.pinned || false
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addNote error:', error);
+    });
+
     return newNote;
   };
 
   const updateNote = (updated: Note) => {
     sound.click();
-    setNotes(prev => prev.map(n => n.id === updated.id ? { ...updated, updatedAt: new Date().toISOString().split('T')[0] } : n));
+    const dateStr = new Date().toISOString().split('T')[0];
+    setNotes(prev => prev.map(n => n.id === updated.id ? { ...updated, updatedAt: dateStr } : n));
+
+    const validProjectId = updated.projectId && projects.some(p => p.id === updated.projectId) ? updated.projectId : (projects[0]?.id || null);
+
+    supabase.from('notes').update({
+      title: updated.title,
+      content: updated.content,
+      type: updated.type,
+      tags: updated.tags || [],
+      project_id: validProjectId,
+      is_pinned: updated.pinned || false,
+      updated_at: new Date().toISOString()
+    }).eq('id', updated.id).then(({ error }) => {
+      if (error) console.warn('Supabase updateNote error:', error);
+    });
   };
 
   const deleteNote = (id: string) => {
     sound.click();
     setNotes(prev => prev.filter(n => n.id !== id));
+    supabase.from('notes').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase deleteNote error:', error);
+    });
   };
 
   const togglePinNote = (id: string) => {
     sound.click();
-    setNotes(prev => prev.map(n => n.id === id ? { ...n, pinned: !n.pinned } : n));
+    const target = notes.find(n => n.id === id);
+    const nextPinned = !target?.pinned;
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, pinned: nextPinned } : n));
+
+    supabase.from('notes').update({ is_pinned: nextPinned }).eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase togglePinNote error:', error);
+    });
   };
 
-  const uploadFile = (fileData: { name: string; size: string; type: string; projectId: string; folder: string; notes?: string }) => {
+  const uploadFile = async (fileData: {
+    name: string;
+    size: string;
+    type: string;
+    projectId: string;
+    folder: string;
+    notes?: string;
+    fileUrl?: string;
+  }): Promise<FileItem> => {
     sound.patchStamp();
     const newFile: FileItem = {
       id: `f-${Date.now().toString().slice(-4)}`,
       name: fileData.name,
       size: fileData.size,
       type: fileData.type,
-      projectId: fileData.projectId,
+      projectId: fileData.projectId || 'p-1',
       folder: fileData.folder || 'General',
       uploadedBy: currentUserId,
       uploadedAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
       version: 1,
+      downloadUrl: fileData.fileUrl,
       versions: [
         {
           version: 1,
@@ -503,6 +976,22 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       ]
     };
     setFiles(prev => [newFile, ...prev]);
+
+    const { error } = await supabase.from('files').insert({
+      id: newFile.id,
+      name: newFile.name,
+      size: newFile.size,
+      type: newFile.type,
+      project_id: newFile.projectId,
+      folder: newFile.folder,
+      uploaded_by: currentUserId,
+      version: 'v1.0',
+      file_url: fileData.fileUrl || null,
+      version_history: newFile.versions
+    });
+    if (error) console.warn('Supabase uploadFile error:', error);
+
+    return newFile;
   };
 
   const addFileVersion = (fileId: string, versionData: { size: string; notes: string }) => {
@@ -516,13 +1005,23 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           size: versionData.size,
           notes: versionData.notes
         };
-        return {
+        const updatedFile = {
           ...f,
           version: nextVer,
           size: versionData.size,
           uploadedAt: newRev.uploadedAt,
           versions: [newRev, ...f.versions]
         };
+
+        supabase.from('files').update({
+          version: `v${nextVer}.0`,
+          size: versionData.size,
+          version_history: updatedFile.versions
+        }).eq('id', fileId).then(({ error }) => {
+          if (error) console.warn('Supabase addFileVersion error:', error);
+        });
+
+        return updatedFile;
       }
       return f;
     }));
@@ -531,6 +1030,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteFile = (id: string) => {
     sound.click();
     setFiles(prev => prev.filter(f => f.id !== id));
+    supabase.from('files').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase deleteFile error:', error);
+    });
   };
 
   const addChannel = (c: Omit<ChatChannel, 'id'>) => {
@@ -541,11 +1043,25 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     setChannels(prev => [...prev, newChannel]);
     setActiveChannelId(newChannel.id);
+
+    supabase.from('chat_channels').insert({
+      id: newChannel.id,
+      name: newChannel.name,
+      description: newChannel.description,
+      is_private: newChannel.isPrivate || false,
+      is_dm: newChannel.isDm || false
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addChannel error:', error);
+    });
   };
 
-  const sendMessage = (channelId: string, text: string, parentId?: string) => {
+  const sendMessage = (
+    channelId: string,
+    text: string,
+    parentId?: string,
+    attachment?: { url: string; type: 'image' | 'file' | 'audio'; name?: string; size?: string; duration?: string }
+  ) => {
     sound.click();
-    // Detect mentions like @jax, @maya
     const mentionRegex = /@(\w+)/g;
     const detectedMentions: string[] = [];
     let match;
@@ -558,6 +1074,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       channelId,
       senderId: currentUserId,
       text,
+      attachmentUrl: attachment?.url,
+      attachmentType: attachment?.type,
+      attachmentName: attachment?.name,
+      attachmentSize: attachment?.size,
+      audioDuration: attachment?.duration,
       timestamp: 'Just now',
       pinned: false,
       parentId,
@@ -571,6 +1092,27 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (parentId) {
       setMessages(prev => prev.map(m => m.id === parentId ? { ...m, replyCount: m.replyCount + 1 } : m));
     }
+
+    const dbPayloadText = attachment ? `__UVL_ATTACHMENT__:${JSON.stringify({
+      text,
+      attachmentUrl: attachment.url,
+      attachmentType: attachment.type,
+      attachmentName: attachment.name,
+      attachmentSize: attachment.size,
+      audioDuration: attachment.duration
+    })}` : text;
+
+    supabase.from('chat_messages').insert({
+      id: newMessage.id,
+      channel_id: channelId,
+      user_id: currentUserId,
+      text: dbPayloadText,
+      parent_id: parentId || null,
+      reactions: [],
+      reply_count: 0
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase sendMessage error:', error);
+    });
   };
 
   const togglePinMessage = (messageId: string) => {
@@ -583,28 +1125,27 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setMessages(prev => prev.map(m => {
       if (m.id === messageId) {
         const existing = m.reactions.find(r => r.emoji === emoji);
+        let updatedReactions;
         if (existing) {
           if (existing.userIds.includes(currentUserId)) {
-            // Remove user
             const filteredUsers = existing.userIds.filter(id => id !== currentUserId);
-            return {
-              ...m,
-              reactions: filteredUsers.length > 0
-                ? m.reactions.map(r => r.emoji === emoji ? { ...r, userIds: filteredUsers } : r)
-                : m.reactions.filter(r => r.emoji !== emoji)
-            };
+            updatedReactions = filteredUsers.length > 0
+              ? m.reactions.map(r => r.emoji === emoji ? { ...r, userIds: filteredUsers } : r)
+              : m.reactions.filter(r => r.emoji !== emoji);
           } else {
-            return {
-              ...m,
-              reactions: m.reactions.map(r => r.emoji === emoji ? { ...r, userIds: [...r.userIds, currentUserId] } : r)
-            };
+            updatedReactions = m.reactions.map(r => r.emoji === emoji ? { ...r, userIds: [...r.userIds, currentUserId] } : r);
           }
         } else {
-          return {
-            ...m,
-            reactions: [...m.reactions, { emoji, userIds: [currentUserId] }]
-          };
+          updatedReactions = [...m.reactions, { emoji, userIds: [currentUserId] }];
         }
+
+        supabase.from('chat_messages').update({
+          reactions: updatedReactions
+        }).eq('id', messageId).then(({ error }) => {
+          if (error) console.warn('Supabase updateReaction error:', error);
+        });
+
+        return { ...m, reactions: updatedReactions };
       }
       return m;
     }));
@@ -639,7 +1180,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       particleCount: 30,
       spread: 45,
       origin: { y: 0.8 },
-      colors: ['#5EBA7D', '#EDE8DB', '#E5B869']
+      colors: ['#000000', '#FFFFFF', '#A1A1AA']
     });
 
     const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -652,11 +1193,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setCheckins(prev => [newCheckin, ...prev.filter(c => !(c.userId === currentUserId && c.date === data.date))]);
 
+    supabase.from('checkins').insert({
+      id: newCheckin.id,
+      user_id: currentUserId,
+      worked_on: data.completedToday || 'Progress logged',
+      next_up: data.workingOnNext || 'Next phase planned',
+      blockers: data.blockers || '',
+      velocity: String(data.mood || 'good').toLowerCase().includes('good') ? 'good' : String(data.mood || 'good')
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase submitCheckin error:', error);
+    });
+
     // Update user status
     let newStatus: User['status'] = 'active';
-    if (data.blockers && data.blockers.toLowerCase() !== 'none' && data.blockers.trim().length > 0) {
-      newStatus = 'active';
-    }
     updateUserStatus(newStatus, data.workingOnNext || data.completedToday);
   };
 
@@ -752,6 +1301,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <WorkspaceContext.Provider
       value={{
+        supabaseConnected,
         activeTab,
         setActiveTab,
         quickCaptureOpen,
@@ -769,6 +1319,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setCurrentUser,
         switchUserById,
         users,
+        isVijayrajkumar,
+        addMember,
         updateUser,
         updateUserStatus,
         projects,

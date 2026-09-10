@@ -141,6 +141,11 @@ export interface ChatMessage {
   mentions: string[];
   reactions: ChatReaction[];
   convertedToTaskId?: string;
+  attachmentUrl?: string;
+  attachmentType?: 'image' | 'file' | 'audio';
+  attachmentName?: string;
+  attachmentSize?: string;
+  audioDuration?: string;
 }
 
 export interface ChatChannel {

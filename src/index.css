@@ -1,266 +1,252 @@
-/* Font Import: Rounded geometric sans-serif (soft terminals, uniform stroke width, friendly-but-modern character) */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300..800;1,300..800&family=Quicksand:wght@300;400;500;600;700&display=swap');
+/* ==============================================================================
+   DESIGN SYSTEM: MONOCHROME EDITORIAL PORTFOLIO
+   Color: Pure Black (#000000) & Pure White (#FFFFFF)
+   Secondary Accent: Silver (#A1A1AA) - Minimal, Refined, Ultra-Clean
+   Typography: Single Grotesk Family (Inter), tight letter-spacing, huge headlines
+   Layout: Hairline 1px dividers, 0 border radius, alternating black/white panels
+   Photography: Original uploaded avatar colors preserved intact
+   ============================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400;500;700&family=VT323&display=swap');
 
 @import "tailwindcss";
 
-/* Color System & Typography Foundation */
 :root {
-  --color-primary-text: #FFFFFF;   /* Primary font color: white */
-  --color-background: #1A1A1A;      /* Dark background */
-  --color-background-alt: #0D0D0D;  /* Secondary darker section */
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+  --color-silver: #A1A1AA;
+  --color-silver-light: #E4E4E7;
+  --color-silver-muted: #71717A;
+  --color-silver-dark: #52525B;
 
-  --font-rounded-geometric: 'Quicksand', 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-background: #000000;
+  --color-background-alt: #000000;
+  --color-primary-text: #FFFFFF;
 
-  --color-surface: #222222;
-  --color-surface-hover: #2B2B2B;
-  --color-surface-card: #202020;
-  --color-border: #333333;
-  --color-border-subtle: #262626;
-  --color-accent: #E5B869;
-  --color-text-muted: #B3B3B3;
-  --color-text-faint: #737373;
-
-  --uvl-black: #1A1A1A;
-  --uvl-charcoal: #0D0D0D;
-  --uvl-surface: #222222;
-  --uvl-surface-light: #2A2A2A;
-  --uvl-surface-border: #333333;
-  --uvl-cream: #FFFFFF;
-  --uvl-cream-dim: #B3B3B3;
-  --uvl-cream-faint: rgba(255, 255, 255, 0.08);
-  --uvl-amber: #E5B869;
-  --uvl-emerald: #5EBA7D;
-  --uvl-crimson: #E05A47;
-  --uvl-cyan: #4EC5D4;
-  --uvl-purple: #9D7BFF;
+  --font-editorial: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono-meta: 'JetBrains Mono', monospace;
 }
 
-/* Base Typography — Rounded Geometric Sans-Serif across FULL PAGE, EVERY PAGE */
+/* ZERO BORDER-RADIUS GLOBALLY: Minimal, refined, sharp architectural lines */
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Base Body */
 html,
 body {
-  background-color: var(--color-background);
-  color: var(--color-primary-text);
-  font-family: var(--font-rounded-geometric);
-  font-weight: 500;
-  letter-spacing: 0.01em;
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-editorial);
+  font-weight: 400;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Headings */
+/* AVATAR PHOTOS & IMAGES: Original uploaded color preserved completely */
+img,
+.avatar-photo,
+.avatar-img {
+  filter: none !important;
+  image-rendering: auto;
+}
+
+/* Typography Hierarchy */
 h1, h2, h3, h4, h5, h6, .headline {
-  font-family: var(--font-rounded-geometric);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-editorial);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-transform: none; /* sentence case */
 }
 
-.headline em, .accent-italic {
-  font-family: 'Nunito', var(--font-rounded-geometric);
-  font-style: italic;
-  font-weight: 600;
-  color: var(--color-accent);
+.headline-display {
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-weight: 800;
 }
 
-/* Applied throughout full page, every page, all components */
-button, input, select, textarea, p, span, div, a, label, li, td, th {
-  font-family: var(--font-rounded-geometric);
+.headline-section {
+  font-size: clamp(1.75rem, 3.5vw, 3rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  font-weight: 700;
 }
 
-.font-patch,
-.font-serif,
-.font-playfair,
-.font-sans,
-.font-rounded {
-  font-family: var(--font-rounded-geometric);
+/* Body & Column Text: narrow, tight line-height */
+p, .body-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: inherit;
 }
 
-/* Map font-mono to rounded geometric sans across layout elements */
-.font-mono {
-  font-family: var(--font-rounded-geometric);
+/* Micro Labels & Metadata */
+.micro-label {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
-/* Technical elements retain crisp monospace for PINs & telemetry */
-.font-mono-tech,
-kbd,
-code,
-pre {
-  font-family: 'JetBrains Mono', monospace !important;
+.meta-number {
+  font-family: var(--font-mono-meta);
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
-/* Brand Identity Logo Protection - 100% INTACT */
+/* Interactive & Secondary Accent: Silver (#A1A1AA) */
+.text-accent-silver,
+.text-accent-blue,
+.text-\[\#0055FF\] {
+  color: var(--color-silver) !important;
+}
+
+.bg-accent-silver,
+.bg-accent-blue,
+.bg-\[\#0055FF\] {
+  background-color: var(--color-silver) !important;
+  color: #000000 !important;
+}
+
+.border-accent-silver,
+.border-accent-blue,
+.border-\[\#0055FF\] {
+  border-color: var(--color-silver) !important;
+}
+
+/* Alternating Section Classes */
+.section-black {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+  border-top: 1px solid #FFFFFF;
+}
+
+.section-white {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-top: 1px solid #000000;
+}
+
+.section-white input,
+.section-white select,
+.section-white textarea {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.section-white button.btn-outline {
+  border-color: #000000 !important;
+  color: #000000 !important;
+}
+
+.section-white button.btn-outline:hover {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+/* Hairline 1px rules */
+.hairline-b {
+  border-bottom: 1px solid currentColor;
+}
+
+.hairline-t {
+  border-top: 1px solid currentColor;
+}
+
+.hairline-r {
+  border-right: 1px solid currentColor;
+}
+
+.hairline-l {
+  border-left: 1px solid currentColor;
+}
+
+.hairline-all {
+  border: 1px solid currentColor;
+}
+
+/* Entrance moment on page load */
+@keyframes editorialReveal {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.editorial-reveal {
+  animation: editorialReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom Minimal Silver Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-silver);
+}
+
+/* Brand Identity Patch Badge Emblem Protection */
 .brand-logo-intact,
 .brand-logo-intact *,
 .font-brand-logo {
   font-family: 'VT323', monospace !important;
 }
 
-/* Fabric twill & patch textures with new dark color palette */
-.bg-twill {
-  background-color: var(--color-background);
-  background-image: 
-    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0),
-    radial-gradient(rgba(255, 255, 255, 0.015) 1px, var(--color-background) 0);
-  background-size: 8px 8px;
-  background-position: 0 0, 4px 4px;
-}
-
-.bg-patch-fabric {
-  background-color: var(--color-background-alt);
-  background-image: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.015),
-    rgba(255, 255, 255, 0.015) 2px,
-    transparent 2px,
-    transparent 4px
-  );
-}
-
-/* Embroidered Stitched Borders */
-.border-stitched {
-  border: 1.5px dashed rgba(255, 255, 255, 0.35);
-}
-
-.border-stitched-amber {
-  border: 1.5px dashed rgba(229, 184, 105, 0.5);
-}
-
-.border-stitched-green {
-  border: 1.5px dashed rgba(94, 186, 125, 0.5);
-}
-
-.border-stitched-crimson {
-  border: 1.5px dashed rgba(224, 90, 71, 0.5);
-}
-
-/* Patch Geometry - Chamfered Octagonal Corners */
-.patch-pill {
-  clip-path: polygon(
-    14px 0%, 
-    calc(100% - 14px) 0%, 
-    100% 14px, 
-    100% calc(100% - 14px), 
-    calc(100% - 14px) 100%, 
-    14px 100%, 
-    0% calc(100% - 14px), 
-    0% 14px
-  );
-}
-
-.patch-chamfer-sm {
-  clip-path: polygon(
-    6px 0%, 
-    calc(100% - 6px) 0%, 
-    100% 6px, 
-    100% calc(100% - 6px), 
-    calc(100% - 6px) 100%, 
-    6px 100%, 
-    0% calc(100% - 6px), 
-    0% 6px
-  );
-}
-
-.patch-chamfer-md {
-  clip-path: polygon(
-    10px 0%, 
-    calc(100% - 10px) 0%, 
-    100% 10px, 
-    100% calc(100% - 10px), 
-    calc(100% - 10px) 100%, 
-    10px 100%, 
-    0% calc(100% - 10px), 
-    0% 10px
-  );
-}
-
-/* Subtle embroidered ridge shadow */
-.patch-embroidery-shadow {
-  box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.6),
-    0 4px 12px rgba(0, 0, 0, 0.5);
-}
-
-.patch-raised {
-  box-shadow: 
-    0 2px 0 #000,
-    0 4px 8px rgba(0,0,0,0.6);
-  transition: transform 0.08s ease, box-shadow 0.08s ease;
-}
-
-.patch-raised:active {
-  transform: translateY(2px);
-  box-shadow: 0 0 0 #000;
-}
-
-/* Custom Tactical Scrollbars aligned with #1A1A1A / #0D0D0D */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-background-alt);
-}
-
-::-webkit-scrollbar-thumb {
-  background: #333333;
-  border-radius: 0px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #E5B869;
-}
-
-/* Color Overrides: Remap legacy palette to #1A1A1A / #0D0D0D / #FFFFFF */
-.bg-\[\#0B0C0E\],
-.bg-\[\#0b0c0e\] {
-  background-color: var(--color-background) !important;
-}
-
-.bg-\[\#0C0E10\],
-.bg-\[\#0c0e10\],
+/* Remap legacy styling classes */
+.bg-\[\#1A1A1A\],
+.bg-\[\#0D0D0D\],
 .bg-\[\#0C0E11\],
-.bg-\[\#0c0e11\] {
-  background-color: var(--color-background-alt) !important;
+.bg-\[\#0B0C0E\],
+.bg-\[\#202020\],
+.bg-\[\#222222\],
+.bg-\[\#242424\],
+.bg-\[\#2A2A2A\],
+.bg-\[\#181B20\] {
+  background-color: #000000 !important;
 }
 
-.bg-\[\#14171B\],
-.bg-\[\#14171C\],
-.bg-\[\#16191D\],
-.bg-\[\#181B20\],
-.bg-\[\#191D22\],
-.bg-\[\#171A1E\],
-.bg-\[\#1C2027\],
-.bg-\[\#1F242C\],
-.bg-\[\#1A1E24\],
-.bg-\[\#111316\] {
-  background-color: var(--color-surface) !important;
-}
-
-.text-\[\#EDE8DB\],
-.text-\[\#D8D2C2\] {
-  color: var(--color-primary-text) !important;
-}
-
-.text-\[\#9E9A8E\],
-.text-\[\#666B75\],
-.text-\[\#757168\] {
-  color: var(--color-text-muted) !important;
-}
-
-.border-\[\#242930\],
-.border-\[\#2A303A\],
-.border-\[\#2B313B\],
+.border-\[\#333333\],
+.border-\[\#262626\],
 .border-\[\#252B35\],
-.border-\[\#262C36\],
-.border-\[\#282F3B\],
-.border-\[\#2D3440\],
-.border-\[\#2D333F\],
-.border-\[\#323A48\],
-.border-\[\#303642\],
-.border-\[\#323945\],
-.border-\[\#1F242C\] {
-  border-color: var(--color-border) !important;
+.border-\[\#242930\],
+.border-\[\#2D333F\] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
+.border-\[\#E5B869\],
+.bg-\[\#E5B869\],
+.text-\[\#E5B869\] {
+  border-color: var(--color-silver) !important;
+}
+
+.text-\[\#E5B869\] {
+  color: var(--color-silver) !important;
+}
+
+.bg-\[\#E5B869\] {
+  background-color: var(--color-silver) !important;
+  color: #000000 !important;
+}
+
+.patch-pill,
+.patch-chamfer-sm,
+.patch-chamfer-md {
+  clip-path: none !important;
+}

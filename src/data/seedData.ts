@@ -9,7 +9,7 @@ export const initialUsers: User[] = [
     avatarUrl: '/avatars/vijayrajkumar.png',
     avatarEmblem: 'crosshair',
     avatarBg: '#1C2128',
-    avatarStitch: '#E5B869',
+    avatarStitch: '#A1A1AA',
     callsign: 'VIJAY-01',
     pin: '1001',
     status: 'active',

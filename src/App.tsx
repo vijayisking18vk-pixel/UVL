@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
+import { LoginPortal } from './components/auth/LoginPortal';
 import { Header } from './components/layout/Header';
 import { DashboardView } from './components/dashboard/DashboardView';
-import { CalendarView } from './components/calendar/CalendarView';
 import { TasksView } from './components/tasks/TasksView';
+import { CalendarView } from './components/calendar/CalendarView';
 import { MeetingsView } from './components/meetings/MeetingsView';
 import { NotesView } from './components/notes/NotesView';
 import { FilesView } from './components/files/FilesView';
@@ -13,10 +14,33 @@ import { PatchAvatarLab } from './components/personalization/PatchAvatarLab';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { AccessControlModal } from './components/access/AccessControlModal';
-import { LoginPortal } from './components/auth/LoginPortal';
 
 const AppContent: React.FC = () => {
-  const { activeTab, workspaceConfig, isAuthenticated } = useWorkspace();
+  const {
+    isAuthenticated,
+    activeTab,
+    setQuickCaptureOpen,
+    setCommandPaletteOpen
+  } = useWorkspace();
+
+  // Keyboard shortcut listener for fast operations
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K => Command Palette
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+      // Cmd/Ctrl + Shift + N => Quick Capture Brain Dump
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        setQuickCaptureOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setCommandPaletteOpen, setQuickCaptureOpen]);
 
   if (!isAuthenticated) {
     return <LoginPortal />;
@@ -26,10 +50,10 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardView />;
-      case 'calendar':
-        return <CalendarView />;
       case 'tasks':
         return <TasksView />;
+      case 'calendar':
+        return <CalendarView />;
       case 'meetings':
         return <MeetingsView />;
       case 'notes':
@@ -38,7 +62,7 @@ const AppContent: React.FC = () => {
         return <FilesView />;
       case 'chat':
         return <ChatView />;
-      case 'checkins':
+      case 'pulse':
         return <CheckinsView />;
       case 'personalization':
         return <PatchAvatarLab />;
@@ -47,13 +71,38 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const { supabaseConnected } = useWorkspace();
+
   return (
-    <div className="min-h-screen bg-twill text-[#FFFFFF] flex flex-col selection:bg-[#E5B869] selection:text-[#0D0D0D]">
-      {/* Top Tactical Command Header */}
+    <div className="min-h-screen bg-[#000000] text-[#FFFFFF] flex flex-col selection:bg-[#A1A1AA] selection:text-[#000000]">
+      {/* Top Editorial Header */}
       <Header />
 
+      {/* Editorial Marquee Ticker Strip: hairline borders, text-only, single-speed */}
+      <div className="bg-[#000000] border-b border-white/20 py-1.5 px-4 overflow-hidden select-none">
+        <div className="max-w-[1700px] mx-auto flex items-center justify-between text-[11px] text-white/70">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-[#A1A1AA] inline-block" />
+            <span className="micro-label">Database sync:</span>
+            <span className={`meta-number ${supabaseConnected ? 'text-[#A1A1AA]' : 'text-white'}`}>
+              {supabaseConnected ? 'Active / Supabase Live' : 'Ready / Local & Cloud Cache'}
+            </span>
+          </div>
+          <div className="hidden md:flex items-center gap-6">
+            <span>Protocol: Autonomous Command Center</span>
+            <span className="text-white/30">/</span>
+            <span>Roster: Vijayrajkumar / Saai / Harish / Subanesh / Vinayak</span>
+            <span className="text-white/30">/</span>
+            <span className="text-[#A1A1AA]">Zero Mock Fallback</span>
+          </div>
+          <div className="flex items-center gap-2 meta-number text-[10px] text-white/50">
+            <span>UVL·CORE·2026</span>
+          </div>
+        </div>
+      </div>
+
       {/* Main Workspace Viewport */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-6">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-8 editorial-reveal">
         {renderActiveModule()}
       </main>
 
@@ -62,20 +111,22 @@ const AppContent: React.FC = () => {
       <CommandPalette />
       <AccessControlModal />
 
-      {/* Retro Status Footer */}
-      <footer className="border-t border-[#333333] bg-[#0D0D0D]/95 py-3 px-4 text-xs text-[#B3B3B3]">
-        <div className="max-w-[1700px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-[#5EBA7D] rounded-none animate-pulse" />
-            <span className="headline text-xs tracking-wider text-[#FFFFFF] font-normal">
-              Unfounded Venture Lab <em className="accent-italic text-[#B3B3B3]">// Autonomous Protocols</em>
+      {/* Monochrome Editorial Status Footer */}
+      <footer className="border-t border-white/20 bg-[#000000] py-4 px-4 text-xs text-white/60">
+        <div className="max-w-[1700px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="w-1.5 h-1.5 bg-[#A1A1AA]" />
+            <span className="micro-label text-white">
+              Unfounded Venture Lab / Private Operator Roster
             </span>
+            <span className="text-white/30">/</span>
+            <span className="meta-number text-[11px] text-white/50">BUILD 2026.09</span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px]">
-            <span>SHORTCUTS: <kbd className="border border-[#333333] px-1.5 py-0.5 bg-[#222222] text-[#FFFFFF] font-mono-tech text-[10px]">Ctrl+K</kbd> Search</span>
-            <span><kbd className="border border-[#333333] px-1.5 py-0.5 bg-[#222222] text-[#FFFFFF] font-mono-tech text-[10px]">Ctrl+Shift+N</kbd> Brain Dump</span>
-            <span className="text-[#E5B869] font-normal">SESSION ACTIVE <em className="accent-italic">// LOCAL AIRGAP SYNC</em></span>
+          <div className="flex items-center gap-4 micro-label text-white/70">
+            <span>Shortcuts / <kbd className="border border-white/30 px-1 py-0.5 bg-white/5 text-white meta-number text-[10px]">Ctrl+K</kbd> Search</span>
+            <span><kbd className="border border-white/30 px-1 py-0.5 bg-white/5 text-white meta-number text-[10px]">Ctrl+Shift+N</kbd> Quick Capture</span>
+            <span className="text-[#A1A1AA] font-medium">Session Authenticated / Secure Vault</span>
           </div>
         </div>
       </footer>
@@ -83,13 +134,10 @@ const AppContent: React.FC = () => {
   );
 };
 
-export function App() {
+export default function App() {
   return (
     <WorkspaceProvider>
       <AppContent />
     </WorkspaceProvider>
   );
 }
-
-export default App;
-

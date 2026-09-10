@@ -106,71 +106,74 @@ export const CalendarView: React.FC = () => {
   };
 
   const categoryBadges: Record<CalendarLayer, { label: string; color: string; border: string; bg: string }> = {
-    team: { label: 'Team Shared', color: '#EDE8DB', border: 'border-[#EDE8DB]/50', bg: 'bg-[#1F2328]' },
-    personal: { label: 'Personal Schedule', color: '#E5B869', border: 'border-[#E5B869]/50', bg: 'bg-[#292215]' },
-    meeting: { label: 'Meeting', color: '#4EC5D4', border: 'border-[#4EC5D4]/50', bg: 'bg-[#152329]' },
-    task_deadline: { label: 'Task Deadline', color: '#E05A47', border: 'border-[#E05A47]/50', bg: 'bg-[#291717]' }
+    team: { label: 'Team Shared', color: '#FFFFFF', border: 'border-white/40', bg: 'bg-black' },
+    personal: { label: 'Personal Schedule', color: '#A1A1AA', border: 'border-[#A1A1AA]/60', bg: 'bg-black' },
+    meeting: { label: 'Meeting', color: '#FFFFFF', border: 'border-white/60', bg: 'bg-black' },
+    task_deadline: { label: 'Task Deadline', color: '#A1A1AA', border: 'border-[#A1A1AA]/80', bg: 'bg-black' }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Top Header & Overlay Controller */}
-      <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1F242C] border border-[#3A4250] flex items-center justify-center patch-chamfer-sm text-[#E5B869]">
-              <CalendarIcon size={20} />
+      <div className="border-b border-white/20 pb-6">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 micro-label text-white/60">
+              <span className="w-1.5 h-1.5 bg-[#A1A1AA]" />
+              <span>Index</span>
+              <span>/</span>
+              <span>Schedule</span>
+              <span>/</span>
+              <span className="meta-number text-white">Calendar Operations</span>
             </div>
-            <div>
-              <h2 className="font-patch text-2xl font-bold tracking-wider text-[#EDE8DB] uppercase">
-                Team & Personal Command Calendar
-              </h2>
-              <p className="font-mono text-xs text-[#9E9A8E]">
-                Layered multi-calendar with auto-synced meetings & task deadline telemetry.
-              </p>
-            </div>
+            <h1 className="headline-section font-bold tracking-tight text-white">
+              Command Calendar.
+            </h1>
+            <p className="body-text text-xs text-white/70 max-w-xl">
+              Layered team and personal schedules, auto-synced meeting rooms, and real-time task milestone deadlines.
+            </p>
           </div>
 
           {/* Action Bar */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex bg-[#0C0E11] border border-[#2D333F] p-0.5 patch-chamfer-sm">
+            <div className="flex items-center gap-2 border border-white/20 px-2 py-1">
               <button
                 onClick={() => setViewMode('month')}
-                className={`px-3 py-1 font-mono text-xs transition-colors ${
+                className={`micro-label transition-colors cursor-pointer ${
                   viewMode === 'month'
-                    ? 'bg-[#E5B869] text-[#0B0C0E] font-bold'
-                    : 'text-[#9E9A8E] hover:text-[#EDE8DB]'
+                    ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                    : 'text-white/60 hover:text-white'
                 }`}
               >
-                Month Grid
+                Month Grid /
               </button>
               <button
                 onClick={() => setViewMode('agenda')}
-                className={`px-3 py-1 font-mono text-xs transition-colors ${
+                className={`micro-label transition-colors cursor-pointer ${
                   viewMode === 'agenda'
-                    ? 'bg-[#E5B869] text-[#0B0C0E] font-bold'
-                    : 'text-[#9E9A8E] hover:text-[#EDE8DB]'
+                    ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                    : 'text-white/60 hover:text-white'
                 }`}
               >
-                Agenda List
+                Agenda List /
               </button>
             </div>
 
             <button
               onClick={() => setIsAddOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold transition-transform active:scale-95 patch-chamfer-sm shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Plus size={14} strokeWidth={3} />
-              Add Event
+              <Plus size={14} strokeWidth={2.5} />
+              <span>Schedule Event /</span>
             </button>
           </div>
         </div>
 
         {/* Calendar Overlay Layer Toggles */}
-        <div className="mt-4 pt-3 border-t border-[#242930] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-xs text-[#9E9A8E] flex items-center gap-1 mr-1">
-              <Layers size={13} className="text-[#E5B869]" /> Overlays:
+        <div className="mt-6 pt-3 border-t border-white/20 flex flex-wrap items-center justify-between gap-4 text-xs">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="micro-label text-white/50 flex items-center gap-1.5 mr-1">
+              <Layers size={13} className="text-[#A1A1AA]" /> Layers:
             </span>
 
             {(Object.keys(categoryBadges) as CalendarLayer[]).map(layerKey => {
@@ -180,28 +183,28 @@ export const CalendarView: React.FC = () => {
                 <button
                   key={layerKey}
                   onClick={() => toggleLayer(layerKey)}
-                  className={`px-2.5 py-1 font-mono text-xs border transition-all patch-chamfer-sm flex items-center gap-1.5 ${
+                  className={`px-2.5 py-1 text-xs border transition-all flex items-center gap-1.5 cursor-pointer ${
                     active
-                      ? `${badge.bg} ${badge.border} text-[#EDE8DB]`
-                      : 'bg-[#0B0C0E]/40 border-[#222730] text-[#555A65] opacity-50'
+                      ? `${badge.border} text-white font-semibold bg-white/5`
+                      : 'border-white/10 text-white/40'
                   }`}
                 >
                   <span
-                    className="w-2 h-2 rounded-none"
+                    className="w-1.5 h-1.5"
                     style={{ backgroundColor: active ? badge.color : '#555' }}
                   />
-                  <span>{badge.label}</span>
+                  <span className="micro-label">{badge.label}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Project & Member Filter Dropdowns */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <select
               value={selectedProjectId}
               onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="bg-[#0C0E11] border border-[#2D333F] text-[#EDE8DB] text-xs font-mono px-2 py-1 patch-chamfer-sm focus:outline-none focus:border-[#E5B869]"
+              className="bg-black border border-white/30 text-white text-xs px-2.5 py-1 focus:outline-none focus:border-[#A1A1AA]"
             >
               <option value="all">All Projects</option>
               {projects.map(p => (
@@ -212,7 +215,7 @@ export const CalendarView: React.FC = () => {
             <select
               value={selectedMemberId}
               onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="bg-[#0C0E11] border border-[#2D333F] text-[#EDE8DB] text-xs font-mono px-2 py-1 patch-chamfer-sm focus:outline-none focus:border-[#E5B869]"
+              className="bg-black border border-white/30 text-white text-xs px-2.5 py-1 focus:outline-none focus:border-[#A1A1AA]"
             >
               <option value="all">All Members</option>
               {users.map(u => (
@@ -225,15 +228,15 @@ export const CalendarView: React.FC = () => {
 
       {/* MONTH GRID VIEW */}
       {viewMode === 'month' && (
-        <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
+        <div className="bg-[#000000] border border-white/20 p-6">
           {/* Month Navigator */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-4">
-            <div className="flex items-center gap-2">
-              <span className="font-patch text-xl font-bold text-[#EDE8DB] uppercase tracking-wider">
+          <div className="flex items-center justify-between pb-4 border-b border-white/20 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-bold text-white tracking-tight">
                 SEPTEMBER 2026
               </span>
-              <span className="font-mono text-xs px-2 py-0.5 bg-[#1F242C] border border-[#323945] text-[#E5B869]">
-                Q3 SPRINT CYCLE
+              <span className="meta-number text-[10px] px-2 py-0.5 border border-white/20 text-[#A1A1AA]">
+                /SPRINT·CYCLE·03
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -285,20 +288,20 @@ export const CalendarView: React.FC = () => {
                     setNewDate(dateStr);
                     setIsAddOpen(true);
                   }}
-                  className={`min-h-[105px] p-2 border transition-all cursor-pointer patch-chamfer-sm flex flex-col justify-between ${
+                  className={`min-h-[105px] p-2.5 border transition-colors cursor-pointer flex flex-col justify-between ${
                     isToday
-                      ? 'bg-[#181E27] border-[#4EC5D4] shadow-[0_0_8px_rgba(78,197,212,0.15)]'
-                      : 'bg-[#16191E] border-[#252C36] hover:border-[#E5B869]/50'
+                      ? 'bg-white/5 border-[#A1A1AA]'
+                      : 'bg-black border-white/20 hover:border-white'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`font-mono text-xs font-bold ${
-                      isToday ? 'text-[#4EC5D4] px-1 bg-[#4EC5D4]/20' : 'text-[#EDE8DB]'
+                    <span className={`meta-number text-xs font-bold ${
+                      isToday ? 'text-[#A1A1AA] px-1 bg-[#A1A1AA]/10' : 'text-white'
                     }`}>
                       {dayNum}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="font-mono text-[9px] text-[#9E9A8E]">
+                      <span className="meta-number text-[9px] text-white/50">
                         {dayEvents.length} ev
                       </span>
                     )}
@@ -315,8 +318,7 @@ export const CalendarView: React.FC = () => {
                             e.stopPropagation();
                             setSelectedEvent(ev);
                           }}
-                          className={`px-1.5 py-0.5 text-[10px] font-mono truncate border patch-chamfer-sm ${badge.bg} ${badge.border}`}
-                          style={{ color: badge.color }}
+                          className={`px-1.5 py-0.5 text-[10px] meta-number truncate border ${badge.border} text-white hover:border-[#A1A1AA]`}
                           title={`${ev.title} (${ev.startTime})`}
                         >
                           {ev.startTime} {ev.title}
@@ -403,42 +405,40 @@ export const CalendarView: React.FC = () => {
 
       {/* EVENT DETAILS MODAL */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#14171B] border-2 border-[#323A48] max-w-lg w-full p-5 patch-chamfer-md shadow-2xl relative">
-            <div className="absolute inset-[3px] border border-dashed border-[#EDE8DB]/20 pointer-events-none patch-chamfer-md" />
-
-            <div className="flex items-start justify-between gap-4 pb-3 border-b border-[#242930] mb-4">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="bg-[#000000] text-white border border-white/40 max-w-lg w-full p-6 relative">
+            <div className="flex items-start justify-between gap-4 pb-3 border-b border-white/20 mb-4">
               <div>
-                <span className={`text-[10px] font-mono px-2 py-0.5 border uppercase ${categoryBadges[selectedEvent.category].border}`} style={{ color: categoryBadges[selectedEvent.category].color }}>
-                  {categoryBadges[selectedEvent.category].label}
+                <span className={`meta-number text-[10px] px-2 py-0.5 border uppercase ${categoryBadges[selectedEvent.category].border}`} style={{ color: categoryBadges[selectedEvent.category].color }}>
+                  /{categoryBadges[selectedEvent.category].label}
                 </span>
-                <h3 className="font-mono text-base font-bold text-[#EDE8DB] mt-2">
+                <h3 className="text-base font-bold text-white mt-2">
                   {selectedEvent.title}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB]"
+                className="text-white/60 hover:text-white cursor-pointer p-1"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs text-[#EDE8DB]">
-              <div className="flex items-center gap-2">
-                <Clock size={14} className="text-[#E5B869]" />
+            <div className="space-y-3 text-xs text-white">
+              <div className="flex items-center gap-2 meta-number">
+                <Clock size={14} className="text-[#A1A1AA]" />
                 <span>{selectedEvent.date} • {selectedEvent.startTime} - {selectedEvent.endTime}</span>
               </div>
 
               {selectedEvent.location && (
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} className="text-[#5EBA7D]" />
+                <div className="flex items-center gap-2 micro-label">
+                  <MapPin size={14} className="text-[#A1A1AA]" />
                   <span>{selectedEvent.location}</span>
                 </div>
               )}
 
               {selectedEvent.description && (
-                <div className="p-3 bg-[#0C0E11] border border-[#252B36] patch-chamfer-sm text-[#D8D2C2]">
+                <div className="p-3 border border-white/20 text-white/80">
                   {selectedEvent.description}
                 </div>
               )}
@@ -450,10 +450,10 @@ export const CalendarView: React.FC = () => {
                       setSelectedEvent(null);
                       setActiveTab('meetings');
                     }}
-                    className="w-full py-1.5 bg-[#4EC5D4]/15 hover:bg-[#4EC5D4]/25 border border-[#4EC5D4]/40 text-[#4EC5D4] font-mono text-xs patch-chamfer-sm flex items-center justify-center gap-2"
+                    className="w-full py-2 border border-white/30 hover:border-[#A1A1AA] text-[#A1A1AA] text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <Users size={13} />
-                    Open Linked Meeting Notes & Action Items
+                    Open Linked Meeting Notes & Action Items /
                   </button>
                 </div>
               )}
@@ -465,30 +465,30 @@ export const CalendarView: React.FC = () => {
                       setSelectedEvent(null);
                       setActiveTab('tasks');
                     }}
-                    className="w-full py-1.5 bg-[#E05A47]/15 hover:bg-[#E05A47]/25 border border-[#E05A47]/40 text-[#E05A47] font-mono text-xs patch-chamfer-sm flex items-center justify-center gap-2"
+                    className="w-full py-2 border border-white/30 hover:border-[#A1A1AA] text-white text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     <CheckSquare size={13} />
-                    View Linked Task on Task Board
+                    View Linked Task on Task Board /
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#242930] flex items-center justify-between">
+            <div className="mt-6 pt-3 border-t border-white/20 flex items-center justify-between">
               <button
                 onClick={() => {
                   deleteCalendarEvent(selectedEvent.id);
                   setSelectedEvent(null);
                 }}
-                className="font-mono text-xs text-[#E05A47] hover:underline"
+                className="text-xs text-white/60 hover:text-[#A1A1AA] cursor-pointer"
               >
-                Delete Event
+                Delete Event /
               </button>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="px-4 py-1.5 bg-[#252B34] hover:bg-[#323945] text-[#EDE8DB] font-mono text-xs patch-chamfer-sm"
+                className="px-4 py-1.5 bg-white text-black hover:bg-[#A1A1AA] hover:text-black text-xs font-semibold cursor-pointer"
               >
-                Close
+                Close /
               </button>
             </div>
           </div>
@@ -497,56 +497,54 @@ export const CalendarView: React.FC = () => {
 
       {/* ADD EVENT MODAL */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           <form
             onSubmit={handleAddSubmit}
-            className="bg-[#14171B] border-2 border-[#323A48] max-w-lg w-full p-5 patch-chamfer-md shadow-2xl relative"
+            className="bg-[#000000] text-white border border-white/40 max-w-lg w-full p-6 relative"
           >
-            <div className="absolute inset-[3px] border border-dashed border-[#EDE8DB]/20 pointer-events-none patch-chamfer-md" />
-
-            <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-4">
-              <h3 className="font-patch text-xl font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Schedule Lab Event
+            <div className="flex items-center justify-between pb-3 border-b border-white/20 mb-4">
+              <h3 className="text-base font-bold text-white uppercase">
+                Schedule Event
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB]"
+                className="text-white/60 hover:text-white cursor-pointer p-1"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Event Title *</label>
+                <label className="block micro-label text-white/60 mb-1">Event Title *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Partner Review: Quantum Silicon Moat"
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                  className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Date *</label>
+                  <label className="block micro-label text-white/60 mb-1">Date *</label>
                   <input
                     type="date"
                     required
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Overlay Category</label>
+                  <label className="block micro-label text-white/60 mb-1">Overlay Category</label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value as CalendarLayer)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     <option value="team">Team Shared</option>
                     <option value="personal">Personal Schedule</option>
@@ -557,32 +555,32 @@ export const CalendarView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Start Time</label>
+                  <label className="block micro-label text-white/60 mb-1">Start Time</label>
                   <input
                     type="time"
                     value={newStartTime}
                     onChange={(e) => setNewStartTime(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">End Time</label>
+                  <label className="block micro-label text-white/60 mb-1">End Time</label>
                   <input
                     type="time"
                     value={newEndTime}
                     onChange={(e) => setNewEndTime(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Linked Project</label>
+                  <label className="block micro-label text-white/60 mb-1">Linked Project</label>
                   <select
                     value={newProjectId}
                     onChange={(e) => setNewProjectId(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     <option value="">None / General</option>
                     {projects.map(p => (
@@ -591,42 +589,42 @@ export const CalendarView: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Location / Link</label>
+                  <label className="block micro-label text-white/60 mb-1">Location / Link</label>
                   <input
                     type="text"
                     value={newLocation}
                     onChange={(e) => setNewLocation(e.target.value)}
                     placeholder="Lab Pod 1 or Secure Jitsi"
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Description & Notes</label>
+                <label className="block micro-label text-white/60 mb-1">Description & Notes</label>
                 <textarea
                   rows={2}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Tactical details, topics to cover..."
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-none"
+                  className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA] resize-none"
                 />
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#242930] flex items-center justify-end gap-2">
+            <div className="mt-6 pt-3 border-t border-white/20 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsAddOpen(false)}
-                className="px-3 py-1.5 bg-[#1F242C] hover:bg-[#282F3B] text-[#9E9A8E] hover:text-[#EDE8DB] font-mono text-xs patch-chamfer-sm"
+                className="px-3 py-1.5 border border-white/20 hover:border-white text-white/70 text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold patch-chamfer-sm"
+                className="px-4 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-semibold cursor-pointer"
               >
-                Confirm Event
+                Confirm Event /
               </button>
             </div>
           </form>

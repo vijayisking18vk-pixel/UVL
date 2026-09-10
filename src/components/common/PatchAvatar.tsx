@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User } from '../../types';
 import { 
   Crosshair, Cpu, Radio, Zap, Compass, ShieldAlert, Sparkles
@@ -21,74 +21,69 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
   onClick,
   className = ''
 }) => {
+  const [imgError, setImgError] = useState(false);
+
   const getEmblemIcon = (emblem: string, iconSize: number) => {
     switch (emblem) {
       case 'crosshair':
-        return <Crosshair size={iconSize} className="text-[#EDE8DB]" />;
+        return <Crosshair size={iconSize} className="text-[#A1A1AA]" />;
       case 'chip':
-        return <Cpu size={iconSize} className="text-[#EDE8DB]" />;
+        return <Cpu size={iconSize} className="text-[#A1A1AA]" />;
       case 'radar':
-        return <Radio size={iconSize} className="text-[#EDE8DB]" />;
+        return <Radio size={iconSize} className="text-[#A1A1AA]" />;
       case 'bolt':
-        return <Zap size={iconSize} className="text-[#EDE8DB]" />;
+        return <Zap size={iconSize} className="text-[#A1A1AA]" />;
       case 'compass':
-        return <Compass size={iconSize} className="text-[#EDE8DB]" />;
+        return <Compass size={iconSize} className="text-[#A1A1AA]" />;
       case 'dagger':
-        return <ShieldAlert size={iconSize} className="text-[#EDE8DB]" />;
+        return <ShieldAlert size={iconSize} className="text-[#A1A1AA]" />;
       default:
-        return <Sparkles size={iconSize} className="text-[#EDE8DB]" />;
+        return <Sparkles size={iconSize} className="text-[#A1A1AA]" />;
     }
   };
 
   const dimensions = {
-    sm: { box: 'w-7 h-7', icon: 13, text: 'text-[9px]', chamfer: 'patch-chamfer-sm' },
-    md: { box: 'w-9 h-9', icon: 16, text: 'text-[10px]', chamfer: 'patch-chamfer-sm' },
-    lg: { box: 'w-12 h-12', icon: 20, text: 'text-xs', chamfer: 'patch-chamfer-md' },
-    xl: { box: 'w-16 h-16', icon: 26, text: 'text-sm', chamfer: 'patch-pill' }
+    sm: { box: 'w-7 h-7', icon: 13, text: 'text-[9px]' },
+    md: { box: 'w-9 h-9', icon: 16, text: 'text-[10px]' },
+    lg: { box: 'w-12 h-12', icon: 20, text: 'text-xs' },
+    xl: { box: 'w-16 h-16', icon: 26, text: 'text-sm' }
   }[size];
 
   const statusColors = {
-    active: 'bg-[#5EBA7D] border-[#0B0C0E]',
-    focus: 'bg-[#4EC5D4] border-[#0B0C0E]',
-    reviewing: 'bg-[#E5B869] border-[#0B0C0E]',
-    away: 'bg-[#9E9A8E] border-[#0B0C0E]',
-    leave: 'bg-[#E05A47] border-[#0B0C0E]'
+    active: 'bg-[#A1A1AA] border-[#000000]',
+    focus: 'bg-[#FFFFFF] border-[#000000]',
+    reviewing: 'bg-[#D4D4D8] border-[#000000]',
+    away: 'bg-[#71717A] border-[#000000]',
+    leave: 'bg-[#3F3F46] border-[#000000]'
   };
 
   return (
     <div 
       onClick={onClick}
-      className={`inline-flex items-center gap-2 select-none ${onClick ? 'cursor-pointer hover:opacity-90' : ''} ${className}`}
+      className={`inline-flex items-center gap-2 select-none ${onClick ? 'cursor-pointer hover:opacity-85' : ''} ${className}`}
     >
       <div className="relative">
         <div
-          className={`${dimensions.box} ${dimensions.chamfer} flex items-center justify-center relative shadow-md transition-transform overflow-hidden`}
-          style={{
-            backgroundColor: user.avatarBg || '#16191D',
-            boxShadow: `inset 0 0 0 1.5px ${user.avatarStitch || '#EDE8DB'}`
-          }}
+          className={`${dimensions.box} border border-white/40 bg-[#111111] flex items-center justify-center relative overflow-hidden transition-all`}
           title={`${user.name} (${user.callsign})`}
         >
-          {user.avatarUrl ? (
+          {user.avatarUrl && !imgError ? (
             <img 
               src={user.avatarUrl} 
               alt={user.name} 
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-              }}
+              className="w-full h-full object-cover avatar-img"
+              style={{ filter: 'none' }}
+              onError={() => setImgError(true)}
             />
           ) : (
             getEmblemIcon(user.avatarEmblem, dimensions.icon)
           )}
-          {/* Subtle stitch dash pattern */}
-          <div className="absolute inset-[2px] border border-dashed border-white/30 pointer-events-none" />
         </div>
 
-        {/* Status dot */}
+        {/* Square Status Indicator */}
         {showStatus && (
           <span 
-            className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-none border ${statusColors[user.status]} shadow-sm`}
+            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border ${statusColors[user.status]}`}
             title={`Status: ${user.status}`}
           />
         )}
@@ -96,11 +91,11 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
 
       {showCallsign && (
         <div className="flex flex-col text-left">
-          <span className="font-mono text-xs font-semibold text-[#EDE8DB] leading-tight">
+          <span className="text-xs font-semibold text-[#FFFFFF] leading-tight">
             {user.name}
           </span>
-          <span className="font-mono text-[10px] text-[#9E9A8E] tracking-wider">
-            [{user.callsign}]
+          <span className="meta-number text-[10px] text-[#A1A1AA]">
+            /{user.callsign}
           </span>
         </div>
       )}

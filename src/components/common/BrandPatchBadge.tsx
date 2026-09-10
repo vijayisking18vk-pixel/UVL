@@ -37,7 +37,7 @@ export const BrandPatchBadge: React.FC<BrandPatchBadgeProps> = ({
       >
         {/* Overlock Stitched Border Simulation */}
         <div 
-          className="absolute inset-[3px] patch-pill pointer-events-none border border-dashed border-[#EDE8DB]/40 group-hover:border-[#E5B869]/80 transition-colors"
+          className="absolute inset-[3px] patch-pill pointer-events-none border border-dashed border-[#EDE8DB]/40 group-hover:border-[#A1A1AA] transition-colors"
         />
 
         {/* Woven Twill Texture Overlay */}

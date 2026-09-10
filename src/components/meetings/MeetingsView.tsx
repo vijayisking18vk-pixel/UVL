@@ -11,10 +11,9 @@ import {
   ListTodo,
   CheckCircle2,
   FileText,
-  Send,
   X,
   Sparkles,
-  ChevronRight
+  ArrowRight
 } from 'lucide-react';
 
 export const MeetingsView: React.FC = () => {
@@ -63,7 +62,7 @@ export const MeetingsView: React.FC = () => {
       duration: newDuration,
       attendeeIds: newAttendees,
       agenda,
-      notes: `### Tactical Dossier: ${newTitle}\n\n- Briefing notes initialized on ${newDate}.\n- Agenda aligned. Action items listed below.`,
+      notes: `### Tactical dossier: ${newTitle}\n\n- Briefing notes initialized on ${newDate}.\n- Agenda aligned. Action items listed below.`,
       actionItems: [],
       link: newLink
     });
@@ -108,96 +107,102 @@ export const MeetingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1F242C] border border-[#3A4250] flex items-center justify-center patch-chamfer-sm text-[#4EC5D4]">
-              <Users size={20} />
+    <div className="space-y-12 pb-16">
+      {/* Editorial Header Section */}
+      <section className="border-b border-white/20 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
+              <span>operations</span>
+              <span>/</span>
+              <span className="text-[#A1A1AA]">war rooms & briefings</span>
+              <span>/</span>
+              <span>live dispatch</span>
             </div>
-            <div>
-              <h2 className="font-patch text-2xl font-bold tracking-wider text-[#EDE8DB] uppercase">
-                War Room & Meeting Operations
-              </h2>
-              <p className="font-mono text-xs text-[#9E9A8E]">
-                Agenda planning, live collaborative notes, and 1-click action item to task conversions.
-              </p>
-            </div>
+            <h1 className="headline-section text-white font-bold tracking-tight">
+              War room & briefings.
+            </h1>
+            <p className="text-white/60 text-sm mt-2 max-w-xl">
+              Agenda planning, live collaborative notes, and one-click action item to task conversions.
+            </p>
           </div>
 
           <button
             onClick={() => setIsScheduleOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold transition-transform active:scale-95 patch-chamfer-sm shadow-sm"
+            className="self-start md:self-auto flex items-center gap-2 px-5 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium text-xs tracking-wide transition-all uppercase"
           >
-            <Plus size={14} strokeWidth={3} />
-            Schedule War Room
+            <Plus size={14} />
+            <span>Schedule war room</span>
           </button>
         </div>
-      </div>
+      </section>
 
       {/* Main Two-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Meeting Directory */}
-        <div className="lg:col-span-4 bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md space-y-3">
-          <div className="flex items-center justify-between pb-2.5 border-b border-[#242930]">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#9E9A8E]">
-              Scheduled Sessions ({meetings.length})
-            </h3>
+        {/* Left Column: Scheduled Sessions List */}
+        <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-white/20 text-xs font-mono text-white/50 uppercase tracking-wider">
+            <span>Sessions ({meetings.length})</span>
+            <span className="text-[#A1A1AA]">Synchronized</span>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {meetings.length === 0 ? (
-              <div className="p-8 text-center border border-dashed border-[#262C36] bg-[#0C0E11] font-mono text-xs text-[#9E9A8E]">
-                No scheduled sessions. Click "Schedule War Room" to convene a session.
+              <div className="p-8 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
+                No scheduled war rooms. Click "Schedule war room" to convene a session.
               </div>
             ) : (
               meetings.map(m => {
-              const isActive = m.id === activeMeetingId;
-              const pendingActions = m.actionItems.filter(ai => !ai.convertedToTaskId).length;
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => setActiveMeetingId(m.id)}
-                  className={`p-3 border patch-chamfer-sm cursor-pointer transition-all ${
-                    isActive
-                      ? 'bg-[#1A222B] border-[#4EC5D4] shadow-md'
-                      : 'bg-[#181B20] border-[#252B35] hover:border-[#E5B869]/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-mono text-[10px] text-[#4EC5D4] font-bold flex items-center gap-1">
-                      <Calendar size={11} /> {m.date}
-                    </span>
-                    <span className="font-mono text-[10px] text-[#9E9A8E]">
-                      {m.time} ({m.duration})
-                    </span>
-                  </div>
-
-                  <h4 className="font-mono text-xs font-semibold text-[#EDE8DB] leading-snug">
-                    {m.title}
-                  </h4>
-
-                  <div className="mt-2.5 flex items-center justify-between gap-2">
-                    <div className="flex items-center -space-x-1.5">
-                      {m.attendeeIds.slice(0, 4).map(uid => {
-                        const user = users.find(u => u.id === uid);
-                        return user ? (
-                          <PatchAvatar key={uid} user={user} size="sm" />
-                        ) : null;
-                      })}
+                const isActive = m.id === activeMeetingId;
+                const pendingActions = m.actionItems.filter(ai => !ai.convertedToTaskId).length;
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => setActiveMeetingId(m.id)}
+                    className={`p-4 border cursor-pointer transition-all ${
+                      isActive
+                        ? 'border-[#A1A1AA] bg-white text-black'
+                        : 'border-white/20 bg-black text-white hover:border-white/60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className={`text-[11px] font-mono font-bold flex items-center gap-1.5 ${isActive ? 'text-[#A1A1AA]' : 'text-[#A1A1AA]'}`}>
+                        <Calendar size={12} /> {m.date}
+                      </span>
+                      <span className={`text-[11px] font-mono ${isActive ? 'text-black/60' : 'text-white/40'}`}>
+                        {m.time} ({m.duration})
+                      </span>
                     </div>
 
-                    {pendingActions > 0 && (
-                      <span className="font-mono text-[9px] px-1.5 py-0.2 bg-[#E5B869]/20 border border-[#E5B869]/40 text-[#E5B869]">
-                        {pendingActions} Action Items
-                      </span>
-                    )}
+                    <h4 className={`text-sm font-bold tracking-tight mb-3 ${isActive ? 'text-black' : 'text-white'}`}>
+                      {m.title}
+                    </h4>
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-current/10">
+                      <div className="flex items-center -space-x-1">
+                        {m.attendeeIds.slice(0, 4).map(uid => {
+                          const user = users.find(u => u.id === uid);
+                          return user ? (
+                            <PatchAvatar key={uid} user={user} size="sm" />
+                          ) : null;
+                        })}
+                      </div>
+
+                      {pendingActions > 0 && (
+                        <span className={`text-[10px] font-mono px-2 py-0.5 border ${
+                          isActive
+                            ? 'border-[#A1A1AA] text-[#A1A1AA] bg-[#A1A1AA]/10'
+                            : 'border-[#A1A1AA]/60 text-[#A1A1AA] bg-[#A1A1AA]/10'
+                        }`}>
+                          {pendingActions} action item{pendingActions > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            }))}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -205,22 +210,21 @@ export const MeetingsView: React.FC = () => {
         {activeMeeting ? (
           <div className="lg:col-span-8 space-y-6">
             
-            {/* Active Meeting Card */}
-            <div className="bg-[#14171B] border border-[#2A303A] p-5 patch-chamfer-md shadow-md space-y-4">
-              {/* Header Details */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#242930]">
+            {/* Active Session Top Card */}
+            <div className="border border-white/20 bg-black p-6 space-y-6">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-white/20">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-xs text-[#4EC5D4] font-bold px-2 py-0.5 bg-[#4EC5D4]/10 border border-[#4EC5D4]/30">
-                      WAR ROOM DOSSIER
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-[#A1A1AA] text-white uppercase font-bold tracking-wider">
+                      Briefing dossier
                     </span>
-                    <span className="font-mono text-xs text-[#9E9A8E] flex items-center gap-1">
+                    <span className="text-xs font-mono text-white/50 flex items-center gap-1">
                       <Clock size={12} /> {activeMeeting.date} @ {activeMeeting.time} ({activeMeeting.duration})
                     </span>
                   </div>
-                  <h3 className="font-patch text-2xl font-bold uppercase tracking-wide text-[#EDE8DB]">
+                  <h2 className="text-2xl font-bold tracking-tight text-white">
                     {activeMeeting.title}
-                  </h3>
+                  </h2>
                 </div>
 
                 {activeMeeting.link && (
@@ -228,28 +232,28 @@ export const MeetingsView: React.FC = () => {
                     href={activeMeeting.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1F242C] hover:bg-[#2A313C] border border-[#3A4250] text-[#EDE8DB] font-mono text-xs patch-chamfer-sm self-start"
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-white/20 hover:border-white text-white text-xs font-mono uppercase tracking-wider transition-colors self-start"
                   >
                     <ExternalLink size={13} />
-                    Secure Video Feed
+                    <span>Join room link</span>
                   </a>
                 )}
               </div>
 
-              {/* Attendees & Agenda */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Attendees and Agenda Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Attendees */}
-                <div className="p-3 bg-[#0C0E11] border border-[#232832] patch-chamfer-sm">
-                  <span className="font-mono text-[10px] text-[#9E9A8E] uppercase block mb-2">
-                    Confirmed Attendees ({activeMeeting.attendeeIds.length})
+                <div className="p-4 border border-white/20 bg-black">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-white/50 block mb-3">
+                    Confirmed attendees ({activeMeeting.attendeeIds.length})
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {activeMeeting.attendeeIds.map(uid => {
                       const attendee = users.find(u => u.id === uid);
                       return attendee ? (
-                        <div key={uid} className="flex items-center gap-1.5 px-2 py-1 bg-[#16191D] border border-[#2B313B]">
+                        <div key={uid} className="flex items-center gap-2 px-2.5 py-1.5 border border-white/20 bg-black">
                           <PatchAvatar user={attendee} size="sm" />
-                          <span className="font-mono text-xs text-[#EDE8DB]">{attendee.name}</span>
+                          <span className="text-xs font-medium text-white">{attendee.name}</span>
                         </div>
                       ) : null;
                     })}
@@ -257,14 +261,14 @@ export const MeetingsView: React.FC = () => {
                 </div>
 
                 {/* Agenda Items */}
-                <div className="p-3 bg-[#0C0E11] border border-[#232832] patch-chamfer-sm">
-                  <span className="font-mono text-[10px] text-[#9E9A8E] uppercase block mb-2">
-                    Agenda Protocol
+                <div className="p-4 border border-white/20 bg-black">
+                  <span className="text-[11px] font-mono uppercase tracking-wider text-white/50 block mb-3">
+                    Agenda protocol
                   </span>
-                  <ul className="space-y-1 font-mono text-xs text-[#D8D2C2]">
+                  <ul className="space-y-2 text-xs font-mono text-white/80">
                     {activeMeeting.agenda.map((ag, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <span className="text-[#E5B869] font-bold">0{i + 1}.</span>
+                        <span className="text-[#A1A1AA] font-bold">0{i + 1}.</span>
                         <span>{ag}</span>
                       </li>
                     ))}
@@ -273,44 +277,44 @@ export const MeetingsView: React.FC = () => {
               </div>
 
               {/* Collaborative Notes Markdown Editor */}
-              <div className="space-y-2">
+              <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#EDE8DB] flex items-center gap-1.5">
-                    <FileText size={14} className="text-[#E5B869]" />
-                    Collaborative Notes & Briefing (Auto-Saved)
+                  <span className="text-xs font-mono uppercase tracking-wider text-white flex items-center gap-2">
+                    <FileText size={14} className="text-[#A1A1AA]" />
+                    Collaborative briefing notes
                   </span>
-                  <span className="font-mono text-[10px] text-[#5EBA7D]">
-                    ● LIVE SYNC
+                  <span className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">
+                    ● Live sync to Supabase
                   </span>
                 </div>
                 <textarea
                   rows={8}
                   value={activeMeeting.notes}
                   onChange={(e) => handleNotesChange(e.target.value)}
-                  placeholder="Record discussions, decisions, and notes here..."
-                  className="w-full bg-[#0C0E11] border border-[#2C333F] p-3 font-mono text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-y leading-relaxed"
+                  placeholder="Record discussions, decisions, and tactical notes..."
+                  className="w-full bg-black border border-white/20 p-4 font-mono text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-y leading-relaxed"
                 />
               </div>
 
-              {/* ACTION ITEMS CONVERSION ENGINE */}
-              <div className="pt-4 border-t border-[#242930] space-y-3">
-                <div className="flex items-center justify-between">
+              {/* ACTION ITEMS ENGINE */}
+              <div className="pt-6 border-t border-white/20 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-[#E5B869]" />
-                    <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-[#EDE8DB]">
-                      Action Items Engine ({activeMeeting.actionItems.length})
-                    </h4>
+                    <Sparkles size={16} className="text-[#A1A1AA]" />
+                    <h3 className="text-xs font-mono uppercase tracking-wider font-bold text-white">
+                      Action items engine ({activeMeeting.actionItems.length})
+                    </h3>
                   </div>
-                  <span className="font-mono text-[10px] text-[#9E9A8E]">
-                    1-Click Auto-converts to Tasks & Calendar Deadlines
+                  <span className="text-[10px] font-mono text-white/40">
+                    Auto-converts into real tasks and calendar events
                   </span>
                 </div>
 
                 {/* Action Items List */}
                 <div className="space-y-2">
                   {activeMeeting.actionItems.length === 0 ? (
-                    <div className="p-4 text-center border border-dashed border-[#242A33] bg-[#0C0E11] font-mono text-xs text-[#9E9A8E]">
-                      No action items created yet. Add one below to dispatch into the task system.
+                    <div className="p-6 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
+                      No action items logged. Add one below to dispatch directly into the task backlog.
                     </div>
                   ) : (
                     activeMeeting.actionItems.map(ai => {
@@ -319,23 +323,24 @@ export const MeetingsView: React.FC = () => {
                       return (
                         <div
                           key={ai.id}
-                          className="p-2.5 bg-[#171A1F] border border-[#2B323D] patch-chamfer-sm flex items-center justify-between gap-3 font-mono text-xs"
+                          className="p-3.5 border border-white/20 bg-black flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                         >
-                          <div className="flex items-center gap-2.5">
+                          <div className="flex items-start sm:items-center gap-3">
                             {isConverted ? (
-                              <CheckCircle2 size={16} className="text-[#5EBA7D]" />
+                              <CheckCircle2 size={16} className="text-white shrink-0 mt-0.5 sm:mt-0" />
                             ) : (
-                              <div className="w-4 h-4 border border-[#E5B869] flex items-center justify-center text-[10px] text-[#E5B869]">
+                              <div className="w-4 h-4 border border-[#A1A1AA] text-[#A1A1AA] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 sm:mt-0">
                                 !
                               </div>
                             )}
                             <div>
-                              <span className={`text-xs ${isConverted ? 'text-[#D8D2C2]' : 'text-[#EDE8DB] font-semibold'}`}>
+                              <span className={`text-xs ${isConverted ? 'text-white/40 line-through' : 'text-white font-medium'}`}>
                                 {ai.text}
                               </span>
-                              <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#9E9A8E]">
+                              <div className="flex items-center gap-3 mt-1 text-[11px] font-mono text-white/50">
                                 <span>Assigned: {assignee?.name || 'Unassigned'}</span>
-                                <span>• Due: {ai.dueDate}</span>
+                                <span>/</span>
+                                <span>Due: {ai.dueDate}</span>
                               </div>
                             </div>
                           </div>
@@ -344,16 +349,16 @@ export const MeetingsView: React.FC = () => {
                             {isConverted ? (
                               <button
                                 onClick={() => setActiveTab('tasks')}
-                                className="px-2.5 py-1 bg-[#5EBA7D]/15 border border-[#5EBA7D]/40 text-[#5EBA7D] text-[10px] font-mono patch-chamfer-sm hover:underline"
+                                className="px-3 py-1 border border-white/20 text-white/60 text-[11px] font-mono hover:border-white hover:text-white transition-colors"
                               >
-                                ✓ Converted (Task #{ai.convertedToTaskId})
+                                View task #{ai.convertedToTaskId}
                               </button>
                             ) : (
                               <button
                                 onClick={() => convertActionItemToTask(activeMeeting.id, ai.id)}
-                                className="px-3 py-1 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] text-[10px] font-bold font-mono patch-chamfer-sm flex items-center gap-1 shadow-sm transition-transform active:scale-95"
+                                className="px-3 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-[11px] font-medium font-mono uppercase tracking-wide flex items-center gap-1.5 transition-all"
                               >
-                                <ListTodo size={12} /> Convert to Task
+                                <ListTodo size={12} /> Convert to task
                               </button>
                             )}
                           </div>
@@ -366,7 +371,7 @@ export const MeetingsView: React.FC = () => {
                 {/* Add Action Item Inline Form */}
                 <form
                   onSubmit={handleAddActionItem}
-                  className="bg-[#0C0E11] p-3 border border-[#242A33] patch-chamfer-sm flex flex-col md:flex-row items-center gap-2"
+                  className="bg-black p-3.5 border border-white/20 flex flex-col md:flex-row items-stretch gap-2 font-mono text-xs"
                 >
                   <input
                     type="text"
@@ -374,13 +379,13 @@ export const MeetingsView: React.FC = () => {
                     value={actionText}
                     onChange={(e) => setActionText(e.target.value)}
                     placeholder="New action item description..."
-                    className="flex-1 w-full bg-[#14171B] border border-[#2D333F] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm font-mono"
+                    className="flex-1 bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
                   />
 
                   <select
                     value={actionAssignee}
                     onChange={(e) => setActionAssignee(e.target.value)}
-                    className="w-full md:w-36 bg-[#14171B] border border-[#2D333F] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm font-mono"
+                    className="bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.name}</option>
@@ -391,14 +396,14 @@ export const MeetingsView: React.FC = () => {
                     type="date"
                     value={actionDue}
                     onChange={(e) => setActionDue(e.target.value)}
-                    className="w-full md:w-36 bg-[#14171B] border border-[#2D333F] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm font-mono"
+                    className="bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
 
                   <button
                     type="submit"
-                    className="w-full md:w-auto px-4 py-1.5 bg-[#1F242C] hover:bg-[#2A313C] border border-[#3A4250] text-[#EDE8DB] text-xs font-mono font-semibold patch-chamfer-sm whitespace-nowrap"
+                    className="px-5 py-2 bg-white text-black hover:bg-[#A1A1AA] hover:text-black text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
                   >
-                    + Add Item
+                    + Add item
                   </button>
                 </form>
               </div>
@@ -406,13 +411,10 @@ export const MeetingsView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-8 p-16 text-center border border-dashed border-[#2A303A] bg-[#14171B] patch-chamfer-md space-y-3 font-mono">
-            <div className="w-12 h-12 mx-auto bg-[#1F242C] border border-[#3A4250] flex items-center justify-center text-[#9E9A8E] patch-chamfer-sm">
-              <Users size={22} />
-            </div>
-            <h4 className="text-sm font-bold text-[#EDE8DB] uppercase">No War Room Briefings</h4>
-            <p className="text-xs text-[#9E9A8E] max-w-sm mx-auto">
-              No operational sessions scheduled. Click "Schedule War Room" to create agendas and action items.
+          <div className="lg:col-span-8 p-16 text-center border border-dashed border-white/20 bg-black font-mono space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">No session selected</h3>
+            <p className="text-xs text-white/40 max-w-sm mx-auto">
+              Select a briefing from the list or schedule a new one to view meeting agendas and take notes.
             </p>
           </div>
         )}
@@ -420,87 +422,88 @@ export const MeetingsView: React.FC = () => {
 
       {/* SCHEDULE WAR ROOM MODAL */}
       {isScheduleOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           <form
             onSubmit={handleScheduleSubmit}
-            className="bg-[#14171B] border-2 border-[#323A48] max-w-lg w-full p-5 patch-chamfer-md shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto"
           >
-            <div className="absolute inset-[3px] border border-dashed border-[#EDE8DB]/20 pointer-events-none patch-chamfer-md" />
-
-            <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-4">
-              <h3 className="font-patch text-xl font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Schedule War Room Session
-              </h3>
+            <div className="flex items-center justify-between pb-3 border-b border-white/20">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-[#A1A1AA]" />
+                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
+                  Schedule war room
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsScheduleOpen(false)}
-                className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB]"
+                className="text-white/50 hover:text-white p-1"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-4 font-mono text-xs">
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Meeting Topic *</label>
+                <label className="block text-white/50 mb-1 uppercase text-[10px]">Session topic *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="e.g. Series-A Deal Evaluation: NeuralMesh"
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                  placeholder="e.g. Series-A Deal Evaluation"
+                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Date *</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Date *</label>
                   <input
                     type="date"
                     required
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Time</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Time</label>
                   <input
                     type="text"
                     value={newTime}
                     onChange={(e) => setNewTime(e.target.value)}
                     placeholder="10:00 AM"
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Duration</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Duration</label>
                   <input
                     type="text"
                     value={newDuration}
                     onChange={(e) => setNewDuration(e.target.value)}
                     placeholder="60 min"
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-2 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
               </div>
 
               {/* Attendee Selection */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Select Attendees</label>
-                <div className="grid grid-cols-2 gap-2 bg-[#0C0E11] p-2 border border-[#242A33] patch-chamfer-sm">
+                <label className="block text-white/50 mb-1 uppercase text-[10px]">Attendees</label>
+                <div className="grid grid-cols-2 gap-2 border border-white/20 p-3 bg-black">
                   {users.map(u => {
                     const isSelected = newAttendees.includes(u.id);
                     return (
                       <div
                         key={u.id}
                         onClick={() => toggleAttendeeSelection(u.id)}
-                        className={`p-1.5 flex items-center gap-2 cursor-pointer border ${
-                          isSelected ? 'bg-[#1E252E] border-[#4EC5D4] text-[#EDE8DB]' : 'border-transparent text-[#9E9A8E]'
+                        className={`p-2 flex items-center gap-2 cursor-pointer border ${
+                          isSelected ? 'border-[#A1A1AA] bg-white text-black font-bold' : 'border-white/10 text-white/70'
                         }`}
                       >
-                        <input type="checkbox" checked={isSelected} readOnly className="accent-[#4EC5D4]" />
+                        <input type="checkbox" checked={isSelected} readOnly className="accent-[#A1A1AA]" />
                         <span className="text-xs truncate">{u.name}</span>
                       </div>
                     );
@@ -509,39 +512,39 @@ export const MeetingsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Agenda Items (1 per line)</label>
+                <label className="block text-white/50 mb-1 uppercase text-[10px]">Agenda items (1 per line)</label>
                 <textarea
                   rows={3}
                   value={newAgendaStr}
                   onChange={(e) => setNewAgendaStr(e.target.value)}
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-none"
+                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Virtual Room URL</label>
+                <label className="block text-white/50 mb-1 uppercase text-[10px]">Virtual room link</label>
                 <input
                   type="text"
                   value={newLink}
                   onChange={(e) => setNewLink(e.target.value)}
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                  className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                 />
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#242930] flex items-center justify-end gap-2">
+            <div className="pt-4 border-t border-white/20 flex items-center justify-end gap-3 font-mono text-xs">
               <button
                 type="button"
                 onClick={() => setIsScheduleOpen(false)}
-                className="px-3 py-1.5 bg-[#1F242C] hover:bg-[#282F3B] text-[#9E9A8E] hover:text-[#EDE8DB] font-mono text-xs patch-chamfer-sm"
+                className="px-4 py-2 border border-white/20 text-white/60 hover:text-white hover:border-white transition-colors uppercase"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold patch-chamfer-sm"
+                className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium uppercase tracking-wider transition-colors"
               >
-                Confirm War Room
+                Confirm session
               </button>
             </div>
           </form>
@@ -550,4 +553,3 @@ export const MeetingsView: React.FC = () => {
     </div>
   );
 };
-

@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   ChevronDown,
   Plus,
-  LogOut
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -27,6 +28,7 @@ export const Header: React.FC = () => {
     setActiveTab,
     currentUser,
     users,
+    isVijayrajkumar,
     switchUserById,
     logout,
     workspaceConfig,
@@ -46,106 +48,110 @@ export const Header: React.FC = () => {
     { id: 'notes', label: 'Notes & Wiki', icon: FileText },
     { id: 'files', label: 'Files', icon: FolderArchive },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'checkins', label: 'Pulse & Check-in', icon: Activity },
+    { id: 'pulse', label: 'Pulse & Check-in', icon: Activity },
     { id: 'personalization', label: 'Patch Lab', icon: Sparkles },
   ];
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0D0D0D]/95 backdrop-blur border-b border-[#333333] shadow-md">
+    <header className="sticky top-0 z-40 bg-[#000000] border-b border-white/20">
       {/* Top utility bar */}
-      <div className="max-w-[1700px] mx-auto px-4 py-2 flex items-center justify-between gap-4">
+      <div className="max-w-[1700px] mx-auto px-4 py-2.5 flex items-center justify-between gap-4">
         {/* Left Brand Badge */}
         <div className="flex items-center gap-4">
           <BrandPatchBadge size="md" />
-          <div className="hidden lg:flex flex-col border-l border-[#333333] pl-3 py-0.5">
-            <h1 className="headline text-[15px] text-[#FFFFFF] tracking-wide leading-none flex items-center gap-1.5 font-normal">
-              <span className="w-2 h-2 rounded-none bg-[#5EBA7D] animate-pulse" />
-              Command Center <em className="accent-italic text-[#B3B3B3]">// Alpha Node</em>
-            </h1>
-            <span className="text-[11px] text-[#B3B3B3] tracking-wider mt-0.5">
-              AUTHENTICATED TEAM WORKSPACE
-            </span>
+          <div className="hidden lg:flex items-center gap-2 border-l border-white/20 pl-4 py-1 text-xs">
+            <span className="w-1.5 h-1.5 bg-[#A1A1AA]" />
+            <span className="text-white font-medium">Unfounded Venture Lab</span>
+            <span className="text-white/40">/</span>
+            <span className="meta-number text-[11px] text-white/60">INDEX·001</span>
           </div>
         </div>
 
         {/* Global Search & Quick Actions */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           {/* Quick Search Ctrl+K */}
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-[#222222] hover:bg-[#2B2B2B] border border-[#333333] text-[#B3B3B3] hover:text-[#FFFFFF] text-xs transition-colors patch-chamfer-sm"
+            className="flex items-center gap-2 px-3 py-1.5 border border-white/30 hover:border-white text-white/70 hover:text-white text-xs transition-colors"
             title="Search workspace (Ctrl + K)"
           >
-            <Search size={14} className="text-[#E5B869]" />
-            <span className="hidden sm:inline">Search Lab...</span>
-            <kbd className="hidden md:inline text-[10px] px-1 py-0.5 bg-[#0D0D0D] border border-[#333333] text-[#FFFFFF] font-mono-tech">
-              Ctrl+K
-            </kbd>
+            <Search size={13} className="text-[#A1A1AA]" />
+            <span className="hidden sm:inline">Search /</span>
+            <span className="meta-number text-[10px] text-white/50">Ctrl+K</span>
           </button>
 
           {/* Quick Capture Sticky Note */}
           <button
             onClick={() => setQuickCaptureOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0D0D0D] text-xs font-bold transition-transform active:scale-95 patch-chamfer-sm shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black text-xs font-semibold transition-colors"
             title="Quick Capture / Brain Dump (Ctrl+Shift+N)"
           >
-            <Plus size={14} strokeWidth={3} />
-            <span className="hidden sm:inline">Brain Dump</span>
+            <Plus size={13} strokeWidth={2.5} />
+            <span className="hidden sm:inline">Capture</span>
           </button>
 
           {/* Sound FX Toggle */}
           <button
             onClick={toggleSound}
-            className={`p-2 border text-xs transition-colors patch-chamfer-sm ${
+            className={`p-1.5 border text-xs transition-colors ${
               workspaceConfig.soundEnabled
-                ? 'bg-[#222222] border-[#333333] text-[#E5B869] hover:text-white'
-                : 'bg-[#222222]/50 border-[#333333] text-[#6B7280]'
+                ? 'border-white/50 text-white hover:text-[#A1A1AA]'
+                : 'border-white/20 text-white/30'
             }`}
             title={workspaceConfig.soundEnabled ? 'Mute Audio FX' : 'Enable Audio FX'}
           >
-            {workspaceConfig.soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            {workspaceConfig.soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
 
           {/* Access / Invite-Only Security Status */}
           <button
             onClick={() => setAccessModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#222222] hover:bg-[#2B2B2B] border border-[#333333] text-[#5EBA7D] text-xs transition-colors patch-chamfer-sm"
+            className="hidden md:flex items-center gap-1 px-2.5 py-1.5 border border-white/30 hover:border-white text-white/80 hover:text-white text-xs transition-colors"
             title="Private Workspace Settings & Invites"
           >
-            <ShieldCheck size={14} />
-            <span className="text-[11px] font-semibold">INVITE-ONLY</span>
+            <ShieldCheck size={13} className="text-[#A1A1AA]" />
+            <span className="micro-label">Private</span>
           </button>
+
+          {/* Vijayrajkumar Exclusive Add Member Shortcut */}
+          {isVijayrajkumar && (
+            <button
+              onClick={() => setAccessModalOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 border border-[#A1A1AA] bg-white/5 hover:bg-[#A1A1AA] hover:text-black text-white text-xs font-semibold transition-colors"
+              title="Vijayrajkumar Authorization: Add New Member to Database"
+            >
+              <UserPlus size={13} />
+              <span>+ Add Member</span>
+            </button>
+          )}
 
           {/* User Selector Dropdown */}
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              className="flex items-center gap-2 p-1 pl-2 pr-2.5 bg-[#222222] hover:bg-[#2B2B2B] border border-[#333333] text-left transition-colors patch-chamfer-sm"
+              className="flex items-center gap-2 p-1 pl-2 pr-2 border border-white/30 hover:border-white transition-colors"
             >
               <PatchAvatar user={currentUser} size="sm" showStatus />
-              <div className="hidden sm:flex flex-col">
-                <span className="text-xs font-semibold text-[#FFFFFF] leading-tight">
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-xs font-semibold text-white leading-tight">
                   {currentUser.name}
                 </span>
-                <span className="text-[9px] text-[#E5B869] tracking-wider font-mono-tech">
-                  {currentUser.callsign}
+                <span className="meta-number text-[9px] text-[#A1A1AA]">
+                  /{currentUser.callsign}
                 </span>
               </div>
-              <ChevronDown size={14} className="text-[#B3B3B3]" />
+              <ChevronDown size={13} className="text-white/60 ml-1" />
             </button>
 
             {/* User Dropdown Menu */}
             {userMenuOpen && (
               <div
-                className="absolute right-0 mt-2 w-64 bg-[#1A1A1A] border-2 border-[#333333] shadow-2xl p-2 z-50 patch-chamfer-md"
+                className="absolute right-0 mt-1 w-64 bg-[#000000] border border-white/50 p-3 z-50 shadow-2xl"
                 onMouseLeave={() => setUserMenuOpen(false)}
               >
-                <div className="px-2 py-1.5 border-b border-[#333333] mb-2">
-                  <span className="text-[10px] uppercase text-[#B3B3B3] tracking-wider block font-semibold">
+                <div className="pb-2 border-b border-white/20 mb-2">
+                  <span className="micro-label text-white/60 block">
                     Switch Active Member
-                  </span>
-                  <span className="text-xs text-[#FFFFFF]">
-                    Switch between team members
                   </span>
                 </div>
 
@@ -157,10 +163,10 @@ export const Header: React.FC = () => {
                         switchUserById(u.id);
                         setUserMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between p-2 text-left text-xs transition-colors patch-chamfer-sm ${
+                      className={`w-full flex items-center justify-between p-2 text-left text-xs transition-colors border ${
                         u.id === currentUser.id
-                          ? 'bg-[#E5B869]/15 border border-[#E5B869]/40 text-[#FFFFFF]'
-                          : 'hover:bg-[#222222] text-[#B3B3B3] hover:text-[#FFFFFF]'
+                          ? 'border-[#A1A1AA] bg-white/5 text-white'
+                          : 'border-transparent hover:border-white/20 text-white/70 hover:text-white'
                       }`}
                     >
                       <PatchAvatar user={u} size="sm" showStatus showCallsign />
@@ -168,36 +174,48 @@ export const Header: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-[#333333] flex flex-col gap-1">
+                <div className="mt-2 pt-2 border-t border-white/20 flex flex-col gap-1 text-xs">
+                  {isVijayrajkumar && (
+                    <button
+                      onClick={() => {
+                        setAccessModalOpen(true);
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full text-left p-1.5 text-white hover:bg-white/10 flex items-center gap-2 font-semibold"
+                    >
+                      <UserPlus size={12} className="text-[#A1A1AA]" />
+                      <span>+ Onboard New Member /</span>
+                    </button>
+                  )}
                   <button
                     onClick={() => {
                       setActiveTab('personalization');
                       setUserMenuOpen(false);
                     }}
-                    className="w-full text-left px-2 py-1.5 text-xs text-[#E5B869] hover:bg-[#222222] flex items-center gap-2 font-semibold"
+                    className="w-full text-left p-1.5 text-[#A1A1AA] hover:bg-white/5 flex items-center gap-2"
                   >
-                    <Sparkles size={13} />
-                    Customize Callsign & Patch
+                    <Sparkles size={12} />
+                    <span>Customize Profile /</span>
                   </button>
                   <button
                     onClick={() => {
                       setAccessModalOpen(true);
                       setUserMenuOpen(false);
                     }}
-                    className="w-full text-left px-2 py-1.5 text-xs text-[#B3B3B3] hover:bg-[#222222] hover:text-[#FFFFFF] flex items-center gap-2"
+                    className="w-full text-left p-1.5 text-white/80 hover:text-white hover:bg-white/5 flex items-center gap-2"
                   >
-                    <ShieldCheck size={13} />
-                    Workspace Permissions
+                    <ShieldCheck size={12} />
+                    <span>Workspace Settings /</span>
                   </button>
                   <button
                     onClick={() => {
                       logout();
                       setUserMenuOpen(false);
                     }}
-                    className="w-full text-left px-2 py-1.5 text-xs text-[#E05A47] hover:bg-[#2A1717] flex items-center gap-2 font-semibold border-t border-[#333333] mt-1 pt-2"
+                    className="w-full text-left p-1.5 text-white/60 hover:text-white hover:bg-white/10 flex items-center gap-2 border-t border-white/20 mt-1 pt-2"
                   >
-                    <LogOut size={13} />
-                    Sign Out / Switch Operator
+                    <LogOut size={12} />
+                    <span>Sign Out / Switch</span>
                   </button>
                 </div>
               </div>
@@ -207,37 +225,36 @@ export const Header: React.FC = () => {
           {/* Quick Sign Out Button */}
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#222222] hover:bg-[#2A1717] border border-[#333333] hover:border-[#E05A47] text-[#B3B3B3] hover:text-[#E05A47] text-xs transition-colors patch-chamfer-sm"
-            title="Sign Out / Lock Session"
+            className="flex items-center gap-1 px-2.5 py-1.5 border border-white/20 hover:border-white text-white/70 hover:text-white text-xs transition-colors"
+            title="Sign Out"
           >
-            <LogOut size={13} />
+            <LogOut size={12} />
             <span className="hidden xl:inline">Sign Out</span>
           </button>
         </div>
       </div>
 
-      {/* Module Navigation Tabs */}
-      <div className="bg-[#0D0D0D] border-t border-[#333333] overflow-x-auto no-scrollbar">
-        <div className="max-w-[1700px] mx-auto px-2 flex items-center gap-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+      {/* Slash-separated Editorial Navigation */}
+      <div className="bg-[#000000] border-t border-white/20 overflow-x-auto no-scrollbar">
+        <div className="max-w-[1700px] mx-auto px-4 flex items-center gap-3 py-2 text-xs">
+          {navItems.map((item, idx) => {
             const isActive = activeTab === item.id;
             return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-3.5 py-2.5 text-xs tracking-wide whitespace-nowrap transition-all border-b-2 ${
-                  isActive
-                    ? 'border-[#E5B869] text-[#FFFFFF] bg-[#222222] font-semibold'
-                    : 'border-transparent text-[#B3B3B3] hover:text-[#FFFFFF] hover:bg-[#1A1A1A]'
-                }`}
-              >
-                <Icon
-                  size={14}
-                  className={isActive ? 'text-[#E5B869]' : 'text-[#808080]'}
-                />
-                <span>{item.label}</span>
-              </button>
+              <React.Fragment key={item.id}>
+                <button
+                  onClick={() => setActiveTab(item.id)}
+                  className={`micro-label transition-colors flex items-center gap-1.5 ${
+                    isActive
+                      ? 'text-white font-semibold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  <span>{item.label}</span>
+                </button>
+                {idx < navItems.length - 1 && (
+                  <span className="text-white/20 select-none">/</span>
+                )}
+              </React.Fragment>
             );
           })}
         </div>

@@ -4,14 +4,7 @@ import { PatchAvatar } from '../common/PatchAvatar';
 import { sound } from '../../utils/sound';
 import {
   Sparkles,
-  Shield,
-  Palette,
-  Layout,
   Check,
-  RotateCcw,
-  Volume2,
-  VolumeX,
-  Type,
   Crosshair,
   Cpu,
   Radio,
@@ -28,8 +21,6 @@ export const PatchAvatarLab: React.FC = () => {
     currentUser,
     updateUser,
     workspaceConfig,
-    toggleSound,
-    togglePixelFont,
     reorderWidgets
   } = useWorkspace();
 
@@ -38,17 +29,17 @@ export const PatchAvatarLab: React.FC = () => {
   const [handle, setHandle] = useState(currentUser.handle);
   const [callsign, setCallsign] = useState(currentUser.callsign);
   const [avatarEmblem, setAvatarEmblem] = useState(currentUser.avatarEmblem);
-  const [avatarBg, setAvatarBg] = useState(currentUser.avatarBg || '#14171C');
-  const [avatarStitch, setAvatarStitch] = useState(currentUser.avatarStitch || '#E5B869');
+  const [avatarBg, setAvatarBg] = useState(currentUser.avatarBg || '#000000');
+  const [avatarStitch, setAvatarStitch] = useState(currentUser.avatarStitch || '#A1A1AA');
   const [isSaved, setIsSaved] = useState(false);
 
   // Widget management
   const availableWidgets = [
-    { id: 'tasks', label: 'My Active Tasks' },
-    { id: 'calendar', label: 'Upcoming Engagements' },
+    { id: 'tasks', label: 'Active Tasks' },
+    { id: 'calendar', label: 'Upcoming Sessions' },
     { id: 'pulse', label: 'Team Pulse & Status' },
-    { id: 'notes', label: 'Operator Scratchpad' },
-    { id: 'mentions', label: 'Tactical Pings & Mentions' }
+    { id: 'notes', label: 'Knowledge Notes' },
+    { id: 'mentions', label: 'Activity & Pings' }
   ];
 
   const [widgetOrder, setWidgetOrder] = useState<string[]>(
@@ -65,30 +56,29 @@ export const PatchAvatarLab: React.FC = () => {
   ] as const;
 
   const stitchColors = [
-    { label: 'Gold Amber', hex: '#E5B869' },
-    { label: 'Bone Cream', hex: '#EDE8DB' },
-    { label: 'Cyan Laser', hex: '#4EC5D4' },
-    { label: 'Terminal Green', hex: '#5EBA7D' },
-    { label: 'Crimson Alert', hex: '#E05A47' },
-    { label: 'Venture Violet', hex: '#9D7BFF' }
+    { label: 'Refined Silver', hex: '#A1A1AA' },
+    { label: 'Pure White', hex: '#FFFFFF' },
+    { label: 'Silver Mono', hex: '#CCCCCC' },
+    { label: 'Signal Cyan', hex: '#00D4FF' },
+    { label: 'Alert Crimson', hex: '#FF3333' },
+    { label: 'Deep Black', hex: '#000000' }
   ];
 
   const fabricColors = [
-    { label: 'Stealth Twill', hex: '#14171C' },
-    { label: 'Carbon Weave', hex: '#1B1F26' },
-    { label: 'Deep Tactical', hex: '#0E1013' },
-    { label: 'Spec-Ops Olive', hex: '#19221C' },
-    { label: 'Vault Crimson', hex: '#261717' }
+    { label: 'Pure Black', hex: '#000000' },
+    { label: 'Carbon Weave', hex: '#111111' },
+    { label: 'Night Void', hex: '#0A0A0A' },
+    { label: 'Pure White', hex: '#FFFFFF' }
   ];
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     sound.taskComplete();
     confetti({
-      particleCount: 50,
-      spread: 70,
+      particleCount: 40,
+      spread: 60,
       origin: { y: 0.6 },
-      colors: ['#E5B869', '#EDE8DB', '#4EC5D4']
+      colors: ['#A1A1AA', '#FFFFFF', '#000000']
     });
 
     updateUser({
@@ -118,7 +108,6 @@ export const PatchAvatarLab: React.FC = () => {
     reorderWidgets(updated);
   };
 
-  // Draft dummy user for live patch rendering
   const draftUser = {
     ...currentUser,
     name,
@@ -130,157 +119,143 @@ export const PatchAvatarLab: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1F242C] border border-[#3A4250] flex items-center justify-center patch-chamfer-sm text-[#E5B869]">
-              <Sparkles size={20} />
+    <div className="space-y-12 pb-16">
+      {/* Top Editorial Header */}
+      <section className="border-b border-white/20 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
+              <span>operator</span>
+              <span>/</span>
+              <span className="text-[#A1A1AA]">identity badge & preferences</span>
+              <span>/</span>
+              <span>customization</span>
             </div>
-            <div>
-              <h2 className="font-patch text-2xl font-bold tracking-wider text-[#EDE8DB] uppercase">
-                Patch Identity & Command Personalization
-              </h2>
-              <p className="font-mono text-xs text-[#9E9A8E]">
-                Design your embroidered velcro callsign patch, customize theme typography, and organize dashboard widgets.
-              </p>
-            </div>
+            <h1 className="headline-section text-white font-bold tracking-tight">
+              Patch identity & profile.
+            </h1>
+            <p className="text-white/60 text-sm mt-2 max-w-xl">
+              Design your embroidered velcro callsign patch, personalize operator credentials, and reorder dashboard widgets.
+            </p>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* LEFT COLUMN: LIVE EMBROIDERED PATCH PREVIEW */}
-        <div className="lg:col-span-5 bg-[#14171B] border border-[#2A303A] p-5 patch-chamfer-md shadow-md space-y-5">
-          <div className="pb-3 border-b border-[#242930] flex items-center justify-between">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#9E9A8E]">
-              Tactical Morale Patch Studio
+        <div className="lg:col-span-5 border border-white/20 bg-black p-6 space-y-6">
+          <div className="pb-3 border-b border-white/20 flex items-center justify-between">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+              Tactical badge preview
             </h3>
-            <span className="font-mono text-[10px] text-[#E5B869] border border-[#E5B869]/40 px-1.5 py-0.2">
-              CALLSIGN: {callsign || 'UVL-OP'}
+            <span className="font-mono text-[10px] text-[#A1A1AA] border border-[#A1A1AA] px-2 py-0.5 font-bold uppercase">
+              {callsign || 'UVL-OP'}
             </span>
           </div>
 
-          {/* LARGE PHYSICAL PATCH DISPLAY */}
-          <div className="p-8 bg-[#0C0E11] border border-[#252B36] patch-chamfer-md flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
-            {/* Background fabric weave */}
-            <div 
-              className="absolute inset-0 opacity-40 pointer-events-none"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(45deg, #1f242d 0, #1f242d 2px, transparent 0, transparent 6px)'
-              }}
-            />
-
-            {/* The Embroidered Badge */}
+          {/* PHYSICAL EMBROIDERED BADGE DISPLAY */}
+          <div className="p-10 border border-white/20 bg-black flex flex-col items-center justify-center relative overflow-hidden">
             <div
-              className="relative w-64 h-36 patch-pill flex flex-col items-center justify-center shadow-2xl p-4 transition-all duration-200"
+              className="relative w-64 h-36 border-2 flex flex-col items-center justify-center p-4 transition-all"
               style={{
                 backgroundColor: avatarBg,
-                boxShadow: `0 8px 24px rgba(0,0,0,0.8), inset 0 0 0 2px ${avatarStitch}`
+                borderColor: avatarStitch,
+                boxShadow: `0 0 0 1px ${avatarStitch}`
               }}
             >
-              {/* Overlock Stitched Border */}
+              {/* Overlock Stitched Inner Border */}
               <div
-                className="absolute inset-[4px] patch-pill pointer-events-none border-2 border-dashed"
+                className="absolute inset-[4px] pointer-events-none border border-dashed"
                 style={{ borderColor: `${avatarStitch}90` }}
               />
 
-              {/* Twill texture */}
-              <div 
-                className="absolute inset-0 patch-pill pointer-events-none opacity-20"
-                style={{
-                  backgroundImage: 'repeating-linear-gradient(-45deg, #fff 0, #fff 1px, transparent 0, transparent 4px)'
-                }}
-              />
-
-              {/* Emblem Icon in Center */}
+              {/* Emblem Icon */}
               <div className="relative z-10 mb-2">
                 <PatchAvatar user={draftUser} size="lg" />
               </div>
 
               {/* Callsign Monospace Plate */}
               <div className="relative z-10 text-center leading-tight">
-                <span className="font-patch text-xl font-bold uppercase tracking-widest text-[#EDE8DB] block drop-shadow">
+                <span className={`text-xl font-bold uppercase tracking-widest block font-brand-logo ${avatarBg === '#FFFFFF' ? 'text-black' : 'text-white'}`}>
                   {callsign || 'OPERATOR'}
                 </span>
-                <span className="font-mono text-[10px] uppercase tracking-wider text-[#D8D2C2] block">
+                <span className={`text-[11px] font-mono uppercase tracking-wider block ${avatarBg === '#FFFFFF' ? 'text-black/60' : 'text-white/60'}`}>
                   {name || 'UNFOUNDED LAB'}
                 </span>
               </div>
             </div>
 
-            <p className="font-mono text-[11px] text-[#9E9A8E] mt-4 z-10 text-center">
-              Embroidered 45° chamfered patch with tactile thread overlock edge.
+            <p className="text-[11px] font-mono text-white/50 mt-4 text-center">
+              Monochrome high-contrast identity badge with sharp edges.
             </p>
           </div>
 
-          {/* Quick Stats on Active Operator */}
+          {/* Active Operator Credentials */}
           <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-            <div className="p-3 bg-[#0C0E11] border border-[#262C36] patch-chamfer-sm">
-              <span className="text-[10px] text-[#9E9A8E] uppercase block">Assigned Handle</span>
-              <span className="text-[#E5B869] font-bold">{handle}</span>
+            <div className="p-3 border border-white/20 bg-black">
+              <span className="text-[10px] text-white/50 uppercase block mb-1">Handle</span>
+              <span className="text-white font-bold">{handle}</span>
             </div>
-            <div className="p-3 bg-[#0C0E11] border border-[#262C36] patch-chamfer-sm">
-              <span className="text-[10px] text-[#9E9A8E] uppercase block">Callsign</span>
-              <span className="text-[#5EBA7D] font-bold">{currentUser.callsign}</span>
+            <div className="p-3 border border-white/20 bg-black">
+              <span className="text-[10px] text-white/50 uppercase block mb-1">Callsign</span>
+              <span className="text-[#A1A1AA] font-bold">{currentUser.callsign}</span>
             </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: CUSTOMIZATION CONTROLS & WIDGET CONFIG */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* RIGHT COLUMN: CONTROLS & WIDGET CONFIG */}
+        <div className="lg:col-span-7 space-y-8">
           
           {/* PROFILE & PATCH EDITOR FORM */}
-          <div className="bg-[#14171B] border border-[#2A303A] p-5 patch-chamfer-md shadow-md space-y-4">
-            <div className="pb-3 border-b border-[#242930] flex items-center justify-between">
-              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Operator Credentials & Emblem Config
+          <div className="border border-white/20 bg-black p-6 space-y-6">
+            <div className="pb-3 border-b border-white/20 flex items-center justify-between">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                Credentials & emblem settings
               </h3>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-4 font-mono text-xs">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <form onSubmit={handleSaveProfile} className="space-y-5 font-mono text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Full Name</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Full Name</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Chat @Handle</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Chat @Handle</label>
                   <input
                     type="text"
                     required
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Patch Callsign</label>
+                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Callsign</label>
                   <input
                     type="text"
                     required
                     value={callsign}
                     onChange={(e) => setCallsign(e.target.value.toUpperCase())}
                     placeholder="e.g. VANCE-01"
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm font-bold"
+                    className="w-full bg-black border border-white/20 px-3 py-2 text-white font-bold focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
               </div>
 
               {/* Emblem Selection */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1.5 uppercase text-[10px]">
-                  Select Patch Center Emblem
+                <label className="block text-white/50 mb-2 uppercase text-[10px]">
+                  Select center emblem
                 </label>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                   {emblemOptions.map(opt => {
@@ -291,14 +266,14 @@ export const PatchAvatarLab: React.FC = () => {
                         key={opt.id}
                         type="button"
                         onClick={() => setAvatarEmblem(opt.id as any)}
-                        className={`p-2.5 border patch-chamfer-sm flex flex-col items-center justify-center gap-1.5 transition-all ${
+                        className={`p-3 border flex flex-col items-center justify-center gap-1.5 transition-all ${
                           isSelected
-                            ? 'bg-[#E5B869]/20 border-[#E5B869] text-[#E5B869]'
-                            : 'bg-[#0C0E11] border-[#292F3B] text-[#9E9A8E] hover:text-[#EDE8DB]'
+                            ? 'border-[#A1A1AA] bg-white text-black font-bold'
+                            : 'border-white/20 bg-black text-white/60 hover:text-white hover:border-white'
                         }`}
                       >
                         <Icon size={18} />
-                        <span className="text-[9px] font-mono leading-tight">{opt.label}</span>
+                        <span className="text-[9px] leading-tight">{opt.label}</span>
                       </button>
                     );
                   })}
@@ -307,8 +282,8 @@ export const PatchAvatarLab: React.FC = () => {
 
               {/* Stitch Color Picker */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1.5 uppercase text-[10px]">
-                  Embroidered Overlock Thread Color
+                <label className="block text-white/50 mb-2 uppercase text-[10px]">
+                  Border overlock thread color
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {stitchColors.map(c => (
@@ -316,23 +291,23 @@ export const PatchAvatarLab: React.FC = () => {
                       key={c.hex}
                       type="button"
                       onClick={() => setAvatarStitch(c.hex)}
-                      className={`px-3 py-1.5 border patch-chamfer-sm flex items-center gap-2 transition-all ${
+                      className={`px-3 py-1.5 border flex items-center gap-2 transition-all ${
                         avatarStitch === c.hex
-                          ? 'border-white bg-[#1F242C] text-white shadow-sm'
-                          : 'border-[#292F3B] bg-[#0C0E11] text-[#9E9A8E]'
+                          ? 'border-[#A1A1AA] bg-white text-black font-bold'
+                          : 'border-white/20 bg-black text-white/70 hover:border-white'
                       }`}
                     >
-                      <span className="w-3 h-3 rounded-none" style={{ backgroundColor: c.hex }} />
+                      <span className="w-3 h-3 border border-black/20" style={{ backgroundColor: c.hex }} />
                       <span className="text-[10px]">{c.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Fabric Twill Base */}
+              {/* Fabric Base */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1.5 uppercase text-[10px]">
-                  Patch Base Cloth Fabric
+                <label className="block text-white/50 mb-2 uppercase text-[10px]">
+                  Patch base fabric
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {fabricColors.map(f => (
@@ -340,42 +315,42 @@ export const PatchAvatarLab: React.FC = () => {
                       key={f.hex}
                       type="button"
                       onClick={() => setAvatarBg(f.hex)}
-                      className={`px-3 py-1.5 border patch-chamfer-sm flex items-center gap-2 transition-all ${
+                      className={`px-3 py-1.5 border flex items-center gap-2 transition-all ${
                         avatarBg === f.hex
-                          ? 'border-[#E5B869] bg-[#1F242C] text-[#EDE8DB]'
-                          : 'border-[#292F3B] bg-[#0C0E11] text-[#9E9A8E]'
+                          ? 'border-[#A1A1AA] bg-white text-black font-bold'
+                          : 'border-white/20 bg-black text-white/70 hover:border-white'
                       }`}
                     >
-                      <span className="w-3 h-3 rounded-none border border-white/30" style={{ backgroundColor: f.hex }} />
+                      <span className="w-3 h-3 border border-white/40" style={{ backgroundColor: f.hex }} />
                       <span className="text-[10px]">{f.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-[#242930] flex items-center justify-between">
-                <span className="text-[#5EBA7D] font-bold">
-                  {isSaved && '✓ Identity patch committed to lab registry!'}
+              <div className="pt-4 border-t border-white/20 flex items-center justify-between">
+                <span className="text-[#A1A1AA] font-bold">
+                  {isSaved && '✓ Identity badge saved successfully!'}
                 </span>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold patch-chamfer-sm transition-transform active:scale-95 shadow-md flex items-center gap-1.5"
+                  className="px-6 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-medium uppercase tracking-wider flex items-center gap-2 transition-all"
                 >
-                  <Check size={14} strokeWidth={3} />
-                  Save Changes
+                  <Check size={14} />
+                  <span>Save changes</span>
                 </button>
               </div>
             </form>
           </div>
 
           {/* DASHBOARD WIDGET REARRANGEMENT */}
-          <div className="bg-[#14171B] border border-[#2A303A] p-5 patch-chamfer-md shadow-md space-y-4">
-            <div className="pb-3 border-b border-[#242930] flex items-center justify-between">
-              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Rearrange Personal Dashboard Widgets
+          <div className="border border-white/20 bg-black p-6 space-y-4">
+            <div className="pb-3 border-b border-white/20 flex items-center justify-between">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                Dashboard widget priority
               </h3>
-              <span className="font-mono text-[10px] text-[#9E9A8E]">
-                Reorder priority cards on your home screen
+              <span className="text-[11px] font-mono text-white/50">
+                Reorder cards on command center home
               </span>
             </div>
 
@@ -385,13 +360,13 @@ export const PatchAvatarLab: React.FC = () => {
                 return (
                   <div
                     key={widgetId}
-                    className="p-3 bg-[#181B20] border border-[#252B35] patch-chamfer-sm flex items-center justify-between gap-3"
+                    className="p-3 border border-white/20 bg-black flex items-center justify-between gap-3 hover:border-white transition-colors"
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-5 h-5 bg-[#0C0E11] border border-[#2C333F] flex items-center justify-center text-[10px] text-[#E5B869] font-bold">
+                    <div className="flex items-center gap-3">
+                      <span className="w-5 h-5 border border-white/20 flex items-center justify-center text-[10px] text-[#A1A1AA] font-bold">
                         {idx + 1}
                       </span>
-                      <span className="font-semibold text-[#EDE8DB]">
+                      <span className="font-semibold text-white">
                         {widgetMeta?.label || widgetId}
                       </span>
                     </div>
@@ -401,7 +376,7 @@ export const PatchAvatarLab: React.FC = () => {
                         type="button"
                         disabled={idx === 0}
                         onClick={() => moveWidget(idx, 'up')}
-                        className="p-1 bg-[#0C0E11] hover:bg-[#20252D] disabled:opacity-30 border border-[#2C333F] text-[#EDE8DB] patch-chamfer-sm"
+                        className="p-1 border border-white/20 hover:border-white disabled:opacity-30 text-white"
                         title="Move Up"
                       >
                         <ArrowUp size={13} />
@@ -410,7 +385,7 @@ export const PatchAvatarLab: React.FC = () => {
                         type="button"
                         disabled={idx === widgetOrder.length - 1}
                         onClick={() => moveWidget(idx, 'down')}
-                        className="p-1 bg-[#0C0E11] hover:bg-[#20252D] disabled:opacity-30 border border-[#2C333F] text-[#EDE8DB] patch-chamfer-sm"
+                        className="p-1 border border-white/20 hover:border-white disabled:opacity-30 text-white"
                         title="Move Down"
                       >
                         <ArrowDown size={13} />
@@ -428,4 +403,3 @@ export const PatchAvatarLab: React.FC = () => {
     </div>
   );
 };
-

@@ -45,7 +45,7 @@ export const TasksView: React.FC = () => {
   const [newAssigneeId, setNewAssigneeId] = useState(currentUser.id);
   const [newProjectId, setNewProjectId] = useState(projects[0]?.id || '');
   const [newDueDate, setNewDueDate] = useState('2026-09-18');
-  const [newTagsStr, setNewTagsStr] = useState('crypto, lab');
+  const [newTagsStr, setNewTagsStr] = useState('operations, core');
   const [newSubtasks, setNewSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
 
@@ -61,19 +61,12 @@ export const TasksView: React.FC = () => {
     return true;
   });
 
-  const columns: { id: TaskStatus; label: string; border: string; color: string }[] = [
-    { id: 'todo', label: 'To Do', border: 'border-[#9E9A8E]/40', color: '#EDE8DB' },
-    { id: 'in_progress', label: 'In Progress', border: 'border-[#4EC5D4]/50', color: '#4EC5D4' },
-    { id: 'blocked', label: 'Blocked', border: 'border-[#E05A47]/60', color: '#E05A47' },
-    { id: 'done', label: 'Done', border: 'border-[#5EBA7D]/50', color: '#5EBA7D' }
+  const columns: { id: TaskStatus; label: string }[] = [
+    { id: 'todo', label: 'To Do' },
+    { id: 'in_progress', label: 'In Progress' },
+    { id: 'blocked', label: 'Blocked' },
+    { id: 'done', label: 'Done' }
   ];
-
-  const priorityStyles: Record<TaskPriority, { label: string; class: string }> = {
-    urgent: { label: 'URGENT', class: 'bg-[#E05A47]/20 text-[#E05A47] border-[#E05A47]/50' },
-    high: { label: 'HIGH', class: 'bg-[#E5B869]/20 text-[#E5B869] border-[#E5B869]/50' },
-    medium: { label: 'MED', class: 'bg-[#4EC5D4]/20 text-[#4EC5D4] border-[#4EC5D4]/50' },
-    low: { label: 'LOW', class: 'bg-[#9E9A8E]/20 text-[#9E9A8E] border-[#9E9A8E]/50' }
-  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,97 +103,106 @@ export const TasksView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Header & Filters */}
-      <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#1F242C] border border-[#3A4250] flex items-center justify-center patch-chamfer-sm text-[#E5B869]">
-              <CheckSquare size={20} />
+    <div className="space-y-8">
+      {/* Editorial Header Section (Pure Black) */}
+      <div className="border-b border-white/20 pb-6">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 micro-label text-white/60">
+              <span className="w-1.5 h-1.5 bg-[#A1A1AA]" />
+              <span>Index</span>
+              <span>/</span>
+              <span>Operations</span>
+              <span>/</span>
+              <span className="meta-number text-white">Tasks Catalog</span>
             </div>
-            <div>
-              <h2 className="font-patch text-2xl font-bold tracking-wider text-[#EDE8DB] uppercase">
-                Tactical Task Board
-              </h2>
-              <p className="font-mono text-xs text-[#9E9A8E]">
-                Kanban workflow, sub-tasks, checklists, dependencies & assignment dispatch.
-              </p>
-            </div>
+            <h1 className="headline-section font-bold tracking-tight">
+              Task Operations & Board.
+            </h1>
+            <p className="body-text text-xs text-white/70 max-w-xl">
+              Strict task assignment, sprint velocity tracking, dependencies, and real-time database synchronization.
+            </p>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* My Tasks vs Team Tasks Toggle */}
-            <div className="flex bg-[#0C0E11] border border-[#2D333F] p-0.5 patch-chamfer-sm">
-              <button
-                onClick={() => setScopeFilter('all')}
-                className={`px-3 py-1 font-mono text-xs transition-colors ${
-                  scopeFilter === 'all'
-                    ? 'bg-[#E5B869] text-[#0B0C0E] font-bold'
-                    : 'text-[#9E9A8E] hover:text-[#EDE8DB]'
-                }`}
-              >
-                Team Board ({tasks.length})
-              </button>
-              <button
-                onClick={() => setScopeFilter('my')}
-                className={`px-3 py-1 font-mono text-xs transition-colors ${
-                  scopeFilter === 'my'
-                    ? 'bg-[#E5B869] text-[#0B0C0E] font-bold'
-                    : 'text-[#9E9A8E] hover:text-[#EDE8DB]'
-                }`}
-              >
-                My Tasks ({tasks.filter(t => t.assigneeId === currentUser.id).length})
-              </button>
-            </div>
-
-            {/* Kanban vs List Mode */}
-            <div className="flex bg-[#0C0E11] border border-[#2D333F] p-0.5 patch-chamfer-sm">
-              <button
-                onClick={() => setViewMode('kanban')}
-                className={`p-1.5 font-mono text-xs transition-colors ${
-                  viewMode === 'kanban' ? 'bg-[#242930] text-[#EDE8DB]' : 'text-[#9E9A8E]'
-                }`}
-                title="Kanban View"
-              >
-                <Kanban size={14} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 font-mono text-xs transition-colors ${
-                  viewMode === 'list' ? 'bg-[#242930] text-[#EDE8DB]' : 'text-[#9E9A8E]'
-                }`}
-                title="List View"
-              >
-                <List size={14} />
-              </button>
-            </div>
-
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold transition-transform active:scale-95 patch-chamfer-sm shadow-sm"
+              className="px-4 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
             >
-              <Plus size={14} strokeWidth={3} />
-              New Task
+              <Plus size={14} strokeWidth={2.5} />
+              <span>Deploy Task /</span>
             </button>
           </div>
         </div>
 
-        {/* Filter bar */}
-        <div className="mt-4 pt-3 border-t border-[#242930] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* Persistent Hairline Horizontal Filter Bar (No Pill Buttons) */}
+        <div className="mt-6 pt-3 border-t border-white/20 flex flex-wrap items-center justify-between gap-4 text-xs">
+          {/* Scope Filters */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setScopeFilter('all')}
+              className={`micro-label transition-colors cursor-pointer ${
+                scopeFilter === 'all'
+                  ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              All Operations ({tasks.length})
+            </button>
+            <span className="text-white/20">/</span>
+            <button
+              onClick={() => setScopeFilter('my')}
+              className={`micro-label transition-colors cursor-pointer ${
+                scopeFilter === 'my'
+                  ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              My Assignments ({tasks.filter(t => t.assigneeId === currentUser.id).length})
+            </button>
+          </div>
+
+          {/* View Toggle & Search */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`micro-label flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'kanban'
+                    ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                <Kanban size={13} />
+                <span>Kanban /</span>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`micro-label flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'text-white font-bold underline underline-offset-4 decoration-[#A1A1AA] decoration-2'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                <List size={13} />
+                <span>Catalog List /</span>
+              </button>
+            </div>
+
+            <div className="h-4 w-[1px] bg-white/20" />
+
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter tasks or tags..."
-              className="bg-[#0C0E11] border border-[#2D333F] text-[#EDE8DB] text-xs font-mono px-3 py-1 patch-chamfer-sm focus:outline-none focus:border-[#E5B869] w-48"
+              placeholder="Search tasks..."
+              className="bg-black border border-white/30 text-white text-xs px-3 py-1 focus:outline-none focus:border-[#A1A1AA] w-40 sm:w-52"
             />
 
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="bg-[#0C0E11] border border-[#2D333F] text-[#EDE8DB] text-xs font-mono px-2 py-1 patch-chamfer-sm focus:outline-none focus:border-[#E5B869]"
+              className="bg-black border border-white/30 text-white text-xs px-2 py-1 focus:outline-none focus:border-[#A1A1AA]"
             >
               <option value="all">All Projects</option>
               {projects.map(p => (
@@ -211,7 +213,7 @@ export const TasksView: React.FC = () => {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="bg-[#0C0E11] border border-[#2D333F] text-[#EDE8DB] text-xs font-mono px-2 py-1 patch-chamfer-sm focus:outline-none focus:border-[#E5B869]"
+              className="bg-black border border-white/30 text-white text-xs px-2 py-1 focus:outline-none focus:border-[#A1A1AA]"
             >
               <option value="all">All Priorities</option>
               <option value="urgent">Urgent</option>
@@ -220,32 +222,28 @@ export const TasksView: React.FC = () => {
               <option value="low">Low</option>
             </select>
           </div>
-
-          <div className="font-mono text-[11px] text-[#9E9A8E]">
-            Displaying <span className="text-[#EDE8DB] font-bold">{filteredTasks.length}</span> active operations
-          </div>
         </div>
       </div>
 
       {/* KANBAN VIEW */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
           {columns.map(col => {
             const colTasks = filteredTasks.filter(t => t.status === col.id);
             return (
               <div
                 key={col.id}
-                className="bg-[#14171B] border border-[#2A303A] p-3 patch-chamfer-md shadow-md min-h-[500px] flex flex-col justify-between"
+                className="bg-[#000000] border border-white/20 p-4 min-h-[550px] flex flex-col justify-between"
               >
                 <div>
                   {/* Column Header */}
-                  <div className={`pb-2.5 mb-3 border-b-2 ${col.border} flex items-center justify-between`}>
+                  <div className="pb-3 mb-4 border-b border-white/20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-patch text-lg uppercase font-bold tracking-wider" style={{ color: col.color }}>
+                      <span className="text-sm font-bold tracking-tight text-white uppercase">
                         {col.label}
                       </span>
-                      <span className="font-mono text-xs px-1.5 py-0.2 bg-[#0C0E11] border border-[#2B313B] text-[#9E9A8E]">
-                        {colTasks.length}
+                      <span className="meta-number text-[10px] px-1.5 py-0.5 border border-white/20 text-white/60">
+                        {String(colTasks.length).padStart(2, '0')}
                       </span>
                     </div>
 
@@ -254,7 +252,7 @@ export const TasksView: React.FC = () => {
                         setNewStatus(col.id);
                         setIsCreateOpen(true);
                       }}
-                      className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB] transition-colors"
+                      className="text-white/60 hover:text-[#A1A1AA] transition-colors p-1 cursor-pointer"
                       title={`Add task to ${col.label}`}
                     >
                       <Plus size={14} />
@@ -263,115 +261,117 @@ export const TasksView: React.FC = () => {
 
                   {/* Task Cards */}
                   <div className="space-y-3">
-                    {colTasks.map(task => {
-                      const assignee = users.find(u => u.id === task.assigneeId);
-                      const project = projects.find(p => p.id === task.projectId);
-                      const subtaskCompleted = task.subtasks.filter(s => s.completed).length;
-                      const hasDependencies = task.dependencies.length > 0;
+                    {colTasks.length === 0 ? (
+                      <div className="py-12 text-center border border-dashed border-white/10">
+                        <span className="micro-label text-white/40">Queue Empty</span>
+                      </div>
+                    ) : (
+                      colTasks.map(task => {
+                        const assignee = users.find(u => u.id === task.assigneeId);
+                        const project = projects.find(p => p.id === task.projectId);
+                        const subtaskCompleted = task.subtasks.filter(s => s.completed).length;
+                        const hasDependencies = task.dependencies.length > 0;
 
-                      return (
-                        <div
-                          key={task.id}
-                          onClick={() => setSelectedTask(task)}
-                          className="bg-[#191D23] border border-[#2D333F] hover:border-[#E5B869] p-3.5 patch-chamfer-sm transition-all duration-150 cursor-pointer shadow-sm group hover:-translate-y-0.5"
-                        >
-                          {/* Project Code & Priority */}
-                          <div className="flex items-center justify-between gap-2 mb-1.5">
-                            {project && (
-                              <span
-                                className="font-mono text-[10px] px-1.5 py-0.2 border uppercase font-bold"
-                                style={{
-                                  borderColor: `${project.color}60`,
-                                  color: project.color,
-                                  backgroundColor: `${project.color}15`
-                                }}
-                              >
-                                {project.code}
+                        return (
+                          <div
+                            key={task.id}
+                            onClick={() => setSelectedTask(task)}
+                            className="bg-[#000000] border border-white/20 hover:border-[#A1A1AA] p-4 transition-colors cursor-pointer group"
+                          >
+                            {/* Project Code & Priority */}
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              {project ? (
+                                <span className="meta-number text-[10px] text-[#A1A1AA] font-bold">
+                                  /{project.code}
+                                </span>
+                              ) : (
+                                <span className="meta-number text-[10px] text-white/40">/GENERAL</span>
+                              )}
+                              <span className={`meta-number text-[9px] uppercase font-bold ${
+                                task.priority === 'urgent' ? 'text-[#A1A1AA]' : 'text-white/60'
+                              }`}>
+                                {task.priority}
                               </span>
-                            )}
-                            <span className={`font-mono text-[9px] px-1.5 py-0.2 border uppercase ${priorityStyles[task.priority].class}`}>
-                              {priorityStyles[task.priority].label}
-                            </span>
-                          </div>
-
-                          {/* Title */}
-                          <h4 className="font-mono text-xs font-semibold text-[#EDE8DB] leading-snug group-hover:text-[#E5B869] transition-colors">
-                            {task.title}
-                          </h4>
-
-                          {/* Dependencies Warning */}
-                          {hasDependencies && (
-                            <div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-[#E05A47] bg-[#221515] px-1.5 py-0.5 border border-[#E05A47]/30">
-                              <AlertOctagon size={11} />
-                              <span>Blocked by {task.dependencies.join(', ')}</span>
                             </div>
-                          )}
 
-                          {/* Subtasks Progress Bar */}
-                          {task.subtasks.length > 0 && (
-                            <div className="mt-2.5 space-y-1">
-                              <div className="flex items-center justify-between text-[9px] font-mono text-[#9E9A8E]">
-                                <span>Checklist</span>
-                                <span>{subtaskCompleted}/{task.subtasks.length}</span>
+                            {/* Title */}
+                            <h4 className="text-xs font-bold text-white group-hover:text-[#A1A1AA] transition-colors leading-snug">
+                              {task.title}
+                            </h4>
+
+                            {/* Dependencies Warning */}
+                            {hasDependencies && (
+                              <div className="mt-2 flex items-center gap-1 meta-number text-[10px] text-white/80 border border-white/20 p-1">
+                                <AlertOctagon size={11} className="text-[#A1A1AA]" />
+                                <span>Blocked: {task.dependencies.join(', ')}</span>
                               </div>
-                              <div className="w-full bg-[#0C0E11] h-1.5 border border-[#2A313C] overflow-hidden">
-                                <div
-                                  className="h-full bg-[#5EBA7D] transition-all duration-300"
-                                  style={{ width: `${(subtaskCompleted / task.subtasks.length) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Bottom meta */}
-                          <div className="mt-3 pt-2 border-t border-[#232832] flex items-center justify-between gap-2">
-                            <span className="font-mono text-[10px] text-[#9E9A8E] flex items-center gap-1">
-                              <Clock size={10} />
-                              {task.dueDate}
-                            </span>
-
-                            {assignee && (
-                              <PatchAvatar
-                                user={assignee}
-                                size="sm"
-                                showStatus
-                              />
                             )}
-                          </div>
 
-                          {/* Quick Status Shift Bar */}
-                          <div className="mt-2 pt-2 border-t border-[#20252D] flex items-center justify-between gap-1">
-                            {columns.map(c => (
-                              <button
-                                key={c.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateTaskStatus(task.id, c.id);
-                                }}
-                                disabled={task.status === c.id}
-                                className={`flex-1 text-[9px] font-mono py-0.5 border transition-colors ${
-                                  task.status === c.id
-                                    ? 'bg-[#E5B869]/20 border-[#E5B869] text-[#E5B869] font-bold'
-                                    : 'bg-[#0E1013] border-[#252B34] text-[#7A808C] hover:text-[#EDE8DB]'
-                                }`}
-                              >
-                                {c.id === 'todo' ? 'TODO' : c.id === 'in_progress' ? 'PROG' : c.id === 'blocked' ? 'BLCK' : 'DONE'}
-                              </button>
-                            ))}
+                            {/* Subtasks Progress */}
+                            {task.subtasks.length > 0 && (
+                              <div className="mt-2.5 space-y-1">
+                                <div className="flex items-center justify-between text-[10px] meta-number text-white/60">
+                                  <span>Checklist</span>
+                                  <span>{subtaskCompleted}/{task.subtasks.length}</span>
+                                </div>
+                                <div className="w-full bg-white/10 h-1 overflow-hidden">
+                                  <div
+                                    className="h-full bg-[#A1A1AA]"
+                                    style={{ width: `${(subtaskCompleted / task.subtasks.length) * 100}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Bottom Meta */}
+                            <div className="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between gap-2">
+                              <span className="meta-number text-[10px] text-white/50 flex items-center gap-1">
+                                <Clock size={10} />
+                                {task.dueDate}
+                              </span>
+
+                              {assignee && (
+                                <div className="flex items-center gap-1.5">
+                                  <PatchAvatar user={assignee} size="sm" />
+                                  <span className="micro-label text-white/70 text-[11px]">{assignee.name}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Quick Status Shift Bar */}
+                            <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between gap-1">
+                              {columns.map(c => (
+                                <button
+                                  key={c.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updateTaskStatus(task.id, c.id);
+                                  }}
+                                  disabled={task.status === c.id}
+                                  className={`flex-1 meta-number text-[9px] py-0.5 border transition-colors cursor-pointer ${
+                                    task.status === c.id
+                                      ? 'bg-[#A1A1AA] border-[#A1A1AA] text-white font-bold'
+                                      : 'border-white/20 text-white/50 hover:text-white hover:border-white/40'
+                                  }`}
+                                >
+                                  {c.id === 'todo' ? 'TODO' : c.id === 'in_progress' ? 'PROG' : c.id === 'blocked' ? 'BLCK' : 'DONE'}
+                                </button>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
-                <div className="pt-3 mt-3 border-t border-[#242930]">
+                <div className="pt-3 mt-4 border-t border-white/20">
                   <button
                     onClick={() => {
                       setNewStatus(col.id);
                       setIsCreateOpen(true);
                     }}
-                    className="w-full py-1.5 bg-[#171A1E] hover:bg-[#20252C] border border-[#2B313B] font-mono text-xs text-[#9E9A8E] hover:text-[#EDE8DB] flex items-center justify-center gap-1 patch-chamfer-sm"
+                    className="w-full py-1.5 border border-white/20 hover:border-white text-xs text-white/70 hover:text-white flex items-center justify-center gap-1 transition-colors cursor-pointer"
                   >
                     <Plus size={12} /> Add to {col.label}
                   </button>
@@ -382,19 +382,26 @@ export const TasksView: React.FC = () => {
         </div>
       )}
 
-      {/* LIST VIEW */}
+      {/* LIST CATALOG VIEW */}
       {viewMode === 'list' && (
-        <div className="bg-[#14171B] border border-[#2A303A] p-4 patch-chamfer-md shadow-md space-y-2">
-          <div className="grid grid-cols-12 gap-2 pb-2.5 border-b border-[#242930] font-mono text-[10px] text-[#9E9A8E] uppercase tracking-wider px-2">
-            <span className="col-span-1">Status</span>
-            <span className="col-span-4">Operation Title</span>
-            <span className="col-span-2">Project</span>
-            <span className="col-span-1">Priority</span>
-            <span className="col-span-2">Assignee</span>
-            <span className="col-span-2 text-right">Due Date</span>
+        <div className="bg-[#FFFFFF] text-[#000000] p-6 border border-black space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-black">
+            <span className="micro-label text-black/60">Catalog Index / Tabular Dispatch</span>
+            <span className="meta-number text-[11px] text-black">
+              Total {filteredTasks.length} Operations
+            </span>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="divide-y divide-black">
+            <div className="grid grid-cols-12 gap-2 pb-2 meta-number text-[10px] text-black uppercase tracking-wider font-bold">
+              <span className="col-span-1">Status</span>
+              <span className="col-span-4">Operation Title</span>
+              <span className="col-span-2">Project</span>
+              <span className="col-span-1">Priority</span>
+              <span className="col-span-2">Assignee</span>
+              <span className="col-span-2 text-right">Due Date</span>
+            </div>
+
             {filteredTasks.map(task => {
               const assignee = users.find(u => u.id === task.assigneeId);
               const project = projects.find(p => p.id === task.projectId);
@@ -402,7 +409,7 @@ export const TasksView: React.FC = () => {
                 <div
                   key={task.id}
                   onClick={() => setSelectedTask(task)}
-                  className="grid grid-cols-12 gap-2 items-center p-2.5 bg-[#181B20] border border-[#262C36] hover:border-[#E5B869] cursor-pointer patch-chamfer-sm transition-colors text-xs font-mono"
+                  className="grid grid-cols-12 gap-2 items-center py-3 hover:bg-[#000000] hover:text-[#FFFFFF] cursor-pointer transition-colors px-2"
                 >
                   <div className="col-span-1 flex items-center gap-1.5">
                     <button
@@ -410,44 +417,36 @@ export const TasksView: React.FC = () => {
                         e.stopPropagation();
                         updateTaskStatus(task.id, task.status === 'done' ? 'todo' : 'done');
                       }}
-                      className={`w-4 h-4 border flex items-center justify-center ${
-                        task.status === 'done' ? 'bg-[#5EBA7D] border-[#5EBA7D] text-[#0B0C0E]' : 'border-[#9E9A8E]'
+                      className={`w-4 h-4 border border-current flex items-center justify-center cursor-pointer ${
+                        task.status === 'done' ? 'bg-[#A1A1AA] text-white border-[#A1A1AA]' : ''
                       }`}
                     >
                       {task.status === 'done' && <CheckCircle2 size={12} />}
                     </button>
                   </div>
 
-                  <div className="col-span-4 font-semibold text-[#EDE8DB] truncate">
+                  <div className="col-span-4 font-bold truncate">
                     {task.title}
                   </div>
 
-                  <div className="col-span-2">
-                    {project ? (
-                      <span className="text-[10px] px-1.5 py-0.2 border" style={{ borderColor: `${project.color}60`, color: project.color }}>
-                        {project.code}
-                      </span>
-                    ) : (
-                      <span className="text-[#9E9A8E]">-</span>
-                    )}
+                  <div className="col-span-2 meta-number text-[11px]">
+                    {project ? `/${project.code}` : '-'}
                   </div>
 
-                  <div className="col-span-1">
-                    <span className={`text-[9px] px-1.5 py-0.2 border uppercase ${priorityStyles[task.priority].class}`}>
-                      {priorityStyles[task.priority].label}
-                    </span>
+                  <div className="col-span-1 meta-number text-[10px] uppercase font-bold text-[#A1A1AA]">
+                    /{task.priority}
                   </div>
 
                   <div className="col-span-2 flex items-center gap-2">
                     {assignee && (
                       <>
                         <PatchAvatar user={assignee} size="sm" />
-                        <span className="text-xs text-[#EDE8DB] truncate">{assignee.name}</span>
+                        <span className="text-xs truncate">{assignee.name}</span>
                       </>
                     )}
                   </div>
 
-                  <div className="col-span-2 text-right text-[#9E9A8E]">
+                  <div className="col-span-2 text-right meta-number text-[11px]">
                     {task.dueDate}
                   </div>
                 </div>
@@ -459,44 +458,42 @@ export const TasksView: React.FC = () => {
 
       {/* TASK DETAILS MODAL */}
       {selectedTask && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#14171B] border-2 border-[#323A48] max-w-xl w-full p-5 patch-chamfer-md shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <div className="absolute inset-[3px] border border-dashed border-[#EDE8DB]/20 pointer-events-none patch-chamfer-md" />
-
-            <div className="flex items-start justify-between pb-3 border-b border-[#242930] mb-4">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+          <div className="bg-[#000000] text-white border border-white/40 max-w-xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start justify-between pb-3 border-b border-white/20 mb-4">
               <div>
-                <span className={`text-[10px] font-mono px-2 py-0.5 border uppercase ${priorityStyles[selectedTask.priority].class}`}>
-                  {selectedTask.priority} PRIORITY
+                <span className="meta-number text-[10px] uppercase text-[#A1A1AA]">
+                  /{selectedTask.priority} PRIORITY
                 </span>
-                <h3 className="font-mono text-base font-bold text-[#EDE8DB] mt-1.5">
+                <h3 className="text-base font-bold text-white mt-1">
                   {selectedTask.title}
                 </h3>
               </div>
               <button
                 onClick={() => setSelectedTask(null)}
-                className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB]"
+                className="text-white/60 hover:text-white cursor-pointer p-1"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 font-mono text-xs text-[#EDE8DB]">
+            <div className="space-y-4 text-xs">
               {/* Description */}
-              <div className="p-3 bg-[#0C0E11] border border-[#252B36] patch-chamfer-sm text-[#D8D2C2] whitespace-pre-wrap">
+              <div className="p-3 border border-white/20 text-white/80 whitespace-pre-wrap">
                 {selectedTask.description || 'No additional description provided.'}
               </div>
 
-              {/* Status Selector */}
+              {/* Status & Assignee Selector */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Status</label>
+                  <label className="block micro-label text-white/60 mb-1">Status</label>
                   <select
                     value={selectedTask.status}
                     onChange={(e) => {
                       updateTaskStatus(selectedTask.id, e.target.value as TaskStatus);
                       setSelectedTask({ ...selectedTask, status: e.target.value as TaskStatus });
                     }}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white"
                   >
                     <option value="todo">To Do</option>
                     <option value="in_progress">In Progress</option>
@@ -506,7 +503,7 @@ export const TasksView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Assignee (Reassign)</label>
+                  <label className="block micro-label text-white/60 mb-1">Assignee</label>
                   <select
                     value={selectedTask.assigneeId}
                     onChange={(e) => {
@@ -514,7 +511,7 @@ export const TasksView: React.FC = () => {
                       updateTask(updated);
                       setSelectedTask(updated);
                     }}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white"
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
@@ -523,14 +520,14 @@ export const TasksView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Subtasks / Checklist */}
+              {/* Subtasks Checklist */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">
+                <label className="block micro-label text-white/60 mb-1">
                   Checklist ({selectedTask.subtasks.filter(s => s.completed).length}/{selectedTask.subtasks.length})
                 </label>
-                <div className="space-y-1.5 bg-[#0C0E11] p-3 border border-[#242930] patch-chamfer-sm">
+                <div className="space-y-1.5 border border-white/20 p-3">
                   {selectedTask.subtasks.length === 0 ? (
-                    <p className="text-[11px] text-[#666B75] italic">No subtasks defined.</p>
+                    <p className="micro-label text-white/40 italic">No subtasks defined.</p>
                   ) : (
                     selectedTask.subtasks.map(st => (
                       <div
@@ -542,15 +539,15 @@ export const TasksView: React.FC = () => {
                             subtasks: selectedTask.subtasks.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s)
                           });
                         }}
-                        className="flex items-center gap-2.5 p-1.5 hover:bg-[#16191D] cursor-pointer"
+                        className="flex items-center gap-2.5 p-1.5 hover:bg-white/5 cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={st.completed}
                           readOnly
-                          className="accent-[#5EBA7D]"
+                          className="accent-[#A1A1AA]"
                         />
-                        <span className={`text-xs ${st.completed ? 'line-through text-[#666B75]' : 'text-[#EDE8DB]'}`}>
+                        <span className={`text-xs ${st.completed ? 'line-through text-white/40' : 'text-white'}`}>
                           {st.title}
                         </span>
                       </div>
@@ -562,10 +559,10 @@ export const TasksView: React.FC = () => {
               {/* Tags */}
               {selectedTask.tags.length > 0 && (
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Tags</label>
+                  <label className="block micro-label text-white/60 mb-1">Tags</label>
                   <div className="flex gap-1.5 flex-wrap">
                     {selectedTask.tags.map(t => (
-                      <span key={t} className="text-[10px] px-2 py-0.5 bg-[#1F242C] border border-[#323945] text-[#EDE8DB]">
+                      <span key={t} className="meta-number text-[10px] px-2 py-0.5 border border-white/30 text-white">
                         #{t}
                       </span>
                     ))}
@@ -574,21 +571,21 @@ export const TasksView: React.FC = () => {
               )}
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#242930] flex items-center justify-between">
+            <div className="mt-6 pt-3 border-t border-white/20 flex items-center justify-between">
               <button
                 onClick={() => {
                   deleteTask(selectedTask.id);
                   setSelectedTask(null);
                 }}
-                className="font-mono text-xs text-[#E05A47] hover:underline flex items-center gap-1"
+                className="text-xs text-white/60 hover:text-[#A1A1AA] flex items-center gap-1 cursor-pointer"
               >
-                <Trash2 size={13} /> Delete Task
+                <Trash2 size={13} /> Delete Task /
               </button>
               <button
                 onClick={() => setSelectedTask(null)}
-                className="px-4 py-1.5 bg-[#252B34] hover:bg-[#323945] text-[#EDE8DB] font-mono text-xs patch-chamfer-sm"
+                className="px-4 py-1.5 bg-white text-black hover:bg-[#A1A1AA] hover:text-black text-xs font-semibold cursor-pointer"
               >
-                Done
+                Close /
               </button>
             </div>
           </div>
@@ -597,57 +594,55 @@ export const TasksView: React.FC = () => {
 
       {/* CREATE TASK MODAL */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateSubmit}
-            className="bg-[#14171B] border-2 border-[#323A48] max-w-lg w-full p-5 patch-chamfer-md shadow-2xl relative max-h-[90vh] overflow-y-auto"
+            className="bg-[#000000] text-white border border-white/40 max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto"
           >
-            <div className="absolute inset-[3px] border border-dashed border-[#EDE8DB]/20 pointer-events-none patch-chamfer-md" />
-
-            <div className="flex items-center justify-between pb-3 border-b border-[#242930] mb-4">
-              <h3 className="font-patch text-xl font-bold uppercase tracking-wider text-[#EDE8DB]">
-                Deploy New Tactical Task
+            <div className="flex items-center justify-between pb-3 border-b border-white/20 mb-4">
+              <h3 className="text-base font-bold text-white uppercase">
+                Deploy New Operation
               </h3>
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="p-1 hover:bg-[#20252C] text-[#9E9A8E] hover:text-[#EDE8DB]"
+                className="text-white/60 hover:text-white cursor-pointer p-1"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-3 font-mono text-xs">
+            <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Task Title *</label>
+                <label className="block micro-label text-white/60 mb-1">Task Title *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Implement hardware PUF key generator"
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                  className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                 />
               </div>
 
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Description</label>
+                <label className="block micro-label text-white/60 mb-1">Description</label>
                 <textarea
                   rows={2}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
                   placeholder="Specific requirements, acceptance criteria..."
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm resize-none"
+                  className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA] resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Assignee *</label>
+                  <label className="block micro-label text-white/60 mb-1">Assignee *</label>
                   <select
                     value={newAssigneeId}
                     onChange={(e) => setNewAssigneeId(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
@@ -656,11 +651,11 @@ export const TasksView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Linked Project</label>
+                  <label className="block micro-label text-white/60 mb-1">Linked Project</label>
                   <select
                     value={newProjectId}
                     onChange={(e) => setNewProjectId(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     <option value="">No Project / Unassigned</option>
                     {projects.map(p => (
@@ -672,11 +667,11 @@ export const TasksView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Priority</label>
+                  <label className="block micro-label text-white/60 mb-1">Priority</label>
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value as TaskPriority)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -686,26 +681,26 @@ export const TasksView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Due Date</label>
+                  <label className="block micro-label text-white/60 mb-1">Due Date</label>
                   <input
                     type="date"
                     value={newDueDate}
                     onChange={(e) => setNewDueDate(e.target.value)}
-                    className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                   />
                 </div>
               </div>
 
               {/* Subtasks Builder */}
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Sub-tasks / Checklist</label>
+                <label className="block micro-label text-white/60 mb-1">Sub-tasks / Checklist</label>
                 <div className="flex gap-2 mb-2">
                   <input
                     type="text"
                     value={subtaskInput}
                     onChange={(e) => setSubtaskInput(e.target.value)}
                     placeholder="Add subtask item..."
-                    className="flex-1 bg-[#0C0E11] border border-[#2D3440] px-3 py-1 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                    className="flex-1 bg-black border border-white/30 px-3 py-1 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -716,21 +711,21 @@ export const TasksView: React.FC = () => {
                   <button
                     type="button"
                     onClick={addSubtaskToDraft}
-                    className="px-3 py-1 bg-[#1F242C] hover:bg-[#2A313C] text-[#EDE8DB] font-mono text-xs patch-chamfer-sm border border-[#323945]"
+                    className="px-3 py-1 border border-white/30 hover:border-white text-white text-xs cursor-pointer"
                   >
-                    + Add
+                    + Add /
                   </button>
                 </div>
 
                 {newSubtasks.length > 0 && (
-                  <div className="space-y-1 bg-[#0C0E11] p-2 border border-[#242930] patch-chamfer-sm">
+                  <div className="space-y-1 border border-white/20 p-2">
                     {newSubtasks.map((st, i) => (
-                      <div key={st.id} className="flex items-center justify-between text-xs text-[#D8D2C2] px-1">
+                      <div key={st.id} className="flex items-center justify-between text-xs text-white/80 px-1">
                         <span>{i + 1}. {st.title}</span>
                         <button
                           type="button"
                           onClick={() => setNewSubtasks(prev => prev.filter(item => item.id !== st.id))}
-                          className="text-[#E05A47] text-[10px] hover:underline"
+                          className="text-white/40 hover:text-[#A1A1AA] text-[10px] cursor-pointer"
                         >
                           Remove
                         </button>
@@ -741,30 +736,30 @@ export const TasksView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[#9E9A8E] mb-1 uppercase text-[10px]">Tags (comma-separated)</label>
+                <label className="block micro-label text-white/60 mb-1">Tags (comma-separated)</label>
                 <input
                   type="text"
                   value={newTagsStr}
                   onChange={(e) => setNewTagsStr(e.target.value)}
                   placeholder="e.g. crypto, hardware, tokyo"
-                  className="w-full bg-[#0C0E11] border border-[#2D3440] px-3 py-1.5 text-xs text-[#EDE8DB] focus:outline-none focus:border-[#E5B869] patch-chamfer-sm"
+                  className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#A1A1AA]"
                 />
               </div>
             </div>
 
-            <div className="mt-5 pt-3 border-t border-[#242930] flex items-center justify-end gap-2">
+            <div className="mt-6 pt-3 border-t border-white/20 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setIsCreateOpen(false)}
-                className="px-3 py-1.5 bg-[#1F242C] hover:bg-[#282F3B] text-[#9E9A8E] hover:text-[#EDE8DB] font-mono text-xs patch-chamfer-sm"
+                className="px-3 py-1.5 border border-white/20 hover:border-white text-white/70 text-xs cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-[#E5B869] hover:bg-[#F0C57A] text-[#0B0C0E] font-mono text-xs font-bold patch-chamfer-sm"
+                className="px-4 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-semibold cursor-pointer"
               >
-                Deploy Task
+                Deploy Task /
               </button>
             </div>
           </form>
