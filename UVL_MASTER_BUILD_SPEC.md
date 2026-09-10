@@ -90,13 +90,14 @@ The platform ships with 5 core operator profiles with individual callsigns, cust
 - **Admin Approval Interface**: Vijayrajkumar can approve/reject with review comments or mark reimbursed.
 - **Visual Analytics**:
   - Spend Distribution by Category monochrome chart.
-  - Monthly Budget vs Actual gauge ($8,000 default threshold).
-  - Lifetime spend and pending approval counters.
-- **Accounting CSV Export**: Download verified ledger as standard accounting CSV.
+  - Monthly Budget vs Actual gauge (₹5,00,000 INR default threshold, zero mock data baseline).
+  - Lifetime spend and pending approval counters in Indian Rupees (₹ INR).
+- **Accounting CSV Export**: Download verified ledger as standard accounting CSV with INR values.
 - **Auto-Task Generation**: Pending expenses automatically generate verification tasks for the administrator.
 
 ### MODULE 10: Investor Tracking (`InvestorView.tsx`)
 - **Security Clearance**: Restricted to Admin/Founder clearance (`isVijayrajkumar`).
+- **Currency & Scale**: Standardized in Indian Rupees (₹ INR) with ₹1.5 Cr (₹1,50,00,000) default target raise and zero mock data baseline.
 - **Status Pipeline (Kanban by Stage)**:
   - Stages: `Contacted` → `Meeting Scheduled` → `Pitched` → `Due Diligence` → `Term Sheet` → `Committed` → `Closed / Passed`.
   - 1-click stage advancement with milestone celebrations (confetti on Term Sheet / Committed).

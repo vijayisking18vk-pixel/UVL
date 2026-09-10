@@ -141,7 +141,7 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_MEMBERS_V5';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_MEMBERS_V6_INR';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -166,6 +166,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               avatarUrl: seed?.avatarUrl || u.avatarUrl
             };
           });
+        }
+        // Ensure no legacy mock expenses or investors remain
+        if (parsed.expenses && parsed.expenses.some((e: any) => e.id === 'exp-1' || e.id === 'exp-2' || e.id === 'exp-3')) {
+          parsed.expenses = [];
+        }
+        if (parsed.investors && parsed.investors.some((i: any) => i.id === 'inv-1' || i.id === 'inv-2' || i.id === 'inv-3')) {
+          parsed.investors = [];
         }
         return parsed;
       }
@@ -1345,7 +1352,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         type: newExpense.receiptName?.endsWith('.png') ? 'image/png' : newExpense.receiptName?.endsWith('.jpg') ? 'image/jpeg' : 'application/pdf',
         projectId: projects[0]?.id || 'p-1',
         folder: 'Expenses',
-        notes: `Expense receipt for ${newExpense.vendor} ($${newExpense.amount}) submitted by ${currentUser.name}`,
+        notes: `Expense receipt for ${newExpense.vendor} (₹${newExpense.amount.toLocaleString('en-IN')}) submitted by ${currentUser.name}`,
         fileUrl: newExpense.receiptUrl
       });
     }
@@ -1353,10 +1360,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // If status is pending, auto-create a verification task for Vijayrajkumar
     if (newExpense.status === 'pending') {
       addTask({
-        title: `[Expense Review] ${newExpense.vendor} ($${newExpense.amount})`,
-        description: `Review and approve submitted expense of $${newExpense.amount} for category ${newExpense.category}. Paid via ${newExpense.paymentMethod}. Description: ${newExpense.description}`,
+        title: `[Expense Review] ${newExpense.vendor} (₹${newExpense.amount.toLocaleString('en-IN')})`,
+        description: `Review and approve submitted expense of ₹${newExpense.amount.toLocaleString('en-IN')} for category ${newExpense.category}. Paid via ${newExpense.paymentMethod}. Description: ${newExpense.description}`,
         status: 'todo',
-        priority: newExpense.amount > 500 ? 'urgent' : 'medium',
+        priority: newExpense.amount > 25000 ? 'urgent' : 'medium',
         assigneeId: 'u-1', // Vijayrajkumar
         projectId: projects[0]?.id || 'p-1',
         dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
@@ -1407,7 +1414,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           id: `int-${Date.now()}`,
           date: new Date().toISOString().split('T')[0],
           type: 'Email',
-          summary: `Investor lead created by ${currentUser.name}. Stage: ${data.stage}. Target: $${data.dealSize.toLocaleString()}`,
+          summary: `Investor lead created by ${currentUser.name}. Stage: ${data.stage}. Target: ₹${data.dealSize.toLocaleString('en-IN')}`,
           authorId: currentUser.id,
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16)
         }
@@ -1421,7 +1428,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (data.nextFollowUpDate) {
       addTask({
         title: `[Investor Follow-Up] ${newInv.name} (${newInv.firm})`,
-        description: `Follow up on deal pipeline. Stage: ${newInv.stage}, Deal size: $${newInv.dealSize.toLocaleString()}. Notes: ${newInv.notes}`,
+        description: `Follow up on deal pipeline. Stage: ${newInv.stage}, Deal size: ₹${newInv.dealSize.toLocaleString('en-IN')}. Notes: ${newInv.notes}`,
         status: 'todo',
         priority: 'high',
         assigneeId: newInv.relationshipOwnerId,
@@ -1489,12 +1496,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }));
   };
 
-  const addInvestorDocument = async (investorId: string, doc: Omit<InvestorDocument, 'id' | 'uploadedAt'>) => {
+  const addInvestorDocument = async (investorId: string, doc: { name: string; url: string; type: string }): Promise<void> => {
     sound.patchStamp();
     const newDoc: InvestorDocument = {
-      ...doc,
       id: `invdoc-${Date.now()}`,
-      uploadedAt: new Date().toISOString().split('T')[0]
+      name: doc.name,
+      url: doc.url,
+      type: doc.type,
+      version: 1,
+      uploadedAt: new Date().toISOString().split('T')[0],
+      uploadedBy: currentUser.id
     };
 
     setInvestors(prev => prev.map(inv => {
@@ -1507,16 +1518,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return inv;
     }));
 
-    // Also index document in Central File Repo (FilesView) under "Investor Relations"
+    // Mirror to Central File Enclave
     const targetInv = investors.find(i => i.id === investorId);
     await uploadFile({
-      name: newDoc.name,
-      size: '2.5 MB',
-      type: newDoc.type || 'application/pdf',
+      name: `${targetInv?.firm || 'Investor'}_${doc.name}`,
+      size: '2.4 MB',
+      type: doc.type,
       projectId: projects[0]?.id || 'p-1',
-      folder: 'Investor Relations',
+      folder: 'Pitch & Investors',
       notes: `Investor documentation for ${targetInv?.name || 'Investor'} (${targetInv?.firm || 'VC'})`,
-      fileUrl: newDoc.url
+      fileUrl: doc.url
     });
   };
 
@@ -1529,7 +1540,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     addTask({
       title: `[Investor Follow-Up] ${targetInv.name} (${targetInv.firm})`,
-      description: note || `Scheduled deal follow-up. Deal: $${targetInv.dealSize.toLocaleString()} (${targetInv.roundType}). Valuation: $${(targetInv.valuation || 0).toLocaleString()}`,
+      description: note || `Scheduled deal follow-up. Deal: ₹${targetInv.dealSize.toLocaleString('en-IN')} (${targetInv.roundType}). Valuation: ₹${(targetInv.valuation || 0).toLocaleString('en-IN')}`,
       status: 'todo',
       priority: 'high',
       assigneeId: targetInv.relationshipOwnerId,
@@ -1794,9 +1805,9 @@ Your job:
 Context:
 - Active Team: ${users.length} members (${users.map(u => u.name).join(', ')})
 - Tasks: ${tasks.length} total, ${completedTasks} completed, ${tasks.filter(t => t.status === 'blocked').length} blocked
-- Operational Spend: $${totalSpend.toLocaleString()} USD across ${expenses.length} expense records
-- Investor Pipeline: $${totalPipeline.toLocaleString()} across ${investors.length} active venture leads
-- Pipeline breakdown: ${investors.map(i => `${i.name} (${i.firm}) -> ${i.stage}: $${i.dealSize.toLocaleString()}`).join('; ')}
+- Operational Spend: ₹${totalSpend.toLocaleString('en-IN')} INR across ${expenses.length} expense records
+- Investor Pipeline: ₹${totalPipeline.toLocaleString('en-IN')} across ${investors.length} active venture leads
+- Pipeline breakdown: ${investors.map(i => `${i.name} (${i.firm}) -> ${i.stage}: ₹${i.dealSize.toLocaleString('en-IN')}`).join('; ')}
 
 Generate an editorial, high-density, professional markdown report with:
 1. Executive Summary
@@ -1821,10 +1832,10 @@ Format as clean markdown.`;
 **Generated By**: UVL Sentinel (Autonomous AI Agent)
 
 ### Executive Summary
-Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering velocity remains strong with ${completedTasks} verified tasks completed. Capital allocation is controlled at $${totalSpend.toLocaleString()} USD.
+Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering velocity remains strong with ${completedTasks} verified tasks completed. Capital allocation is controlled at ₹${totalSpend.toLocaleString('en-IN')} INR.
 
 ### Key Milestones
-- Active pipeline stands at $${totalPipeline.toLocaleString()} USD across ${investors.length} prospective institutional partners.
+- Active pipeline stands at ₹${totalPipeline.toLocaleString('en-IN')} across ${investors.length} prospective institutional partners.
 - Zero fatal exceptions across Supabase real-time telemetry enclaves.
 - Mobile touch-first responsive shells deployed and verified.
 
@@ -1839,11 +1850,11 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
       title: periodStr,
       period: new Date().toISOString().split('T')[0],
       generatedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      summary: `Automated ${type} synthesis covering ${tasks.length} tasks, $${totalSpend.toLocaleString()} spend, and $${totalPipeline.toLocaleString()} investor pipeline.`,
+      summary: `Automated ${type} synthesis covering ${tasks.length} tasks, ₹${totalSpend.toLocaleString('en-IN')} spend, and ₹${totalPipeline.toLocaleString('en-IN')} investor pipeline.`,
       content: reportContent,
       highlights: [
         `${completedTasks} tasks closed across current sprint`,
-        `$${totalPipeline.toLocaleString()} active capital pipeline`,
+        `₹${totalPipeline.toLocaleString('en-IN')} active capital pipeline`,
         `100% database persistence active`
       ],
       risks: [

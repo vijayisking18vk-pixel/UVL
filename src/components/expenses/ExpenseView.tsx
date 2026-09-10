@@ -5,7 +5,7 @@ import { uploadToStorage } from '../../lib/supabase';
 import { sound } from '../../utils/sound';
 import { PatchAvatar } from '../common/PatchAvatar';
 import {
-  DollarSign,
+  IndianRupee,
   UploadCloud,
   Plus,
   Download,
@@ -47,7 +47,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
   'Reimbursement'
 ];
 
-const MONTHLY_BUDGET = 8000.00;
+const MONTHLY_BUDGET = 500000; // ₹5,00,000 monthly budget
 
 export const ExpenseView: React.FC = () => {
   const {
@@ -74,7 +74,7 @@ export const ExpenseView: React.FC = () => {
 
   // Form State
   const [amount, setAmount] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('INR');
   const [category, setCategory] = useState<ExpenseCategory>('Software');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Corporate Card');
@@ -302,7 +302,7 @@ export const ExpenseView: React.FC = () => {
           <div className="p-4 border border-white/20 bg-black">
             <span className="micro-label text-white/50 block mb-1">Total Lifetime Spend</span>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
-              ${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{totalSpend.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             <span className="text-[11px] text-white/40 mt-1 block">Across {expenses.length} ledger records</span>
           </div>
@@ -310,10 +310,10 @@ export const ExpenseView: React.FC = () => {
           <div className="p-4 border border-white/20 bg-black">
             <div className="flex items-center justify-between mb-1">
               <span className="micro-label text-white/50">Current Month Burn</span>
-              <span className="meta-number text-[10px] text-[#A1A1AA]">BUDGET: ${MONTHLY_BUDGET.toLocaleString()}</span>
+              <span className="meta-number text-[10px] text-[#A1A1AA]">BUDGET: ₹{MONTHLY_BUDGET.toLocaleString('en-IN')}</span>
             </div>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
-              ${currentMonthSpend.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ₹{currentMonthSpend.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </div>
             {/* Visual Budget Gauge */}
             <div className="w-full bg-white/10 h-1.5 mt-2 overflow-hidden">
@@ -328,40 +328,25 @@ export const ExpenseView: React.FC = () => {
 
           <div className="p-4 border border-white/20 bg-black">
             <span className="micro-label text-white/50 block mb-1">Pending Clearance</span>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-[#E4E4E7] meta-number flex items-center gap-2">
-              <span>{pendingCount}</span>
-              {pendingCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 border border-yellow-500/40 text-yellow-400 font-normal uppercase">
-                  Action Required
-                </span>
-              )}
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-yellow-400 meta-number">
+              {pendingCount}
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">
-              {isVijayrajkumar ? 'Awaiting your sign-off' : 'Under admin review'}
-            </span>
+            <span className="text-[11px] text-white/40 mt-1 block">Awaiting partner sign-off</span>
           </div>
 
           <div className="p-4 border border-white/20 bg-black">
-            <span className="micro-label text-white/50 block mb-1">Approved & Cleared</span>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number flex items-center gap-2">
-              <span>{approvedCount}</span>
-              <span className="text-[10px] px-1.5 py-0.5 border border-emerald-500/40 text-emerald-400 font-normal uppercase">
-                Verified
-              </span>
+            <span className="micro-label text-white/50 block mb-1">Approved & Reimbursed</span>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-emerald-400 meta-number">
+              {approvedCount}
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">Audited compliance standard</span>
+            <span className="text-[11px] text-white/40 mt-1 block">Disbursed / Settled</span>
           </div>
         </div>
 
-        {/* Spend by Category Visual Breakdown */}
-        <div className="mt-8 p-5 border border-white/20 bg-black">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <PieChart size={14} className="text-[#A1A1AA]" />
-              <span className="text-xs uppercase font-bold text-white tracking-wider">
-                Spend Distribution by Category
-              </span>
-            </div>
+        {/* Category Distribution Micro-Strip */}
+        <div className="mt-6 p-4 border border-white/10 bg-black">
+          <div className="flex items-center justify-between mb-3">
+            <span className="micro-label text-white/60">Category Spend Distribution</span>
             <span className="text-[11px] text-white/40 font-mono">Real-time telemetry</span>
           </div>
 
@@ -371,7 +356,7 @@ export const ExpenseView: React.FC = () => {
                 <div>
                   <span className="text-[10px] text-white/50 uppercase block truncate">{item.category}</span>
                   <span className="text-sm font-bold text-white meta-number block mt-1">
-                    ${item.total.toLocaleString()}
+                    ₹{item.total.toLocaleString('en-IN')}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-[10px] text-[#A1A1AA] font-mono">
@@ -499,7 +484,7 @@ export const ExpenseView: React.FC = () => {
                         {expense.paymentMethod}
                       </td>
                       <td className="py-3 px-4 text-right meta-number font-bold text-white text-sm whitespace-nowrap">
-                        ${expense.amount.toFixed(2)}
+                        ₹{expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-3 px-4 text-center whitespace-nowrap">
                         {expense.receiptUrl ? (
@@ -597,7 +582,7 @@ export const ExpenseView: React.FC = () => {
           <div className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-white/20">
               <div className="flex items-center gap-2">
-                <DollarSign size={18} className="text-[#A1A1AA]" />
+                <IndianRupee size={18} className="text-[#A1A1AA]" />
                 <h3 className="text-base font-bold text-white uppercase tracking-tight">
                   Record New Expense
                 </h3>
@@ -614,7 +599,7 @@ export const ExpenseView: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="micro-label text-white/70 block mb-1.5">
-                    Amount ($ USD) *
+                    Amount (₹ INR) *
                   </label>
                   <input
                     type="number"
@@ -874,7 +859,7 @@ export const ExpenseView: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-white/50">Amount:</span>
-                <span className="text-white font-bold meta-number">${approvalModal.expense.amount.toFixed(2)}</span>
+                <span className="text-white font-bold meta-number">₹{approvalModal.expense.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-white/50">Category:</span>

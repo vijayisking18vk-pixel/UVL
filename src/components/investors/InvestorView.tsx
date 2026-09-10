@@ -12,7 +12,7 @@ import { PatchAvatar } from '../common/PatchAvatar';
 import {
   Briefcase,
   TrendingUp,
-  DollarSign,
+  IndianRupee,
   Calendar,
   Clock,
   Plus,
@@ -57,7 +57,7 @@ const ROUND_TYPES: InvestorRoundType[] = [
   'Convertible Note'
 ];
 
-const TARGET_RAISE = 1500000; // $1.5M target raise
+const TARGET_RAISE = 15000000; // ₹1.5 Cr (₹1,50,00,000) target raise
 
 export const InvestorView: React.FC = () => {
   const {
@@ -92,8 +92,8 @@ export const InvestorView: React.FC = () => {
   const [website, setWebsite] = useState('');
   const [relationshipOwnerId, setRelationshipOwnerId] = useState(currentUser.id);
   const [stage, setStage] = useState<InvestorStage>('contacted');
-  const [dealSize, setDealSize] = useState('250000');
-  const [valuation, setValuation] = useState('6000000');
+  const [dealSize, setDealSize] = useState('2500000');
+  const [valuation, setValuation] = useState('50000000');
   const [roundType, setRoundType] = useState<InvestorRoundType>('Seed');
   const [targetCloseDate, setTargetCloseDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -346,7 +346,7 @@ export const InvestorView: React.FC = () => {
               <span className="meta-number text-[10px] text-[#A1A1AA]">GOAL</span>
             </div>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
-              ${TARGET_RAISE.toLocaleString()}
+              ₹{TARGET_RAISE.toLocaleString('en-IN')}
             </div>
             <span className="text-[11px] text-white/40 mt-1 block">Seed Equity & SAFE</span>
           </div>
@@ -357,7 +357,7 @@ export const InvestorView: React.FC = () => {
               <span className="meta-number text-[10px] text-emerald-400 font-bold">{fundingProgressPercent}%</span>
             </div>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
-              ${totalCommitted.toLocaleString()}
+              ₹{totalCommitted.toLocaleString('en-IN')}
             </div>
             {/* Visual Progress Bar */}
             <div className="w-full bg-white/10 h-1.5 mt-2 overflow-hidden">
@@ -371,7 +371,7 @@ export const InvestorView: React.FC = () => {
           <div className="p-4 border border-white/20 bg-black">
             <span className="micro-label text-white/50 block mb-1">Active Pipeline Value</span>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-[#E4E4E7] meta-number">
-              ${totalPipelinePotential.toLocaleString()}
+              ₹{totalPipelinePotential.toLocaleString('en-IN')}
             </div>
             <span className="text-[11px] text-white/40 mt-1 block">
               Across {investors.length} institutions
@@ -429,7 +429,7 @@ export const InvestorView: React.FC = () => {
                       </div>
                       {colTotal > 0 && (
                         <span className="meta-number text-xs font-semibold text-[#A1A1AA]">
-                          ${colTotal >= 1000000 ? `${(colTotal / 1000000).toFixed(1)}M` : `${Math.round(colTotal / 1000)}k`}
+                          ₹{colTotal >= 10000000 ? `${(colTotal / 10000000).toFixed(2)}Cr` : colTotal >= 100000 ? `${(colTotal / 100000).toFixed(1)}L` : `${Math.round(colTotal / 1000)}k`}
                         </span>
                       )}
                     </div>
@@ -469,7 +469,7 @@ export const InvestorView: React.FC = () => {
                                   </span>
                                 </div>
                                 <span className="text-[10px] px-1.5 py-0.5 border border-[#A1A1AA] text-[#A1A1AA] font-bold meta-number shrink-0">
-                                  ${(inv.dealSize / 1000).toFixed(0)}k
+                                  ₹{inv.dealSize >= 10000000 ? `${(inv.dealSize / 10000000).toFixed(2)}Cr` : inv.dealSize >= 100000 ? `${(inv.dealSize / 100000).toFixed(1)}L` : `${Math.round(inv.dealSize / 1000)}k`}
                                 </span>
                               </div>
 
@@ -555,10 +555,10 @@ export const InvestorView: React.FC = () => {
                           {inv.roundType}
                         </td>
                         <td className="py-3 px-4 text-right meta-number font-bold text-white">
-                          ${inv.dealSize.toLocaleString()}
+                          ₹{inv.dealSize.toLocaleString('en-IN')}
                         </td>
                         <td className="py-3 px-4 text-right meta-number text-white/70">
-                          {inv.valuation ? `$${inv.valuation.toLocaleString()}` : 'N/A'}
+                          {inv.valuation ? `₹${inv.valuation.toLocaleString('en-IN')}` : 'N/A'}
                         </td>
                         <td className="py-3 px-4">
                           {owner && (
@@ -637,12 +637,12 @@ export const InvestorView: React.FC = () => {
               <div className="p-3 border border-white/10 bg-white/5 space-y-2 text-xs font-mono">
                 <div className="flex justify-between">
                   <span className="text-white/50">Deal Size:</span>
-                  <span className="text-white font-bold meta-number">${selectedInvestor.dealSize.toLocaleString()}</span>
+                  <span className="text-white font-bold meta-number">₹{selectedInvestor.dealSize.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">Valuation:</span>
                   <span className="text-white font-bold meta-number">
-                    {selectedInvestor.valuation ? `$${selectedInvestor.valuation.toLocaleString()}` : 'Uncapped / TBD'}
+                    {selectedInvestor.valuation ? `₹${selectedInvestor.valuation.toLocaleString('en-IN')}` : 'Uncapped / TBD'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -856,12 +856,12 @@ export const InvestorView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Target Ticket ($) *</label>
+                  <label className="micro-label text-white/70 block mb-1.5">Target Ticket (₹ INR) *</label>
                   <input
                     type="number"
                     value={dealSize}
                     onChange={(e) => setDealSize(e.target.value)}
-                    placeholder="250000"
+                    placeholder="2500000"
                     className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
                   />
                 </div>
@@ -882,12 +882,12 @@ export const InvestorView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Target Valuation ($)</label>
+                  <label className="micro-label text-white/70 block mb-1.5">Target Valuation (₹ INR)</label>
                   <input
                     type="number"
                     value={valuation}
                     onChange={(e) => setValuation(e.target.value)}
-                    placeholder="6000000"
+                    placeholder="50000000"
                     className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
                   />
                 </div>

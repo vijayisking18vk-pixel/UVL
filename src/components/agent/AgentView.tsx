@@ -22,7 +22,7 @@ import {
   CheckSquare,
   FileText,
   MessageSquare,
-  DollarSign,
+  IndianRupee,
   Briefcase,
   Layers,
   ShieldCheck,
@@ -183,7 +183,7 @@ export const AgentView: React.FC = () => {
       case 'calendar': return <Calendar size={13} className="text-white" />;
       case 'notes': return <FileText size={13} className="text-white" />;
       case 'chat': return <MessageSquare size={13} className="text-white" />;
-      case 'expenses': return <DollarSign size={13} className="text-[#A1A1AA]" />;
+      case 'expenses': return <IndianRupee size={13} className="text-[#A1A1AA]" />;
       case 'investors': return <Briefcase size={13} className="text-[#A1A1AA]" />;
       default: return <Layers size={13} className="text-white/60" />;
     }
@@ -583,7 +583,7 @@ export const AgentView: React.FC = () => {
                     <div className="p-3 border border-white/10 bg-white/5 text-center">
                       <span className="text-[10px] text-white/50 uppercase block">Total Spend</span>
                       <span className="text-lg font-bold text-white meta-number">
-                        ${selectedReport.metrics.totalSpend.toLocaleString()}
+                        ₹{selectedReport.metrics.totalSpend.toLocaleString('en-IN')}
                       </span>
                     </div>
                     <div className="p-3 border border-white/10 bg-white/5 text-center">
