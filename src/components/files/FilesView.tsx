@@ -64,7 +64,8 @@ export const FilesView: React.FC = () => {
   const vaultAudioChunksRef = useRef<Blob[]>([]);
   const vaultRecordTimerRef = useRef<number | null>(null);
 
-  const folders = Array.from(new Set(files.map(f => f.folder)));
+  const defaultFolders = ['Specs', 'Pitch Decks', 'Expenses', 'Investor Relations', 'Voice Memos'];
+  const folders = Array.from(new Set([...defaultFolders, ...files.map(f => f.folder)]));
 
   const filteredFiles = files.filter(f => {
     if (selectedFolder !== 'all' && f.folder !== selectedFolder) return false;

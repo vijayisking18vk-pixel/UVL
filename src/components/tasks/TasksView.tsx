@@ -11,7 +11,8 @@ import {
   AlertOctagon,
   CheckCircle2,
   Trash2,
-  X
+  X,
+  Bot
 } from 'lucide-react';
 
 export const TasksView: React.FC = () => {
@@ -22,6 +23,7 @@ export const TasksView: React.FC = () => {
     updateTaskStatus,
     toggleSubtask,
     deleteTask,
+    delegateTaskToAgent,
     users,
     projects,
     currentUser
@@ -393,6 +395,21 @@ export const TasksView: React.FC = () => {
                                 </button>
                               ))}
                             </div>
+
+                            {/* Delegate to Autonomous AI Agent Button */}
+                            {task.status !== 'done' && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  delegateTaskToAgent(task.id);
+                                }}
+                                className="mt-2 w-full py-1 border border-white/15 hover:border-white bg-white/5 text-[9px] uppercase font-mono text-white/70 hover:text-white flex items-center justify-center gap-1.5 transition-colors"
+                                title="Delegate this task to autonomous AI agent"
+                              >
+                                <Bot size={11} className="text-[#A1A1AA]" />
+                                <span>Assign to AI Agent</span>
+                              </button>
+                            )}
                           </div>
                         );
                       })

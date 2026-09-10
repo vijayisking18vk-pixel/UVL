@@ -22,6 +22,9 @@ export const CommandPalette: React.FC = () => {
     files,
     meetings,
     channels,
+    expenses,
+    investors,
+    agentReports,
     setActiveTab,
     setQuickCaptureOpen
   } = useWorkspace();
@@ -44,6 +47,8 @@ export const CommandPalette: React.FC = () => {
   const matchedNotes = notes.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q)).slice(0, 3);
   const matchedFiles = files.filter(f => f.name.toLowerCase().includes(q) || f.folder.toLowerCase().includes(q)).slice(0, 2);
   const matchedMeetings = meetings.filter(m => m.title.toLowerCase().includes(q) || m.agenda.some(a => a.toLowerCase().includes(q))).slice(0, 2);
+  const matchedExpenses = expenses.filter(e => e.vendor.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.category.toLowerCase().includes(q)).slice(0, 2);
+  const matchedInvestors = investors.filter(i => i.name.toLowerCase().includes(q) || i.firm.toLowerCase().includes(q)).slice(0, 2);
 
   const quickActions = [
     {
@@ -57,33 +62,43 @@ export const CommandPalette: React.FC = () => {
       }
     },
     {
+      id: 'act-goto-agent',
+      title: 'AI Agent Task Executor',
+      category: 'Navigation',
+      icon: Sparkles,
+      action: () => {
+        setCommandPaletteOpen(false);
+        setActiveTab('agent');
+      }
+    },
+    {
+      id: 'act-goto-expenses',
+      title: 'Open Expense Ledger',
+      category: 'Navigation',
+      icon: FileText,
+      action: () => {
+        setCommandPaletteOpen(false);
+        setActiveTab('expenses');
+      }
+    },
+    {
+      id: 'act-goto-investors',
+      title: 'Open Investor Pipeline',
+      category: 'Navigation',
+      icon: Users,
+      action: () => {
+        setCommandPaletteOpen(false);
+        setActiveTab('investors');
+      }
+    },
+    {
       id: 'act-goto-tasks',
-      title: 'Open task board',
+      title: 'Open Task Board',
       category: 'Navigation',
       icon: CheckSquare,
       action: () => {
         setCommandPaletteOpen(false);
         setActiveTab('tasks');
-      }
-    },
-    {
-      id: 'act-goto-cal',
-      title: 'Open calendar & overlays',
-      category: 'Navigation',
-      icon: Calendar,
-      action: () => {
-        setCommandPaletteOpen(false);
-        setActiveTab('calendar');
-      }
-    },
-    {
-      id: 'act-goto-patch',
-      title: 'Open patch identity studio',
-      category: 'Navigation',
-      icon: Sparkles,
-      action: () => {
-        setCommandPaletteOpen(false);
-        setActiveTab('personalization');
       }
     }
   ];
@@ -253,7 +268,57 @@ export const CommandPalette: React.FC = () => {
             </div>
           )}
 
-          {q && matchedTasks.length === 0 && matchedNotes.length === 0 && matchedFiles.length === 0 && matchedMeetings.length === 0 && (
+          {/* Matched Expenses */}
+          {matchedExpenses.length > 0 && (
+            <div>
+              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                <FileText size={11} className="text-[#A1A1AA]" /> Expenses & Receipts
+              </span>
+              <div className="space-y-1">
+                {matchedExpenses.map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      sound.click();
+                      setActiveTab('expenses');
+                      setCommandPaletteOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                  >
+                    <span className="truncate">{e.vendor} - {e.description || e.category}</span>
+                    <span className="text-[10px] font-bold meta-number">${e.amount.toFixed(2)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Matched Investors */}
+          {matchedInvestors.length > 0 && (
+            <div>
+              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                <Users size={11} className="text-[#A1A1AA]" /> Investor Leads
+              </span>
+              <div className="space-y-1">
+                {matchedInvestors.map(i => (
+                  <button
+                    key={i.id}
+                    onClick={() => {
+                      sound.click();
+                      setActiveTab('investors');
+                      setCommandPaletteOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                  >
+                    <span className="truncate">{i.name} ({i.firm})</span>
+                    <span className="text-[10px] font-bold uppercase">{i.stage.replace('_', ' ')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {q && matchedTasks.length === 0 && matchedNotes.length === 0 && matchedFiles.length === 0 && matchedMeetings.length === 0 && matchedExpenses.length === 0 && matchedInvestors.length === 0 && (
             <div className="p-8 text-center text-white/40">
               No lab artifacts matching "{query}"
             </div>

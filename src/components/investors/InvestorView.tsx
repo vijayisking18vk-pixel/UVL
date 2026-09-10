@@ -1,0 +1,1156 @@
+import React, { useState, useRef } from 'react';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import {
+  Investor,
+  InvestorStage,
+  InvestorRoundType,
+  InvestorInteraction
+} from '../../types';
+import { uploadToStorage } from '../../lib/supabase';
+import { sound } from '../../utils/sound';
+import { PatchAvatar } from '../common/PatchAvatar';
+import {
+  Briefcase,
+  TrendingUp,
+  DollarSign,
+  Calendar,
+  Clock,
+  Plus,
+  UploadCloud,
+  FileText,
+  MessageSquare,
+  ShieldCheck,
+  ShieldAlert,
+  Search,
+  ExternalLink,
+  ChevronRight,
+  ArrowRight,
+  CheckCircle2,
+  AlertTriangle,
+  User,
+  X,
+  Eye,
+  Download,
+  Phone,
+  Mail,
+  Building,
+  Filter,
+  CheckSquare
+} from 'lucide-react';
+
+const PIPELINE_STAGES: { id: InvestorStage; label: string; description: string }[] = [
+  { id: 'contacted', label: 'Contacted', description: 'Initial outreach & warm intro' },
+  { id: 'meeting_scheduled', label: 'Meeting Set', description: 'Partner call or screening scheduled' },
+  { id: 'pitched', label: 'Pitched', description: 'Formal deck presented to partnership' },
+  { id: 'due_diligence', label: 'Due Diligence', description: 'Data room & technical audit active' },
+  { id: 'term_sheet', label: 'Term Sheet', description: 'Negotiating economics & governance' },
+  { id: 'committed', label: 'Committed', description: 'Allocation locked & wires pending' },
+  { id: 'closed', label: 'Closed / Passed', description: 'Completed or archived leads' }
+];
+
+const ROUND_TYPES: InvestorRoundType[] = [
+  'Pre-Seed',
+  'Seed',
+  'Series A',
+  'Series B',
+  'SAFE',
+  'Convertible Note'
+];
+
+const TARGET_RAISE = 1500000; // $1.5M target raise
+
+export const InvestorView: React.FC = () => {
+  const {
+    investors,
+    addInvestor,
+    updateInvestor,
+    updateInvestorStage,
+    addInvestorInteraction,
+    addInvestorDocument,
+    scheduleInvestorFollowUp,
+    currentUser,
+    users,
+    isVijayrajkumar
+  } = useWorkspace();
+
+  // Search & Stage Filter
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban');
+  const [selectedInvestor, setSelectedInvestor] = useState<Investor | null>(investors[0] || null);
+
+  // Modals
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isLogInteractionOpen, setIsLogInteractionOpen] = useState(false);
+  const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
+  const [isScheduleFollowUpOpen, setIsScheduleFollowUpOpen] = useState(false);
+
+  // Form State: Add Investor
+  const [name, setName] = useState('');
+  const [firm, setFirm] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [website, setWebsite] = useState('');
+  const [relationshipOwnerId, setRelationshipOwnerId] = useState(currentUser.id);
+  const [stage, setStage] = useState<InvestorStage>('contacted');
+  const [dealSize, setDealSize] = useState('250000');
+  const [valuation, setValuation] = useState('6000000');
+  const [roundType, setRoundType] = useState<InvestorRoundType>('Seed');
+  const [targetCloseDate, setTargetCloseDate] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // Form State: Interaction Log
+  const [interactionType, setInteractionType] = useState<'Email' | 'Video Call' | 'In-Person' | 'Pitch' | 'Due Diligence'>('Video Call');
+  const [interactionDate, setInteractionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [interactionSummary, setInteractionSummary] = useState('');
+
+  // Form State: Document Upload
+  const [docName, setDocName] = useState('');
+  const [docType, setDocType] = useState('application/pdf');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUrl, setDocUrl] = useState('');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const docFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form State: Schedule Follow-up
+  const [followUpDate, setFollowUpDate] = useState(
+    new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0]
+  );
+  const [followUpNote, setFollowUpNote] = useState('');
+
+  // Pipeline Metrics
+  const totalCommitted = investors
+    .filter(i => i.stage === 'committed' || i.stage === 'closed')
+    .reduce((sum, i) => sum + i.dealSize, 0);
+
+  const totalPipelinePotential = investors
+    .filter(i => i.stage !== 'closed' && i.stage !== 'passed')
+    .reduce((sum, i) => sum + i.dealSize, 0);
+
+  const fundingProgressPercent = Math.min(100, Math.round((totalCommitted / TARGET_RAISE) * 100));
+
+  const filteredInvestors = investors.filter(inv => {
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      return (
+        inv.name.toLowerCase().includes(q) ||
+        inv.firm.toLowerCase().includes(q) ||
+        inv.notes.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // Access Control Guard
+  if (!isVijayrajkumar && currentUser.role !== 'admin') {
+    return (
+      <div className="py-16 text-center max-w-xl mx-auto space-y-6">
+        <div className="w-16 h-16 border border-white/20 bg-white/5 mx-auto flex items-center justify-center">
+          <ShieldAlert size={32} className="text-[#A1A1AA]" />
+        </div>
+        <div>
+          <span className="micro-label text-white/50 block mb-2">Enclave Security Level 1</span>
+          <h2 className="headline text-2xl font-bold text-white">
+            Institutional Investor Enclave Restricted.
+          </h2>
+          <p className="text-white/60 text-xs mt-3 leading-relaxed">
+            Cap table allocations, term sheet valuations, and investor correspondence are restricted to founder clearance (Vijayrajkumar / Administrative Operator).
+          </p>
+        </div>
+        <div className="p-4 border border-white/20 bg-black text-left text-xs font-mono space-y-2">
+          <div className="flex justify-between">
+            <span className="text-white/50">Active Session:</span>
+            <span className="text-white font-bold">{currentUser.name} ({currentUser.callsign})</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/50">Authorization:</span>
+            <span className="text-[#A1A1AA]">MEMBER_CLEARANCE</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/50">Requirement:</span>
+            <span className="text-white">FOUNDER_EXECUTIVE_KEY</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle Add Investor
+  const handleAddInvestorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !firm.trim()) {
+      alert('Please enter investor name and firm.');
+      return;
+    }
+
+    const created = addInvestor({
+      name: name.trim(),
+      firm: firm.trim(),
+      email: email.trim(),
+      phone: phone.trim() || undefined,
+      website: website.trim() || undefined,
+      relationshipOwnerId,
+      stage,
+      dealSize: parseFloat(dealSize) || 250000,
+      valuation: valuation ? parseFloat(valuation) : undefined,
+      roundType,
+      targetCloseDate: targetCloseDate || undefined,
+      lastInteractionDate: new Date().toISOString().split('T')[0],
+      notes: notes.trim()
+    });
+
+    setSelectedInvestor(created);
+    setIsAddOpen(false);
+
+    // Reset
+    setName('');
+    setFirm('');
+    setEmail('');
+    setPhone('');
+    setWebsite('');
+    setNotes('');
+  };
+
+  // Handle Log Interaction
+  const handleLogInteractionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestor || !interactionSummary.trim()) return;
+
+    addInvestorInteraction(selectedInvestor.id, {
+      date: interactionDate,
+      type: interactionType,
+      summary: interactionSummary.trim(),
+      authorId: currentUser.id
+    });
+
+    const updated = investors.find(i => i.id === selectedInvestor.id);
+    if (updated) setSelectedInvestor(updated);
+
+    setIsLogInteractionOpen(false);
+    setInteractionSummary('');
+  };
+
+  // Handle Document Upload
+  const handleDocUploadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestor || (!docFile && !docUrl)) {
+      alert('Please select a file or provide a document name.');
+      return;
+    }
+
+    let finalUrl = docUrl;
+    if (docFile) {
+      setIsUploadingDoc(true);
+      try {
+        const uploadPath = `investors/${Date.now()}-${docFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { url } = await uploadToStorage(docFile, uploadPath, docFile.type);
+        finalUrl = url;
+      } catch (err) {
+        console.error('Storage upload failed:', err);
+        finalUrl = URL.createObjectURL(docFile);
+      } finally {
+        setIsUploadingDoc(false);
+      }
+    }
+
+    const versionNum = (selectedInvestor.documents?.length || 0) + 1;
+    await addInvestorDocument(selectedInvestor.id, {
+      name: docName.trim() || docFile?.name || 'Investor Document.pdf',
+      url: finalUrl,
+      type: docType,
+      version: versionNum,
+      uploadedBy: currentUser.id
+    });
+
+    const updated = investors.find(i => i.id === selectedInvestor.id);
+    if (updated) setSelectedInvestor(updated);
+
+    setIsUploadDocOpen(false);
+    setDocName('');
+    setDocFile(null);
+    setDocUrl('');
+  };
+
+  // Handle Schedule Follow-up
+  const handleScheduleFollowUpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvestor || !followUpDate) return;
+
+    scheduleInvestorFollowUp(selectedInvestor.id, followUpDate, followUpNote.trim() || undefined);
+
+    const updated = investors.find(i => i.id === selectedInvestor.id);
+    if (updated) setSelectedInvestor(updated);
+
+    setIsScheduleFollowUpOpen(false);
+    setFollowUpNote('');
+  };
+
+  return (
+    <div className="space-y-10 pb-16">
+      {/* Top Editorial Header */}
+      <section className="border-b border-white/20 pb-8">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
+              <span>capitalization</span>
+              <span>/</span>
+              <span className="text-[#A1A1AA]">investor pipeline</span>
+              <span>/</span>
+              <span>fundraising telemetry</span>
+            </div>
+            <h1 className="headline-section text-white font-bold tracking-tight">
+              Institutional investor tracking.
+            </h1>
+            <p className="text-white/60 text-sm mt-2 max-w-xl">
+              Stage pipeline, term sheets, deal size allocations, communication audit trails, and automatic follow-up tasks.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex border border-white/20 text-xs font-mono">
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`px-3 py-2 uppercase transition-colors ${
+                  viewMode === 'kanban' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Kanban
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-2 uppercase transition-colors border-l border-white/20 ${
+                  viewMode === 'table' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+                }`}
+              >
+                List
+              </button>
+            </div>
+
+            <button
+              onClick={() => {
+                sound.click();
+                setIsAddOpen(true);
+              }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs tracking-wide transition-all uppercase"
+            >
+              <Plus size={15} />
+              <span>Add Investor Lead</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Metric Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+          <div className="p-4 border border-white/20 bg-black">
+            <div className="flex items-center justify-between mb-1">
+              <span className="micro-label text-white/50">Target Round Size</span>
+              <span className="meta-number text-[10px] text-[#A1A1AA]">GOAL</span>
+            </div>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
+              ${TARGET_RAISE.toLocaleString()}
+            </div>
+            <span className="text-[11px] text-white/40 mt-1 block">Seed Equity & SAFE</span>
+          </div>
+
+          <div className="p-4 border border-white/20 bg-black">
+            <div className="flex items-center justify-between mb-1">
+              <span className="micro-label text-white/50">Committed Capital</span>
+              <span className="meta-number text-[10px] text-emerald-400 font-bold">{fundingProgressPercent}%</span>
+            </div>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
+              ${totalCommitted.toLocaleString()}
+            </div>
+            {/* Visual Progress Bar */}
+            <div className="w-full bg-white/10 h-1.5 mt-2 overflow-hidden">
+              <div
+                className="bg-emerald-400 h-full transition-all duration-500"
+                style={{ width: `${fundingProgressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="p-4 border border-white/20 bg-black">
+            <span className="micro-label text-white/50 block mb-1">Active Pipeline Value</span>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-[#E4E4E7] meta-number">
+              ${totalPipelinePotential.toLocaleString()}
+            </div>
+            <span className="text-[11px] text-white/40 mt-1 block">
+              Across {investors.length} institutions
+            </span>
+          </div>
+
+          <div className="p-4 border border-white/20 bg-black">
+            <span className="micro-label text-white/50 block mb-1">Conversion Velocity</span>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number flex items-center gap-2">
+              <span>{Math.round((investors.filter(i => i.stage === 'term_sheet' || i.stage === 'committed').length / (investors.length || 1)) * 100)}%</span>
+              <span className="text-[10px] px-1.5 py-0.5 border border-[#A1A1AA] text-[#A1A1AA] font-normal uppercase">
+                Term Sheets Active
+              </span>
+            </div>
+            <span className="text-[11px] text-white/40 mt-1 block">Pitched to Term Sheet ratio</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Main Pipeline Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left/Center Column: Kanban or Table */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* Search bar */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search investor name, venture firm, notes..."
+              className="w-full bg-black border border-white/20 focus:border-[#A1A1AA] text-white text-xs pl-9 pr-4 py-2 focus:outline-none transition-colors"
+            />
+          </div>
+
+          {viewMode === 'kanban' ? (
+            /* KANBAN BOARD */
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {PIPELINE_STAGES.map(col => {
+                const stageInvestors = filteredInvestors.filter(i => i.stage === col.id);
+                const colTotal = stageInvestors.reduce((s, i) => s + i.dealSize, 0);
+
+                return (
+                  <div key={col.id} className="border border-white/20 bg-black flex flex-col min-h-[380px]">
+                    {/* Stage Header */}
+                    <div className="p-3 border-b border-white/20 bg-white/5 flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-xs text-white uppercase">{col.label}</span>
+                          <span className="text-[10px] px-1.5 py-0.2 border border-white/30 text-white/60 meta-number">
+                            {stageInvestors.length}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-white/40 block mt-0.5">{col.description}</span>
+                      </div>
+                      {colTotal > 0 && (
+                        <span className="meta-number text-xs font-semibold text-[#A1A1AA]">
+                          ${colTotal >= 1000000 ? `${(colTotal / 1000000).toFixed(1)}M` : `${Math.round(colTotal / 1000)}k`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stage Cards */}
+                    <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[500px]">
+                      {stageInvestors.length === 0 ? (
+                        <div className="h-28 border border-dashed border-white/10 flex items-center justify-center text-[10px] text-white/30 font-mono">
+                          No leads in stage
+                        </div>
+                      ) : (
+                        stageInvestors.map(inv => {
+                          const isSelected = selectedInvestor?.id === inv.id;
+                          const owner = users.find(u => u.id === inv.relationshipOwnerId);
+
+                          return (
+                            <div
+                              key={inv.id}
+                              onClick={() => {
+                                sound.click();
+                                setSelectedInvestor(inv);
+                              }}
+                              className={`p-3.5 border transition-all cursor-pointer space-y-2.5 ${
+                                isSelected
+                                  ? 'border-white bg-white/10'
+                                  : 'border-white/20 bg-black hover:border-white/50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <h4 className="font-bold text-sm text-white hover:text-[#A1A1AA] transition-colors">
+                                    {inv.name}
+                                  </h4>
+                                  <span className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
+                                    <Building size={11} className="text-[#A1A1AA]" />
+                                    {inv.firm}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 border border-[#A1A1AA] text-[#A1A1AA] font-bold meta-number shrink-0">
+                                  ${(inv.dealSize / 1000).toFixed(0)}k
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between text-[11px] text-white/50 pt-1 border-t border-white/10">
+                                <span className="uppercase text-[10px] font-mono">{inv.roundType}</span>
+                                {owner && (
+                                  <div className="flex items-center gap-1.5" title={`Owner: ${owner.name}`}>
+                                    <PatchAvatar user={owner} size="sm" />
+                                    <span className="text-[10px] text-white/70">{owner.callsign}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Stage advance shortcuts */}
+                              <div className="flex items-center justify-between pt-1 text-[10px]">
+                                <span className="text-white/40 meta-number">
+                                  Last: {inv.lastInteractionDate}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  {col.id !== 'closed' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const currentIdx = PIPELINE_STAGES.findIndex(s => s.id === col.id);
+                                        if (currentIdx < PIPELINE_STAGES.length - 1) {
+                                          updateInvestorStage(inv.id, PIPELINE_STAGES[currentIdx + 1].id);
+                                        }
+                                      }}
+                                      className="px-1.5 py-0.5 border border-white/30 hover:border-white text-white/80 hover:text-white uppercase flex items-center gap-0.5"
+                                      title="Advance stage"
+                                    >
+                                      <span>Advance</span>
+                                      <ChevronRight size={10} />
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* TABLE LIST VIEW */
+            <div className="border border-white/20 bg-black overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-white/20 bg-white/5 font-mono text-[10px] text-white/50 uppercase">
+                    <th className="py-3 px-4">Investor & Firm</th>
+                    <th className="py-3 px-4">Stage</th>
+                    <th className="py-3 px-4">Round</th>
+                    <th className="py-3 px-4 text-right">Deal Size</th>
+                    <th className="py-3 px-4 text-right">Valuation</th>
+                    <th className="py-3 px-4">Owner</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {filteredInvestors.map(inv => {
+                    const owner = users.find(u => u.id === inv.relationshipOwnerId);
+                    return (
+                      <tr
+                        key={inv.id}
+                        onClick={() => setSelectedInvestor(inv)}
+                        className={`hover:bg-white/5 cursor-pointer ${
+                          selectedInvestor?.id === inv.id ? 'bg-white/10' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-white">{inv.name}</div>
+                          <div className="text-[11px] text-white/50">{inv.firm}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 border border-white/20 text-[10px] uppercase font-bold text-white">
+                            {inv.stage.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-white/70 uppercase text-[11px] font-mono">
+                          {inv.roundType}
+                        </td>
+                        <td className="py-3 px-4 text-right meta-number font-bold text-white">
+                          ${inv.dealSize.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 text-right meta-number text-white/70">
+                          {inv.valuation ? `$${inv.valuation.toLocaleString()}` : 'N/A'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {owner && (
+                            <div className="flex items-center gap-1.5">
+                              <PatchAvatar user={owner} size="sm" />
+                              <span className="text-white/80">{owner.name}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedInvestor(inv);
+                              setIsScheduleFollowUpOpen(true);
+                            }}
+                            className="px-2 py-1 border border-white/30 hover:border-white text-[10px] uppercase text-white"
+                          >
+                            Follow Up
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Right Column: Active Investor Detail Drawer */}
+        <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-6">
+          {selectedInvestor ? (
+            <>
+              {/* Profile Card */}
+              <div>
+                <div className="flex items-center justify-between pb-3 border-b border-white/20">
+                  <div>
+                    <span className="micro-label text-white/50 block">Investor Dossier</span>
+                    <h2 className="text-xl font-bold text-white mt-0.5">{selectedInvestor.name}</h2>
+                    <span className="text-xs text-[#A1A1AA] font-semibold block">{selectedInvestor.firm}</span>
+                  </div>
+                  <span className="text-xs px-2.5 py-1 border border-white font-bold uppercase text-white">
+                    {selectedInvestor.stage.replace('_', ' ')}
+                  </span>
+                </div>
+
+                {/* Contact Strip */}
+                <div className="mt-3 space-y-1.5 text-xs text-white/70">
+                  {selectedInvestor.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail size={12} className="text-[#A1A1AA]" />
+                      <a href={`mailto:${selectedInvestor.email}`} className="hover:text-white underline">
+                        {selectedInvestor.email}
+                      </a>
+                    </div>
+                  )}
+                  {selectedInvestor.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} className="text-[#A1A1AA]" />
+                      <span>{selectedInvestor.phone}</span>
+                    </div>
+                  )}
+                  {selectedInvestor.website && (
+                    <div className="flex items-center gap-2">
+                      <ExternalLink size={12} className="text-[#A1A1AA]" />
+                      <a href={selectedInvestor.website} target="_blank" rel="noreferrer" className="hover:text-white underline">
+                        {selectedInvestor.website}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Deal Terms Grid */}
+              <div className="p-3 border border-white/10 bg-white/5 space-y-2 text-xs font-mono">
+                <div className="flex justify-between">
+                  <span className="text-white/50">Deal Size:</span>
+                  <span className="text-white font-bold meta-number">${selectedInvestor.dealSize.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/50">Valuation:</span>
+                  <span className="text-white font-bold meta-number">
+                    {selectedInvestor.valuation ? `$${selectedInvestor.valuation.toLocaleString()}` : 'Uncapped / TBD'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/50">Instrument:</span>
+                  <span className="text-white font-bold uppercase">{selectedInvestor.roundType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/50">Relationship Lead:</span>
+                  <span className="text-white">
+                    {users.find(u => u.id === selectedInvestor.relationshipOwnerId)?.name || 'Vijayrajkumar'}
+                  </span>
+                </div>
+                {selectedInvestor.nextFollowUpDate && (
+                  <div className="flex justify-between border-t border-white/10 pt-1.5 text-emerald-400">
+                    <span>Follow-Up Due:</span>
+                    <span className="font-bold">{selectedInvestor.nextFollowUpDate}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => {
+                    sound.click();
+                    setIsLogInteractionOpen(true);
+                  }}
+                  className="px-3 py-2 border border-white/30 hover:border-white text-white text-xs font-semibold uppercase flex items-center justify-center gap-1.5"
+                >
+                  <MessageSquare size={13} />
+                  <span>Log Meeting</span>
+                </button>
+                <button
+                  onClick={() => {
+                    sound.click();
+                    setIsScheduleFollowUpOpen(true);
+                  }}
+                  className="px-3 py-2 bg-white text-black font-bold text-xs uppercase flex items-center justify-center gap-1.5"
+                >
+                  <Calendar size={13} />
+                  <span>Schedule Task</span>
+                </button>
+              </div>
+
+              {/* Documents & Vault Attachments */}
+              <div className="space-y-3 pt-4 border-t border-white/20">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs uppercase font-bold text-white tracking-wider flex items-center gap-1.5">
+                    <FileText size={13} className="text-[#A1A1AA]" />
+                    <span>Dossier Vault ({selectedInvestor.documents?.length || 0})</span>
+                  </span>
+                  <button
+                    onClick={() => {
+                      sound.click();
+                      setIsUploadDocOpen(true);
+                    }}
+                    className="text-[11px] text-[#A1A1AA] hover:text-white uppercase underline"
+                  >
+                    + Upload Doc
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {!selectedInvestor.documents || selectedInvestor.documents.length === 0 ? (
+                    <div className="p-4 border border-dashed border-white/10 text-center text-[10px] text-white/40 font-mono">
+                      No pitch decks or term sheets uploaded yet.
+                    </div>
+                  ) : (
+                    selectedInvestor.documents.map(doc => (
+                      <div key={doc.id} className="p-2.5 border border-white/20 bg-black flex items-center justify-between gap-2">
+                        <div className="truncate">
+                          <div className="text-xs font-bold text-white truncate">{doc.name}</div>
+                          <span className="text-[10px] text-white/40 meta-number">
+                            v{doc.version}.0 · {doc.uploadedAt}
+                          </span>
+                        </div>
+                        {doc.url && (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            download={doc.name}
+                            className="p-1 border border-white/30 hover:border-white text-white"
+                            title="Download document"
+                          >
+                            <Download size={12} />
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Interaction Timeline Log */}
+              <div className="space-y-3 pt-4 border-t border-white/20">
+                <span className="text-xs uppercase font-bold text-white tracking-wider block">
+                  Interaction Timeline ({selectedInvestor.interactions?.length || 0})
+                </span>
+
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                  {!selectedInvestor.interactions || selectedInvestor.interactions.length === 0 ? (
+                    <p className="text-[11px] text-white/40 italic">No interactions logged yet.</p>
+                  ) : (
+                    selectedInvestor.interactions.map(int => {
+                      const author = users.find(u => u.id === int.authorId);
+                      return (
+                        <div key={int.id} className="p-3 border border-white/15 bg-white/5 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[10px] text-white/50">
+                            <span className="px-1.5 py-0.2 border border-white/20 uppercase text-white font-mono">
+                              {int.type}
+                            </span>
+                            <span className="meta-number">{int.date}</span>
+                          </div>
+                          <p className="text-white/80 leading-snug">{int.summary}</p>
+                          {author && (
+                            <span className="text-[10px] text-white/40 block font-mono">
+                              By {author.name}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="py-20 text-center text-white/40 font-mono text-xs">
+              Select an investor to inspect deal terms, interactions, and documents.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ADD INVESTOR MODAL */}
+      {isAddOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/20">
+              <h3 className="text-base font-bold text-white uppercase tracking-tight flex items-center gap-2">
+                <Briefcase size={18} className="text-[#A1A1AA]" />
+                <span>Onboard Investor Lead</span>
+              </h3>
+              <button onClick={() => setIsAddOpen(false)} className="text-white/50 hover:text-white p-1">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddInvestorSubmit} className="space-y-4 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Investor Contact Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Elena Rostova"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  />
+                </div>
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Venture Firm / Angel *</label>
+                  <input
+                    type="text"
+                    required
+                    value={firm}
+                    onChange={(e) => setFirm(e.target.value)}
+                    placeholder="e.g. Apex Frontier Capital"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Email Address</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="partner@firm.vc"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  />
+                </div>
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Phone / WhatsApp</label>
+                  <input
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1 (555) 000-0000"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Pipeline Stage *</label>
+                  <select
+                    value={stage}
+                    onChange={(e) => setStage(e.target.value as InvestorStage)}
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  >
+                    {PIPELINE_STAGES.map(s => (
+                      <option key={s.id} value={s.id}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Target Ticket ($) *</label>
+                  <input
+                    type="number"
+                    value={dealSize}
+                    onChange={(e) => setDealSize(e.target.value)}
+                    placeholder="250000"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                  />
+                </div>
+
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Round Structure</label>
+                  <select
+                    value={roundType}
+                    onChange={(e) => setRoundType(e.target.value as InvestorRoundType)}
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  >
+                    {ROUND_TYPES.map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Target Valuation ($)</label>
+                  <input
+                    type="number"
+                    value={valuation}
+                    onChange={(e) => setValuation(e.target.value)}
+                    placeholder="6000000"
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                  />
+                </div>
+
+                <div>
+                  <label className="micro-label text-white/70 block mb-1.5">Relationship Lead</label>
+                  <select
+                    value={relationshipOwnerId}
+                    onChange={(e) => setRelationshipOwnerId(e.target.value)}
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  >
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="micro-label text-white/70 block mb-1.5">Initial Notes & Thesis</label>
+                <textarea
+                  rows={2}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Thesis match, sector focus, check size criteria..."
+                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-white/20 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  className="px-4 py-2 border border-white/30 text-white text-xs hover:border-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-bold text-xs uppercase"
+                >
+                  Enroll Investor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* LOG INTERACTION MODAL */}
+      {isLogInteractionOpen && selectedInvestor && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-white/20">
+              <h3 className="text-sm font-bold text-white uppercase">
+                Log Meeting / Note: {selectedInvestor.name}
+              </h3>
+              <button onClick={() => setIsLogInteractionOpen(false)} className="text-white/50 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleLogInteractionSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="micro-label text-white/70 block mb-1">Interaction Type</label>
+                  <select
+                    value={interactionType}
+                    onChange={(e) => setInteractionType(e.target.value as any)}
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  >
+                    <option value="Video Call">Video Call</option>
+                    <option value="Email">Email</option>
+                    <option value="In-Person">In-Person</option>
+                    <option value="Pitch">Formal Pitch</option>
+                    <option value="Due Diligence">Due Diligence Review</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="micro-label text-white/70 block mb-1">Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={interactionDate}
+                    onChange={(e) => setInteractionDate(e.target.value)}
+                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="micro-label text-white/70 block mb-1">Discussion Summary & Action Points</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={interactionSummary}
+                  onChange={(e) => setInteractionSummary(e.target.value)}
+                  placeholder="Key questions asked, valuation response, next steps promised..."
+                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLogInteractionOpen(false)}
+                  className="px-3 py-1.5 border border-white/30 text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-[#A1A1AA] text-black font-bold uppercase"
+                >
+                  Save to Timeline
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD DOCUMENT MODAL */}
+      {isUploadDocOpen && selectedInvestor && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-white/20">
+              <h3 className="text-sm font-bold text-white uppercase">
+                Attach Document: {selectedInvestor.firm}
+              </h3>
+              <button onClick={() => setIsUploadDocOpen(false)} className="text-white/50 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleDocUploadSubmit} className="space-y-4">
+              <div>
+                <label className="micro-label text-white/70 block mb-1">Document Title / Description</label>
+                <input
+                  type="text"
+                  required
+                  value={docName}
+                  onChange={(e) => setDocName(e.target.value)}
+                  placeholder="e.g. UVL_Term_Sheet_Apex_Draft.pdf"
+                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                />
+              </div>
+
+              <div>
+                <label className="micro-label text-white/70 block mb-1">File Attachment (PDF, DOCX, Deck)</label>
+                <input
+                  ref={docFileInputRef}
+                  type="file"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const f = e.target.files[0];
+                      setDocFile(f);
+                      if (!docName) setDocName(f.name);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <div
+                  onClick={() => docFileInputRef.current?.click()}
+                  className="p-4 border border-dashed border-white/30 hover:border-white bg-white/5 text-center cursor-pointer"
+                >
+                  {docFile ? (
+                    <div className="flex items-center justify-center gap-2 text-white">
+                      <CheckCircle2 size={15} className="text-emerald-400" />
+                      <span className="font-mono truncate">{docFile.name}</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <UploadCloud size={20} className="mx-auto text-white/40" />
+                      <span className="text-xs text-white block">Click to select pitch deck or NDA</span>
+                      <span className="text-[10px] text-white/40 block">Stored in Supabase and Central File Repo</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadDocOpen(false)}
+                  className="px-3 py-1.5 border border-white/30 text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingDoc}
+                  className="px-4 py-1.5 bg-[#A1A1AA] text-black font-bold uppercase"
+                >
+                  {isUploadingDoc ? 'Uploading...' : 'Save Document'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SCHEDULE FOLLOW-UP TASK MODAL */}
+      {isScheduleFollowUpOpen && selectedInvestor && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-white/20">
+              <h3 className="text-sm font-bold text-white uppercase flex items-center gap-1.5">
+                <CheckSquare size={16} className="text-[#A1A1AA]" />
+                <span>Auto-Generate Follow-Up Task</span>
+              </h3>
+              <button onClick={() => setIsScheduleFollowUpOpen(false)} className="text-white/50 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleFollowUpSubmit} className="space-y-4">
+              <div>
+                <label className="micro-label text-white/70 block mb-1">Target Follow-Up Date</label>
+                <input
+                  type="date"
+                  required
+                  value={followUpDate}
+                  onChange={(e) => setFollowUpDate(e.target.value)}
+                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                />
+              </div>
+
+              <div>
+                <label className="micro-label text-white/70 block mb-1">Action Task Details</label>
+                <textarea
+                  rows={3}
+                  value={followUpNote}
+                  onChange={(e) => setFollowUpNote(e.target.value)}
+                  placeholder={`Send revised pro-forma cap table to ${selectedInvestor.name} (${selectedInvestor.firm})`}
+                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                />
+              </div>
+
+              <div className="p-3 border border-white/10 bg-white/5 text-[11px] text-white/60">
+                ⚡ This automatically creates a high-priority task in the **Tasks Kanban** assigned to the relationship owner.
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleFollowUpOpen(false)}
+                  className="px-3 py-1.5 border border-white/30 text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-white text-black font-bold uppercase"
+                >
+                  Schedule & Create Task
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

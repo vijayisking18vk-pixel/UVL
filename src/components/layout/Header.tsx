@@ -21,7 +21,10 @@ import {
   LogOut,
   UserPlus,
   Grid,
-  X
+  X,
+  DollarSign,
+  Briefcase,
+  Bot
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -52,6 +55,9 @@ export const Header: React.FC = () => {
     { id: 'notes', label: 'Notes & Wiki', icon: FileText },
     { id: 'files', label: 'Files', icon: FolderArchive },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
+    { id: 'expenses', label: 'Expenses', icon: DollarSign },
+    { id: 'investors', label: 'Investors', icon: Briefcase },
+    { id: 'agent', label: 'AI Agent', icon: Bot },
     { id: 'pulse', label: 'Pulse & Check-in', icon: Activity },
     { id: 'personalization', label: 'Patch Lab', icon: Sparkles },
   ];
@@ -59,8 +65,9 @@ export const Header: React.FC = () => {
   const mobilePrimaryItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
+    { id: 'expenses', label: 'Spend', icon: DollarSign },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'files', label: 'Vault', icon: FolderArchive },
+    { id: 'agent', label: 'Agent', icon: Bot },
   ];
 
   const isPrimaryActive = mobilePrimaryItems.some(i => i.id === activeTab);

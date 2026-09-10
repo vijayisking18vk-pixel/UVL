@@ -177,3 +177,179 @@ export interface WorkspaceConfig {
   pixelFontActive: boolean;
   dashboardWidgets: string[];
 }
+
+// ==========================================
+// EXPENSE TRACKER TYPES
+// ==========================================
+export type ExpenseCategory =
+  | 'Software'
+  | 'Travel'
+  | 'Legal'
+  | 'Marketing'
+  | 'Payroll'
+  | 'Hardware'
+  | 'Office'
+  | 'Misc';
+
+export type ExpenseStatus = 'pending' | 'approved' | 'reimbursed' | 'rejected';
+
+export type PaymentMethod =
+  | 'Corporate Card'
+  | 'Bank Wire'
+  | 'UPI'
+  | 'Personal Card'
+  | 'Cash'
+  | 'Reimbursement';
+
+export interface Expense {
+  id: string;
+  amount: number;
+  currency: string;
+  category: ExpenseCategory;
+  date: string; // YYYY-MM-DD
+  paymentMethod: PaymentMethod;
+  vendor: string;
+  description: string;
+  submittedBy: string; // user ID
+  receiptUrl?: string;
+  receiptName?: string;
+  status: ExpenseStatus;
+  approverComment?: string;
+  approvedBy?: string; // user ID
+  approvedAt?: string;
+  createdAt: string;
+}
+
+// ==========================================
+// INVESTOR TRACKING TYPES
+// ==========================================
+export type InvestorStage =
+  | 'contacted'
+  | 'meeting_scheduled'
+  | 'pitched'
+  | 'due_diligence'
+  | 'term_sheet'
+  | 'committed'
+  | 'closed'
+  | 'passed';
+
+export type InvestorRoundType =
+  | 'Pre-Seed'
+  | 'Seed'
+  | 'Series A'
+  | 'Series B'
+  | 'SAFE'
+  | 'Convertible Note';
+
+export interface InvestorInteraction {
+  id: string;
+  date: string;
+  type: 'Email' | 'Video Call' | 'In-Person' | 'Pitch' | 'Due Diligence';
+  summary: string;
+  authorId: string;
+  timestamp: string;
+}
+
+export interface InvestorDocument {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  version: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface Investor {
+  id: string;
+  name: string;
+  firm: string;
+  email: string;
+  phone?: string;
+  website?: string;
+  avatarUrl?: string;
+  relationshipOwnerId: string; // user ID
+  stage: InvestorStage;
+  dealSize: number; // e.g. 250000
+  valuation?: number; // e.g. 5000000
+  roundType: InvestorRoundType;
+  targetCloseDate?: string;
+  lastInteractionDate: string;
+  nextFollowUpDate?: string;
+  notes: string;
+  interactions: InvestorInteraction[];
+  documents: InvestorDocument[];
+  createdAt: string;
+}
+
+// ==========================================
+// AGENTIC AI TASK EXECUTOR TYPES
+// ==========================================
+export type AgentTaskStatus =
+  | 'planning'
+  | 'pending_approval'
+  | 'executing'
+  | 'completed'
+  | 'failed';
+
+export interface AgentActionStep {
+  id: string;
+  stepNumber: number;
+  title: string;
+  targetModule: 'tasks' | 'calendar' | 'notes' | 'files' | 'chat' | 'investors' | 'expenses';
+  actionType: string;
+  details: Record<string, any>;
+  reasoning: string;
+  status: 'pending' | 'approved' | 'executed' | 'skipped' | 'failed';
+  requiresHumanApproval: boolean;
+}
+
+export interface AgentTask {
+  id: string;
+  prompt: string;
+  status: AgentTaskStatus;
+  createdAt: string;
+  completedAt?: string;
+  sourceTaskId?: string;
+  plan: AgentActionStep[];
+  resultSummary?: string;
+}
+
+export interface AgentActivityLog {
+  id: string;
+  timestamp: string;
+  actionType: string;
+  targetEntity: string;
+  reasoning: string;
+  status: 'success' | 'warning' | 'rolled_back';
+  rollbackAvailable: boolean;
+  rollbackData?: Record<string, any>;
+}
+
+export interface AgentReport {
+  id: string;
+  type: 'daily' | 'weekly' | 'monthly';
+  title: string;
+  period: string;
+  generatedAt: string;
+  summary: string;
+  content: string; // Markdown formatted report
+  highlights: string[];
+  risks: string[];
+  metrics: {
+    tasksCompleted: number;
+    totalSpend: number;
+    activeLeads: number;
+    sentimentScore: string;
+  };
+}
+
+export interface AgentConfig {
+  name: string;
+  callsign: string;
+  autonomousMode: boolean; // true = execute non-destructive steps automatically
+  requireApprovalForSensitive: boolean; // true = require approval for write/modifies
+  announcementsChannelId: string;
+  activeModel: string;
+}
+

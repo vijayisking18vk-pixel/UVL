@@ -11,6 +11,9 @@ import { FilesView } from './components/files/FilesView';
 import { ChatView } from './components/chat/ChatView';
 import { CheckinsView } from './components/checkins/CheckinsView';
 import { PatchAvatarLab } from './components/personalization/PatchAvatarLab';
+import { ExpenseView } from './components/expenses/ExpenseView';
+import { InvestorView } from './components/investors/InvestorView';
+import { AgentView } from './components/agent/AgentView';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { AccessControlModal } from './components/access/AccessControlModal';
@@ -64,6 +67,12 @@ const AppContent: React.FC = () => {
         return <ChatView />;
       case 'pulse':
         return <CheckinsView />;
+      case 'expenses':
+        return <ExpenseView />;
+      case 'investors':
+        return <InvestorView />;
+      case 'agent':
+        return <AgentView />;
       case 'personalization':
         return <PatchAvatarLab />;
       default:
