@@ -348,8 +348,23 @@ export interface AgentConfig {
   name: string;
   callsign: string;
   autonomousMode: boolean; // true = execute non-destructive steps automatically
-  requireApprovalForSensitive: boolean; // true = require approval for write/modifies
+  requireApprovalForSensitive: boolean; // false = direct execution, zero approval required
   announcementsChannelId: string;
   activeModel: string;
+}
+
+export interface AgentExecutedAction {
+  id: string;
+  module: 'tasks' | 'calendar' | 'notes' | 'chat' | 'investors' | 'expenses';
+  action: string;
+  summary: string;
+}
+
+export interface AgentChatMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  timestamp: string;
+  executedActions?: AgentExecutedAction[];
 }
 

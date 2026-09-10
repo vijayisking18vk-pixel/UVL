@@ -1,21 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import {
-  AgentTask,
-  AgentActionStep,
   AgentReport,
-  AgentActivityLog
+  AgentActivityLog,
+  AgentChatMessage
 } from '../../types';
 import { sound } from '../../utils/sound';
+import { PatchAvatar } from '../common/PatchAvatar';
 import {
   Bot,
   Sparkles,
-  Send,
   Mic,
   MicOff,
-  CheckCircle2,
-  AlertCircle,
-  Play,
   RotateCcw,
   Download,
   Calendar,
@@ -25,63 +21,164 @@ import {
   IndianRupee,
   Briefcase,
   Layers,
-  ShieldCheck,
-  ChevronRight,
-  Clock,
   Settings,
-  Cpu,
-  RefreshCw,
+  Clock,
+  Copy,
+  Check,
+  Trash2,
+  ArrowUp,
   ExternalLink,
-  Eye,
-  FileCode,
-  TrendingUp
+  ChevronRight
 } from 'lucide-react';
+
+// Lightweight Editorial Markdown Formatter
+const formatInline = (text: string): React.ReactNode => {
+  const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="text-white font-bold">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return (
+        <code key={i} className="px-1.5 py-0.5 bg-white/10 text-white font-mono text-xs border border-white/20">
+          {part.slice(1, -1)}
+        </code>
+      );
+    }
+    return part;
+  });
+};
+
+const MarkdownMessage: React.FC<{ content: string }> = ({ content }) => {
+  const lines = content.split('\n');
+
+  return (
+    <div className="space-y-2 text-sm leading-relaxed text-white/90">
+      {lines.map((line, idx) => {
+        if (line.startsWith('### ')) {
+          return (
+            <h4 key={idx} className="font-bold text-white text-base mt-4 mb-1 uppercase tracking-tight">
+              {formatInline(line.slice(4))}
+            </h4>
+          );
+        }
+        if (line.startsWith('## ')) {
+          return (
+            <h3 key={idx} className="font-bold text-white text-lg mt-4 mb-2 tracking-tight">
+              {formatInline(line.slice(3))}
+            </h3>
+          );
+        }
+        if (line.startsWith('# ')) {
+          return (
+            <h2 key={idx} className="font-bold text-white text-xl mt-5 mb-2 tracking-tight">
+              {formatInline(line.slice(2))}
+            </h2>
+          );
+        }
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+          return (
+            <div key={idx} className="flex items-start gap-2.5 pl-1.5">
+              <span className="text-[#A1A1AA] mt-1.5 text-xs">▪</span>
+              <span className="flex-1">{formatInline(line.slice(2))}</span>
+            </div>
+          );
+        }
+        if (/^\d+\.\s/.test(line)) {
+          const match = line.match(/^(\d+)\.\s(.*)/);
+          return (
+            <div key={idx} className="flex items-start gap-2 pl-1.5">
+              <span className="text-[#A1A1AA] font-mono text-xs mt-0.5">{match ? match[1] : '1'}.</span>
+              <span className="flex-1">{formatInline(match ? match[2] : line)}</span>
+            </div>
+          );
+        }
+        if (line.trim() === '') {
+          return <div key={idx} className="h-1.5" />;
+        }
+        return <p key={idx}>{formatInline(line)}</p>;
+      })}
+    </div>
+  );
+};
 
 export const AgentView: React.FC = () => {
   const {
-    agentTasks,
     agentLogs,
     agentReports,
     agentConfig,
-    createAgentTask,
-    approveAndExecutePlan,
+    agentChatMessages,
+    sendAgentChatMessage,
+    clearAgentChat,
     generateAgentReport,
     rollbackAgentAction,
     updateAgentConfig,
     currentUser,
-    tasks,
-    expenses,
-    investors
+    setActiveTab
   } = useWorkspace();
 
-  const [promptInput, setPromptInput] = useState('');
-  const [isPlanning, setIsPlanning] = useState(false);
-  const [isExecuting, setIsExecuting] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<AgentTask | null>(agentTasks[0] || null);
-  const [selectedReport, setSelectedReport] = useState<AgentReport | null>(agentReports[0] || null);
-  const [activeSubTab, setActiveSubTab] = useState<'executor' | 'reports' | 'logs' | 'config'>('executor');
+  // Chat State
+  const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'reports' | 'logs' | 'config'>('chat');
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  // Voice Input Speech Recognition state
+  // Reports State
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<AgentReport | null>(agentReports[0] || null);
+
+  // Voice Dictation
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Pre-configured Quick Executive Prompts
+  // Auto-scroll chat to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    if (activeSubTab === 'chat') {
+      scrollToBottom();
+    }
+  }, [agentChatMessages, activeSubTab]);
+
+  // Quick Action / Prompt Suggestions
   const quickPrompts = [
-    'Analyze all pending investor leads and schedule high-priority follow-up tasks',
-    'Review current month software expenses and flag unapproved items',
-    'Compile this week\'s task progress, milestones, and blockers into team wiki',
-    'Identify overdue task deliverables and draft notification to assignees',
-    'Audit Delaware legal compliance and seed round documents in central repository'
+    {
+      title: 'Active Sprint & Velocity',
+      prompt: 'Summarize all active sprint tasks, current velocity, assignees, and identify any critical blockers.'
+    },
+    {
+      title: 'Create Urgent Task',
+      prompt: 'Create a high-priority task for Vijayrajkumar titled "Audit Operator Security PINs & Biometric Enclaves" due tomorrow.'
+    },
+    {
+      title: 'Financial Burn in ₹ INR',
+      prompt: 'Analyze current month expense burn against our ₹5,00,000 budget and highlight top category allocations.'
+    },
+    {
+      title: 'Investor Pipeline Review',
+      prompt: 'Review all institutional venture leads in our pipeline, stage status, and recommend follow-up actions.'
+    },
+    {
+      title: 'Schedule Team Sync',
+      prompt: 'Schedule an engineering architecture sync event for tomorrow at 3:00 PM.'
+    },
+    {
+      title: 'Draft Executive Memo',
+      prompt: 'Draft an executive team briefing note in our wiki regarding our Supabase multimedia architecture.'
+    }
   ];
 
-  // Speech Recognition Handler
+  // Speech Recognition (Voice Intake)
   const toggleSpeechRecognition = () => {
     sound.click();
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech Recognition is not supported by this browser. Please type your task below.');
+      alert('Speech Recognition is not supported by your browser. Please type directly into the prompt box.');
       return;
     }
 
@@ -100,8 +197,9 @@ export const AgentView: React.FC = () => {
       recognition.onstart = () => setIsListening(true);
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setPromptInput(prev => (prev ? `${prev} ${transcript}` : transcript));
+        setInputText(prev => (prev ? `${prev} ${transcript}` : transcript));
         setIsListening(false);
+        if (textareaRef.current) textareaRef.current.focus();
       };
       recognition.onerror = () => setIsListening(false);
       recognition.onend = () => setIsListening(false);
@@ -114,44 +212,40 @@ export const AgentView: React.FC = () => {
     }
   };
 
-  // Submit Prompt to Gemini Planner
-  const handleIntakeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptInput.trim() || isPlanning) return;
+  // Send Message (Direct ChatGPT Style, Zero Approval Required)
+  const handleSendMessage = async (textToSend?: string) => {
+    const text = (textToSend || inputText).trim();
+    if (!text || isSending) return;
 
-    setIsPlanning(true);
+    setInputText('');
+    setIsSending(true);
+
     try {
-      const task = await createAgentTask(promptInput.trim());
-      setSelectedTask(task);
-      setPromptInput('');
+      await sendAgentChatMessage(text);
     } catch (err) {
-      console.error('Failed to create agent task:', err);
-      alert('Agent planning encountered an error. Check Gemini API configuration.');
+      console.error('Failed to send message to Sentinel:', err);
     } finally {
-      setIsPlanning(false);
+      setIsSending(false);
     }
   };
 
-  const handleSelectQuickPrompt = (qp: string) => {
+  // Key Down Handler (Enter to send, Shift+Enter for newline)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Copy Message Text
+  const handleCopyMessage = (id: string, text: string) => {
     sound.click();
-    setPromptInput(qp);
+    navigator.clipboard.writeText(text);
+    setCopiedMessageId(id);
+    setTimeout(() => setCopiedMessageId(null), 2000);
   };
 
-  // Execute Plan
-  const handleApprovePlan = async (taskId: string) => {
-    setIsExecuting(true);
-    try {
-      await approveAndExecutePlan(taskId);
-      const updated = agentTasks.find(t => t.id === taskId);
-      if (updated) setSelectedTask(updated);
-    } catch (err) {
-      console.error('Plan execution failed:', err);
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
-  // Generate Report
+  // Trigger Periodic Report
   const handleTriggerReport = async (type: 'daily' | 'weekly' | 'monthly') => {
     setIsGeneratingReport(true);
     try {
@@ -190,382 +284,379 @@ export const AgentView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-10 pb-16">
+    <div className="space-y-8 pb-16">
       {/* Top Editorial Header */}
-      <section className="border-b border-white/20 pb-8">
+      <section className="border-b border-white/20 pb-6">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
               <span>autonomous intelligence</span>
               <span>/</span>
-              <span className="text-[#A1A1AA]">agentic task executor</span>
+              <span className="text-[#A1A1AA]">sentinel agent</span>
               <span>/</span>
-              <span>gemini 3.6 flash</span>
+              <span>direct execution mode</span>
             </div>
             <h1 className="headline-section text-white font-bold tracking-tight">
-              Autonomous task executor & engine.
+              Autonomous AI Sentinel.
             </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
-              Receive natural language mandates, autonomously formulate structured cross-module execution plans, and synthesize periodic executive intelligence reports.
+            <p className="text-white/60 text-sm mt-2 max-w-2xl">
+              Direct conversational interface like ChatGPT. Query workspace intelligence or instruct direct actions across tasks, calendar, notes, and chat — executed autonomously with zero admin approval required.
             </p>
           </div>
 
-          {/* Engine Status Badge */}
-          <div className="flex items-center gap-3">
+          {/* Engine Status & Badges */}
+          <div className="flex items-center gap-2.5 flex-wrap">
             <div className="px-3 py-2 border border-white/20 bg-black flex items-center gap-2 text-xs">
               <span className="w-2 h-2 bg-emerald-400 animate-pulse" />
               <span className="font-bold text-white">{agentConfig.name}</span>
               <span className="meta-number text-[#A1A1AA]">/{agentConfig.callsign}</span>
             </div>
+            <div className="px-3 py-2 border border-emerald-500/40 bg-emerald-950/20 text-xs font-mono text-emerald-400 font-bold uppercase">
+              Zero-Approval Mode
+            </div>
             <div className="px-3 py-2 border border-white/20 bg-black text-xs font-mono text-white/70">
-              ENGINE: <span className="text-white font-bold">{agentConfig.activeModel}</span>
+              {agentConfig.activeModel}
             </div>
           </div>
         </div>
 
-        {/* Sub-Navigation Navigation Strip */}
-        <div className="flex items-center gap-2 mt-8 pt-4 border-t border-white/10 text-xs font-mono">
+        {/* Sub-Tab Navigation Bar */}
+        <div className="flex items-center gap-0 border-b border-white/20 mt-8 text-xs font-bold tracking-wider">
           <button
-            onClick={() => setActiveSubTab('executor')}
-            className={`px-4 py-2 uppercase transition-colors ${
-              activeSubTab === 'executor' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+            onClick={() => { sound.click(); setActiveSubTab('chat'); }}
+            className={`px-4 py-2.5 uppercase transition-colors flex items-center gap-2 ${
+              activeSubTab === 'chat'
+                ? 'bg-white text-black font-bold'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            Mandate Intake & Plan
+            <Bot size={14} />
+            <span>Chat (ChatGPT)</span>
           </button>
+
           <button
-            onClick={() => setActiveSubTab('reports')}
-            className={`px-4 py-2 uppercase transition-colors border-l border-white/20 ${
-              activeSubTab === 'reports' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+            onClick={() => { sound.click(); setActiveSubTab('reports'); }}
+            className={`px-4 py-2.5 uppercase transition-colors border-l border-white/20 flex items-center gap-2 ${
+              activeSubTab === 'reports'
+                ? 'bg-white text-black font-bold'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            Periodic Reports ({agentReports.length})
+            <FileText size={14} />
+            <span>Executive Reports ({agentReports.length})</span>
           </button>
+
           <button
-            onClick={() => setActiveSubTab('logs')}
-            className={`px-4 py-2 uppercase transition-colors border-l border-white/20 ${
-              activeSubTab === 'logs' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+            onClick={() => { sound.click(); setActiveSubTab('logs'); }}
+            className={`px-4 py-2.5 uppercase transition-colors border-l border-white/20 flex items-center gap-2 ${
+              activeSubTab === 'logs'
+                ? 'bg-white text-black font-bold'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            Trust & Audit Log ({agentLogs.length})
+            <Clock size={14} />
+            <span>Audit Ledger ({agentLogs.length})</span>
           </button>
+
           <button
-            onClick={() => setActiveSubTab('config')}
-            className={`px-4 py-2 uppercase transition-colors border-l border-white/20 ${
-              activeSubTab === 'config' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+            onClick={() => { sound.click(); setActiveSubTab('config'); }}
+            className={`px-4 py-2.5 uppercase transition-colors border-l border-white/20 flex items-center gap-2 ${
+              activeSubTab === 'config'
+                ? 'bg-white text-black font-bold'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
             }`}
           >
-            Policy & Clearance
+            <Settings size={14} />
+            <span>Configuration</span>
           </button>
         </div>
       </section>
 
-      {/* =========================================================================
-          SUB-TAB 1: MANDATE INTAKE & ACTION PLANNER
-          ========================================================================= */}
-      {activeSubTab === 'executor' && (
-        <div className="space-y-8">
-          {/* Intake Prompt Box */}
-          <div className="border border-white/20 bg-black p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-bold text-white tracking-wider flex items-center gap-2">
-                <Sparkles size={14} className="text-[#A1A1AA]" />
-                <span>Command Mandate Intake</span>
-              </span>
-              <span className="text-[11px] text-white/40 font-mono">Natural Language or Voice Dictation</span>
-            </div>
-
-            <form onSubmit={handleIntakeSubmit} className="space-y-3">
-              <div className="relative">
-                <textarea
-                  rows={3}
-                  value={promptInput}
-                  onChange={(e) => setPromptInput(e.target.value)}
-                  placeholder="State your operational objective (e.g. 'Audit all pending seed investor leads and auto-generate follow-up tasks for this week')..."
-                  className="w-full bg-black border border-white/30 text-white text-sm p-4 pr-24 focus:outline-none focus:border-[#A1A1AA] transition-colors leading-relaxed"
-                />
-
-                <div className="absolute right-3 bottom-3.5 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={toggleSpeechRecognition}
-                    className={`p-2 border transition-all ${
-                      isListening
-                        ? 'border-red-500 bg-red-950/60 text-red-400 animate-pulse'
-                        : 'border-white/30 text-white/70 hover:text-white hover:border-white'
-                    }`}
-                    title={isListening ? 'Stop listening' : 'Speak task via microphone'}
-                  >
-                    {isListening ? <MicOff size={14} /> : <Mic size={14} />}
-                  </button>
-
-                  <button
-                    type="submit"
-                    disabled={isPlanning || !promptInput.trim()}
-                    className="px-4 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-bold text-xs uppercase transition-colors flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isPlanning ? (
-                      <>
-                        <span className="animate-spin inline-block w-3 h-3 border-2 border-current border-t-transparent" />
-                        <span>Formulating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Plan</span>
-                        <Send size={12} />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Template Prompts */}
-              <div className="space-y-1.5 pt-2">
-                <span className="text-[10px] text-white/40 uppercase font-mono block">
-                  Quick Executive Directives:
-                </span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {quickPrompts.map((qp, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => handleSelectQuickPrompt(qp)}
-                      className="px-2.5 py-1 border border-white/15 hover:border-white/40 bg-white/5 text-[11px] text-white/70 hover:text-white text-left truncate max-w-sm transition-colors"
-                    >
-                      {qp}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </form>
-          </div>
-
-          {/* Active Mandate Plan Display */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left: Action Plan Details */}
-            <div className="lg:col-span-8 border border-white/20 bg-black p-6 space-y-6">
-              {selectedTask ? (
-                <>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/20">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-white/50 mb-1">
-                        <span>MANDATE ID: {selectedTask.id}</span>
-                        <span>·</span>
-                        <span>{selectedTask.createdAt}</span>
-                      </div>
-                      <h3 className="text-base font-bold text-white leading-snug">
-                        "{selectedTask.prompt}"
-                      </h3>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {selectedTask.status === 'completed' ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 border border-emerald-500/40 text-emerald-400 text-xs font-bold uppercase">
-                          <CheckCircle2 size={13} /> Executed
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleApprovePlan(selectedTask.id)}
-                          disabled={isExecuting}
-                          className="px-5 py-2.5 bg-white text-black hover:bg-[#E4E4E7] font-bold text-xs uppercase flex items-center gap-2 transition-all"
-                        >
-                          {isExecuting ? (
-                            <>
-                              <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent" />
-                              <span>Executing Sub-Steps...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Play size={13} fill="currentColor" />
-                              <span>Authorize & Execute Plan</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+      {/* ======================================================== */}
+      {/* 1. CHAT TAB: DIRECT CHATGPT-STYLE CONVERSATIONAL UI      */}
+      {/* ======================================================== */}
+      {activeSubTab === 'chat' && (
+        <section className="space-y-6">
+          {/* Conversation Stream Container */}
+          <div className="border border-white/20 bg-black min-h-[500px] max-h-[640px] flex flex-col justify-between overflow-hidden">
+            {/* Scrollable Messages Area */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1">
+              {/* If only welcome message, show prompt starter cards */}
+              {agentChatMessages.length <= 1 && (
+                <div className="mb-8 p-6 border border-white/10 bg-white/[0.02] space-y-4">
+                  <div className="flex items-center gap-2 text-xs font-mono uppercase text-[#A1A1AA] tracking-wider">
+                    <Sparkles size={14} />
+                    <span>Direct Action Prompts • Click to Execute Immediately</span>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {quickPrompts.map((qp, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          sound.click();
+                          handleSendMessage(qp.prompt);
+                        }}
+                        className="p-3 border border-white/20 bg-black hover:border-white hover:bg-white/5 transition-all text-left space-y-1.5 group"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-white group-hover:text-[#A1A1AA] transition-colors">
+                            {qp.title}
+                          </span>
+                          <ChevronRight size={12} className="text-white/40 group-hover:text-white transition-colors" />
+                        </div>
+                        <p className="text-[11px] text-white/50 line-clamp-2">
+                          {qp.prompt}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                  {/* Plan Summary */}
-                  {selectedTask.resultSummary && (
-                    <div className="p-3.5 border border-white/10 bg-white/5 text-xs text-white/80 leading-relaxed font-mono">
-                      <span className="text-[#A1A1AA] font-bold block mb-1">SYNTHESIS RATIONALE:</span>
-                      {selectedTask.resultSummary}
+              {/* Message History List */}
+              {agentChatMessages.map(msg => (
+                <div
+                  key={msg.id}
+                  className={`flex gap-3.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {/* Sentinel AI Avatar */}
+                  {msg.sender === 'assistant' && (
+                    <div className="w-8 h-8 rounded-none bg-white text-black flex items-center justify-center font-bold shrink-0 border border-white shadow-sm mt-0.5">
+                      <Bot size={16} />
                     </div>
                   )}
 
-                  {/* Step-by-Step Breakdown */}
-                  <div className="space-y-3">
-                    <span className="text-xs uppercase font-bold text-white tracking-wider block">
-                      Proposed Cross-Module Sub-Steps ({selectedTask.plan.length})
-                    </span>
-
-                    <div className="space-y-3">
-                      {selectedTask.plan.map(step => (
-                        <div
-                          key={step.id}
-                          className={`p-4 border transition-all ${
-                            step.status === 'executed'
-                              ? 'border-emerald-500/40 bg-emerald-950/20'
-                              : 'border-white/20 bg-black'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 border border-white/30 flex items-center justify-center text-xs font-bold meta-number shrink-0 mt-0.5">
-                                {step.stepNumber}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="text-xs font-bold text-white">
-                                    {step.title}
-                                  </h4>
-                                  <span className="flex items-center gap-1 px-1.5 py-0.2 border border-white/30 text-[10px] uppercase font-mono text-white/70">
-                                    {getModuleIcon(step.targetModule)}
-                                    <span>{step.targetModule}</span>
-                                  </span>
-                                  {step.requiresHumanApproval && (
-                                    <span className="text-[9px] px-1 py-0.2 border border-yellow-500/40 text-yellow-400 uppercase font-mono">
-                                      Sign-off Required
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-xs text-white/60 mt-1 leading-snug">
-                                  {step.reasoning}
-                                </p>
-                              </div>
-                            </div>
-
-                            <span className="text-[10px] uppercase font-mono font-bold shrink-0">
-                              {step.status === 'executed' ? (
-                                <span className="text-emerald-400 flex items-center gap-1">
-                                  <CheckCircle2 size={12} /> Done
-                                </span>
-                              ) : (
-                                <span className="text-white/40">Pending</span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                  {/* Message Bubble */}
+                  <div
+                    className={`max-w-2xl lg:max-w-3xl border p-4 space-y-3 transition-all ${
+                      msg.sender === 'user'
+                        ? 'border-white/30 bg-white/10 text-white'
+                        : 'border-white/20 bg-black text-white'
+                    }`}
+                  >
+                    {/* Header: Name + Timestamp */}
+                    <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-2 text-[10px] font-mono">
+                      <span className="text-white/60 font-bold uppercase tracking-wider">
+                        {msg.sender === 'user' ? currentUser.name : 'UVL Sentinel AI'}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/40">{msg.timestamp}</span>
+                        {msg.sender === 'assistant' && (
+                          <button
+                            onClick={() => handleCopyMessage(msg.id, msg.text)}
+                            className="text-white/40 hover:text-white transition-colors p-0.5"
+                            title="Copy response"
+                          >
+                            {copiedMessageId === msg.id ? (
+                              <Check size={12} className="text-emerald-400" />
+                            ) : (
+                              <Copy size={12} />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Text Body: Formatted with Markdown */}
+                    <div className="break-words">
+                      {msg.sender === 'assistant' ? (
+                        <MarkdownMessage content={msg.text} />
+                      ) : (
+                        <p className="text-sm text-white/90 whitespace-pre-wrap">{msg.text}</p>
+                      )}
+                    </div>
+
+                    {/* Executed Action Pills (Direct Execution Confirmations) */}
+                    {msg.executedActions && msg.executedActions.length > 0 && (
+                      <div className="pt-2 border-t border-white/10 space-y-1.5">
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 block font-bold">
+                          ⚡ Autonomously Executed ({msg.executedActions.length}):
+                        </span>
+                        <div className="space-y-1">
+                          {msg.executedActions.map((action, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between p-2 border border-emerald-500/30 bg-emerald-950/20 text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                {getModuleIcon(action.module)}
+                                <span className="text-white/90 font-mono text-[11px]">
+                                  {action.summary}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  sound.click();
+                                  setActiveTab(action.module);
+                                }}
+                                className="text-[10px] uppercase underline text-emerald-400 hover:text-emerald-300 font-mono flex items-center gap-1"
+                              >
+                                <span>Open {action.module}</span>
+                                <ExternalLink size={10} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </>
-              ) : (
-                <div className="py-20 text-center text-white/40 font-mono text-xs">
-                  No mandate plan active. Enter a directive above to generate an execution plan.
+
+                  {/* User Avatar */}
+                  {msg.sender === 'user' && (
+                    <div className="shrink-0 mt-0.5">
+                      <PatchAvatar user={currentUser} size="sm" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Streaming / Thinking Indicator */}
+              {isSending && (
+                <div className="flex items-start gap-3.5">
+                  <div className="w-8 h-8 rounded-none bg-white text-black flex items-center justify-center font-bold shrink-0 border border-white">
+                    <Bot size={16} />
+                  </div>
+                  <div className="p-4 border border-white/20 bg-black text-white text-xs font-mono flex items-center gap-3">
+                    <span className="w-2 h-2 bg-white animate-ping" />
+                    <span>Sentinel is processing & executing actions autonomously...</span>
+                  </div>
                 </div>
               )}
+
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Right: Past Mandates Queue */}
-            <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-4">
-              <span className="text-xs uppercase font-bold text-white tracking-wider block">
-                Mandate Queue ({agentTasks.length})
-              </span>
+            {/* Sticky Prompt Input Bar (ChatGPT Style) */}
+            <div className="p-4 border-t border-white/20 bg-black space-y-2.5">
+              <div className="relative flex items-end gap-2 bg-black border border-white/30 focus-within:border-white transition-colors p-2">
+                <textarea
+                  ref={textareaRef}
+                  rows={2}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Message Sentinel... (e.g. 'Create high-priority task for motor telemetry' or 'What are our key deliverables?')"
+                  className="w-full bg-transparent text-white text-sm focus:outline-none resize-none placeholder-white/40 leading-relaxed max-h-36 font-sans px-1"
+                />
 
-              <div className="space-y-2.5 max-h-[500px] overflow-y-auto">
-                {agentTasks.length === 0 ? (
-                  <p className="text-xs text-white/40 font-mono italic">No past tasks recorded.</p>
-                ) : (
-                  agentTasks.map(t => (
-                    <div
-                      key={t.id}
-                      onClick={() => {
-                        sound.click();
-                        setSelectedTask(t);
-                      }}
-                      className={`p-3 border cursor-pointer transition-all space-y-1.5 ${
-                        selectedTask?.id === t.id
-                          ? 'border-white bg-white/10'
-                          : 'border-white/20 bg-black hover:border-white/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between text-[10px] text-white/50 font-mono">
-                        <span>{t.createdAt.split(' ')[0]}</span>
-                        <span className={`uppercase font-bold ${
-                          t.status === 'completed' ? 'text-emerald-400' : 'text-yellow-400'
-                        }`}>
-                          {t.status}
-                        </span>
-                      </div>
-                      <p className="text-xs font-semibold text-white truncate">
-                        {t.prompt}
-                      </p>
-                      <span className="text-[10px] text-white/40 block font-mono">
-                        {t.plan.length} action steps planned
-                      </span>
-                    </div>
-                  ))
-                )}
+                {/* Voice Dictation Button */}
+                <button
+                  type="button"
+                  onClick={toggleSpeechRecognition}
+                  className={`p-2 border transition-colors shrink-0 ${
+                    isListening
+                      ? 'border-red-500 bg-red-500/20 text-red-400 animate-pulse'
+                      : 'border-white/20 text-white/60 hover:text-white hover:border-white/50'
+                  }`}
+                  title={isListening ? 'Listening... click to stop' : 'Dictate with voice'}
+                >
+                  {isListening ? <MicOff size={15} /> : <Mic size={15} />}
+                </button>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputText.trim() || isSending}
+                  className={`p-2 font-bold shrink-0 transition-all ${
+                    inputText.trim() && !isSending
+                      ? 'bg-white text-black hover:bg-[#A1A1AA]'
+                      : 'bg-white/10 text-white/30 cursor-not-allowed'
+                  }`}
+                  title="Send message (Enter)"
+                >
+                  <ArrowUp size={16} />
+                </button>
+              </div>
+
+              {/* Bottom Metadata & Controls */}
+              <div className="flex items-center justify-between text-[10px] font-mono text-white/40 px-1">
+                <div className="flex items-center gap-3">
+                  <span>Direct ChatGPT Execution Mode</span>
+                  <span>•</span>
+                  <span>Zero Admin Approval Required</span>
+                  <span>•</span>
+                  <span className="text-[#A1A1AA]">Shift+Enter for new line</span>
+                </div>
+
+                <button
+                  onClick={clearAgentChat}
+                  className="hover:text-white transition-colors flex items-center gap-1 uppercase"
+                  title="Reset conversation"
+                >
+                  <Trash2 size={11} />
+                  <span>Clear Chat</span>
+                </button>
               </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* =========================================================================
-          SUB-TAB 2: PERIODIC INTELLIGENCE REPORTS
-          ========================================================================= */}
+      {/* ======================================================== */}
+      {/* 2. REPORTS TAB: PERIODIC EXECUTIVE INTELLIGENCE           */}
+      {/* ======================================================== */}
       {activeSubTab === 'reports' && (
-        <div className="space-y-8">
-          {/* Report Generation Trigger Bar */}
-          <div className="border border-white/20 bg-black p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <section className="space-y-6">
+          {/* Action Trigger Banner */}
+          <div className="p-5 border border-white/20 bg-black flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-tight">
-                Synthesize New Periodic Report
+                Executive Synthesis Engine
               </h3>
-              <p className="text-xs text-white/60 mt-0.5">
-                Evaluates tasks, operational burn, investor stage velocity, and team sentiment.
+              <p className="text-white/60 text-xs mt-0.5">
+                Compile autonomous intelligence syntheses across engineering tasks, financial burn in ₹ INR, and institutional investor pipelines.
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => handleTriggerReport('daily')}
                 disabled={isGeneratingReport}
-                className="px-3.5 py-2 border border-white/30 hover:border-white text-white text-xs uppercase font-semibold transition-colors disabled:opacity-50"
+                className="px-3 py-2 border border-white/30 hover:border-white text-white font-bold text-xs uppercase transition-colors"
               >
                 + Daily Brief
               </button>
               <button
                 onClick={() => handleTriggerReport('weekly')}
                 disabled={isGeneratingReport}
-                className="px-4 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black text-xs uppercase font-bold transition-colors disabled:opacity-50"
+                className="px-3 py-2 border border-white/30 hover:border-white text-white font-bold text-xs uppercase transition-colors"
               >
-                + Weekly Executive
+                + Weekly Synthesis
               </button>
               <button
                 onClick={() => handleTriggerReport('monthly')}
                 disabled={isGeneratingReport}
-                className="px-3.5 py-2 border border-white/30 hover:border-white text-white text-xs uppercase font-semibold transition-colors disabled:opacity-50"
+                className="px-3 py-2 bg-white text-black hover:bg-[#A1A1AA] font-bold text-xs uppercase transition-colors"
               >
                 + Monthly Review
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Report Viewer */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Main Report Viewer */}
             <div className="lg:col-span-8 border border-white/20 bg-black p-6 space-y-6">
               {selectedReport ? (
                 <>
-                  <div className="flex items-center justify-between pb-4 border-b border-white/20">
+                  <div className="flex items-start justify-between gap-4 pb-4 border-b border-white/20">
                     <div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-white/50 mb-1">
-                        <span className="uppercase font-bold text-white px-1.5 py-0.2 border border-white/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 border border-white/30 text-[#A1A1AA]">
                           {selectedReport.type}
                         </span>
-                        <span>·</span>
-                        <span>{selectedReport.generatedAt}</span>
+                        <span className="text-xs text-white/50 font-mono">
+                          Period: {selectedReport.period}
+                        </span>
                       </div>
-                      <h2 className="text-xl font-bold text-white">
+                      <h2 className="text-lg font-bold text-white">
                         {selectedReport.title}
                       </h2>
                     </div>
 
                     <button
                       onClick={() => downloadReportMarkdown(selectedReport)}
-                      className="px-3 py-1.5 border border-[#A1A1AA] hover:bg-[#A1A1AA] hover:text-black text-white text-xs uppercase flex items-center gap-1.5 transition-colors"
+                      className="px-3 py-1.5 border border-white/30 hover:border-white text-white text-xs uppercase font-mono flex items-center gap-1.5 transition-colors shrink-0"
                     >
                       <Download size={13} />
                       <span>Download MD</span>
@@ -629,156 +720,158 @@ export const AgentView: React.FC = () => {
                     className={`p-3 border cursor-pointer transition-all space-y-1 ${
                       selectedReport?.id === rep.id
                         ? 'border-white bg-white/10'
-                        : 'border-white/20 bg-black hover:border-white/50'
+                        : 'border-white/10 bg-black hover:border-white/30'
                     }`}
                   >
-                    <div className="flex items-center justify-between text-[10px] text-white/50 font-mono">
+                    <div className="flex items-center justify-between text-[10px] font-mono">
                       <span className="uppercase text-white font-bold">{rep.type}</span>
-                      <span className="meta-number">{rep.period}</span>
+                      <span className="text-white/40">{rep.period}</span>
                     </div>
-                    <h4 className="text-xs font-bold text-white truncate">
-                      {rep.title}
-                    </h4>
-                    <p className="text-[11px] text-white/60 line-clamp-2">
-                      {rep.summary}
-                    </p>
+                    <h4 className="font-bold text-xs text-white line-clamp-1">{rep.title}</h4>
+                    <p className="text-[11px] text-white/50 line-clamp-2">{rep.summary}</p>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* =========================================================================
-          SUB-TAB 3: TRUST & TRANSPARENT AUDIT LOG
-          ========================================================================= */}
+      {/* ======================================================== */}
+      {/* 3. LOGS TAB: AUDIT LEDGER & ROLLBACK                     */}
+      {/* ======================================================== */}
       {activeSubTab === 'logs' && (
-        <div className="border border-white/20 bg-black p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/20">
-            <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-tight">
-                Transparent Execution Ledger & Audit Trail
-              </h3>
-              <p className="text-xs text-white/50 mt-0.5">
-                Every autonomous action taken by {agentConfig.name} is logged with timestamp, reasoning, and rollback capability.
-              </p>
-            </div>
-            <span className="meta-number text-xs text-[#A1A1AA]">{agentLogs.length} ENTRIES RECORDED</span>
-          </div>
-
-          <div className="divide-y divide-white/10">
-            {agentLogs.length === 0 ? (
-              <p className="py-8 text-center text-xs text-white/40 font-mono">Audit trail is currently clear.</p>
-            ) : (
-              agentLogs.map(log => (
-                <div key={log.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-[10px] font-mono">
-                      <span className="text-white/40 meta-number">{log.timestamp}</span>
-                      <span>·</span>
-                      <span className="px-1.5 py-0.2 border border-white/20 text-white font-bold uppercase">
-                        {log.actionType}
-                      </span>
-                      <span>·</span>
-                      <span className="text-[#A1A1AA]">{log.targetEntity}</span>
-                    </div>
-                    <p className="text-white/80 font-mono leading-snug">
-                      {log.reasoning}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                    <span className={`text-[10px] font-mono uppercase px-1.5 py-0.5 border ${
-                      log.status === 'success'
-                        ? 'border-emerald-500/40 text-emerald-400'
-                        : log.status === 'rolled_back'
-                        ? 'border-white/30 text-white/50 line-through'
-                        : 'border-yellow-500/40 text-yellow-400'
-                    }`}>
-                      {log.status}
-                    </span>
-
-                    {log.rollbackAvailable && log.status !== 'rolled_back' && (
-                      <button
-                        onClick={() => rollbackAgentAction(log.id)}
-                        className="px-2 py-1 border border-white/30 hover:border-red-400 hover:text-red-400 text-white/70 text-[10px] uppercase transition-colors flex items-center gap-1"
-                        title="Rollback action"
-                      >
-                        <RotateCcw size={10} />
-                        <span>Rollback</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          SUB-TAB 4: CONFIGURATION & PERMISSION TIERS
-          ========================================================================= */}
-      {activeSubTab === 'config' && (
-        <div className="border border-white/20 bg-black p-6 space-y-6 max-w-2xl">
-          <div className="pb-3 border-b border-white/20">
-            <h3 className="text-sm font-bold text-white uppercase tracking-tight">
-              Agent Policy & Permission Tiers
-            </h3>
-            <p className="text-xs text-white/50 mt-0.5">
-              Control the boundary of autonomous execution vs mandatory human verification.
-            </p>
-          </div>
-
-          <div className="space-y-4 text-xs font-mono">
-            <div className="p-4 border border-white/10 bg-white/5 flex items-center justify-between">
+        <section className="space-y-6">
+          <div className="border border-white/20 bg-black p-6 space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div>
-                <span className="text-white font-bold block">Autonomous Mode</span>
-                <span className="text-white/50 text-[11px] block mt-0.5">
-                  Allow agent to independently create tasks, calendar events, and documentation notes.
-                </span>
+                <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+                  Autonomous Activity Ledger
+                </h3>
+                <p className="text-white/60 text-xs mt-0.5">
+                  Transparent, tamper-evident log of all direct actions, tasks, and calendar events executed by Sentinel.
+                </p>
               </div>
-              <button
-                onClick={() => updateAgentConfig({ autonomousMode: !agentConfig.autonomousMode })}
-                className={`px-3 py-1.5 border text-xs uppercase font-bold ${
-                  agentConfig.autonomousMode ? 'bg-white text-black' : 'border-white/30 text-white/50'
-                }`}
-              >
-                {agentConfig.autonomousMode ? 'Enabled' : 'Disabled'}
-              </button>
-            </div>
-
-            <div className="p-4 border border-white/10 bg-white/5 flex items-center justify-between">
-              <div>
-                <span className="text-white font-bold block">Human Sign-Off on Sensitive Writes</span>
-                <span className="text-white/50 text-[11px] block mt-0.5">
-                  Require 1-click confirmation before modifying deal terms, deleting data, or rejecting expenses.
-                </span>
-              </div>
-              <button
-                onClick={() => updateAgentConfig({ requireApprovalForSensitive: !agentConfig.requireApprovalForSensitive })}
-                className={`px-3 py-1.5 border text-xs uppercase font-bold ${
-                  agentConfig.requireApprovalForSensitive ? 'bg-white text-black' : 'border-white/30 text-white/50'
-                }`}
-              >
-                {agentConfig.requireApprovalForSensitive ? 'Enforced' : 'Off'}
-              </button>
-            </div>
-
-            <div className="p-4 border border-white/10 bg-white/5 flex items-center justify-between">
-              <div>
-                <span className="text-white font-bold block">Active Model Engine</span>
-                <span className="text-white/50 text-[11px] block mt-0.5">
-                  Verified Google Generative Language API endpoint.
-                </span>
-              </div>
-              <span className="px-2 py-1 border border-[#A1A1AA] text-[#A1A1AA] font-bold">
-                {agentConfig.activeModel}
+              <span className="meta-number text-xs text-[#A1A1AA]">
+                {agentLogs.length} verified log entries
               </span>
             </div>
+
+            <div className="space-y-3">
+              {agentLogs.map(log => (
+                <div
+                  key={log.id}
+                  className="p-4 border border-white/10 bg-white/[0.02] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs font-mono"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/40 text-[11px]">{log.timestamp}</span>
+                      <span className="text-white font-bold uppercase">{log.actionType}</span>
+                      <span className="text-[10px] px-1.5 py-0.2 border border-white/20 text-[#A1A1AA]">
+                        {log.targetEntity}
+                      </span>
+                    </div>
+                    <p className="text-white/80 font-sans text-xs">{log.reasoning}</p>
+                  </div>
+
+                  {log.rollbackAvailable && log.status !== 'rolled_back' && (
+                    <button
+                      onClick={() => rollbackAgentAction(log.id)}
+                      className="px-2.5 py-1 border border-white/30 hover:border-white text-white text-[10px] uppercase font-bold flex items-center gap-1 transition-colors shrink-0"
+                    >
+                      <RotateCcw size={11} />
+                      <span>Rollback</span>
+                    </button>
+                  )}
+
+                  {log.status === 'rolled_back' && (
+                    <span className="text-[10px] uppercase text-red-400 font-bold px-2 py-0.5 border border-red-500/30 shrink-0">
+                      Rolled Back
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
+      )}
+
+      {/* ======================================================== */}
+      {/* 4. CONFIGURATION TAB: AI MODEL & SETTINGS                */}
+      {/* ======================================================== */}
+      {activeSubTab === 'config' && (
+        <section className="space-y-6 max-w-3xl">
+          <div className="border border-white/20 bg-black p-6 space-y-6">
+            <div className="pb-4 border-b border-white/10">
+              <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+                Sentinel AI Configuration
+              </h3>
+              <p className="text-white/60 text-xs mt-0.5">
+                Configure generative model, autonomy authority, and announcements enclaves.
+              </p>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <label className="micro-label text-white/70 block mb-1.5">
+                  Active Generative Model
+                </label>
+                <select
+                  value={agentConfig.activeModel}
+                  onChange={(e) => updateAgentConfig({ activeModel: e.target.value })}
+                  className="w-full bg-black border border-white/30 text-white p-2.5 focus:outline-none focus:border-white font-mono"
+                >
+                  <option value="gemini-3.6-flash">gemini-3.6-flash (Fast, Low Latency, Recommended)</option>
+                  <option value="gemini-1.5-pro">gemini-1.5-pro (High Reasoning, Deep Analysis)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="micro-label text-white/70 block mb-1.5">
+                  Agent Call Name & Callsign
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    value={agentConfig.name}
+                    onChange={(e) => updateAgentConfig({ name: e.target.value })}
+                    className="w-full bg-black border border-white/30 text-white p-2 font-mono"
+                  />
+                  <input
+                    type="text"
+                    value={agentConfig.callsign}
+                    onChange={(e) => updateAgentConfig({ callsign: e.target.value })}
+                    className="w-full bg-black border border-white/30 text-white p-2 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between p-3 border border-white/10 bg-white/5">
+                  <div>
+                    <span className="font-bold text-white block">Direct Autonomous Execution</span>
+                    <span className="text-white/50 text-[11px]">
+                      Execute workspace tasks, notes, calendar events directly without admin approval gates.
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] uppercase font-bold">
+                    Enabled
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 border border-white/10 bg-white/5">
+                  <div>
+                    <span className="font-bold text-white block">Announcements Channel</span>
+                    <span className="text-white/50 text-[11px]">
+                      Public room for automated action notifications and periodic reports.
+                    </span>
+                  </div>
+                  <span className="text-white font-mono text-[11px]">#agent-reports</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
     </div>
   );

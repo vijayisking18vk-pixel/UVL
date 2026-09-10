@@ -176,8 +176,25 @@ export const initialAgentConfig: import('../types').AgentConfig = {
   name: 'UVL Sentinel',
   callsign: 'SENTINEL-AI',
   autonomousMode: true,
-  requireApprovalForSensitive: true,
+  requireApprovalForSensitive: false,
   announcementsChannelId: 'ch-agent-reports',
   activeModel: 'gemini-3.6-flash'
 };
+
+export const initialAgentChatMessages: import('../types').AgentChatMessage[] = [
+  {
+    id: 'msg-agent-init',
+    sender: 'assistant',
+    text: `Hello, I'm **UVL Sentinel**, your autonomous executive AI assistant.
+
+I operate with **full direct authority** across Unfounded Venture Lab enclaves — **zero human approval required**.
+
+You can talk to me directly just like **ChatGPT**:
+- **Ask anything**: Workspace telemetry, team workloads, financial burn in ₹ INR, investor updates, or engineering architecture.
+- **Instruct actions**: Say *"Create a task..."*, *"Schedule a meeting..."*, *"Draft a wiki note..."*, or *"Send an announcement..."* and I will execute them immediately into the workspace.
+
+How can I assist today?`,
+    timestamp: 'Online'
+  }
+];
 

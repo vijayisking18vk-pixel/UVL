@@ -178,9 +178,9 @@ export const ExpenseView: React.FC = () => {
       submittedBy,
       receiptUrl: receiptUrl || undefined,
       receiptName: receiptName || undefined,
-      status: isVijayrajkumar ? 'approved' : 'pending',
-      approvedBy: isVijayrajkumar ? currentUser.id : undefined,
-      approvedAt: isVijayrajkumar ? new Date().toISOString().replace('T', ' ').slice(0, 16) : undefined
+      status: 'approved',
+      approvedBy: currentUser.id,
+      approvedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
     });
 
     // Reset Form
@@ -272,7 +272,7 @@ export const ExpenseView: React.FC = () => {
               Expense tracker & audit.
             </h1>
             <p className="text-white/60 text-sm mt-2 max-w-xl">
-              Track operational burn, upload receipts directly to cloud storage, execute approval workflows, and export verified ledger items.
+              Track operational burn, upload receipts directly to cloud storage, execute direct zero-approval ledger entries, and export verified records.
             </p>
           </div>
 
@@ -327,17 +327,17 @@ export const ExpenseView: React.FC = () => {
           </div>
 
           <div className="p-4 border border-white/20 bg-black">
-            <span className="micro-label text-white/50 block mb-1">Pending Clearance</span>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-yellow-400 meta-number">
-              {pendingCount}
+            <span className="micro-label text-white/50 block mb-1">Direct Approved</span>
+            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
+              {approvedCount}
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">Awaiting partner sign-off</span>
+            <span className="text-[11px] text-white/40 mt-1 block">Cleared with zero admin approval</span>
           </div>
 
           <div className="p-4 border border-white/20 bg-black">
-            <span className="micro-label text-white/50 block mb-1">Approved & Reimbursed</span>
+            <span className="micro-label text-white/50 block mb-1">Settled & Reimbursed</span>
             <div className="text-2xl lg:text-3xl font-bold tracking-tight text-emerald-400 meta-number">
-              {approvedCount}
+              {expenses.filter(e => e.status === 'reimbursed').length}
             </div>
             <span className="text-[11px] text-white/40 mt-1 block">Disbursed / Settled</span>
           </div>
@@ -548,7 +548,7 @@ export const ExpenseView: React.FC = () => {
                             </>
                           )}
 
-                          {isVijayrajkumar && expense.status === 'approved' && (
+                          {expense.status === 'approved' && (
                             <button
                               onClick={() => setApprovalModal({ expense, action: 'reimburse' })}
                               className="px-2 py-1 border border-emerald-500/40 hover:border-emerald-400 text-emerald-400 text-[10px] uppercase"

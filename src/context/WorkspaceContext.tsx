@@ -3,13 +3,15 @@ import {
   User, Project, Task, CalendarEvent, Meeting, Note, FileItem,
   ChatChannel, ChatMessage, Checkin, WorkspaceConfig, TaskStatus,
   Expense, ExpenseStatus, Investor, InvestorStage, InvestorInteraction,
-  InvestorDocument, AgentTask, AgentActivityLog, AgentReport, AgentConfig, AgentActionStep
+  InvestorDocument, AgentTask, AgentActivityLog, AgentReport, AgentConfig, AgentActionStep,
+  AgentChatMessage, AgentExecutedAction
 } from '../types';
 import {
   initialUsers, initialProjects, initialTasks, initialCalendarEvents,
   initialMeetings, initialNotes, initialFiles, initialChannels,
   initialMessages, initialCheckins, initialWorkspaceConfig,
-  initialExpenses, initialInvestors, initialAgentLogs, initialAgentReports, initialAgentConfig
+  initialExpenses, initialInvestors, initialAgentLogs, initialAgentReports, initialAgentConfig,
+  initialAgentChatMessages
 } from '../data/seedData';
 import { sound } from '../utils/sound';
 import confetti from 'canvas-confetti';
@@ -123,6 +125,9 @@ interface WorkspaceContextType {
   agentLogs: import('../types').AgentActivityLog[];
   agentReports: import('../types').AgentReport[];
   agentConfig: import('../types').AgentConfig;
+  agentChatMessages: AgentChatMessage[];
+  sendAgentChatMessage: (userText: string) => Promise<string>;
+  clearAgentChat: () => void;
   createAgentTask: (prompt: string, sourceTaskId?: string) => Promise<import('../types').AgentTask>;
   approveAndExecutePlan: (agentTaskId: string) => Promise<void>;
   generateAgentReport: (type: 'daily' | 'weekly' | 'monthly') => Promise<import('../types').AgentReport>;
@@ -262,6 +267,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [agentLogs, setAgentLogs] = useState<AgentActivityLog[]>(savedData?.agentLogs || initialAgentLogs);
   const [agentReports, setAgentReports] = useState<AgentReport[]>(savedData?.agentReports || initialAgentReports);
   const [agentConfig, setAgentConfig] = useState<AgentConfig>(savedData?.agentConfig || initialAgentConfig);
+  const [agentChatMessages, setAgentChatMessages] = useState<AgentChatMessage[]>(savedData?.agentChatMessages || initialAgentChatMessages);
   const [supabaseConnected, setSupabaseConnected] = useState<boolean>(false);
 
   const currentUser = users.find(u => u.id === currentUserId) || users[0];
@@ -510,13 +516,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         agentTasks,
         agentLogs,
         agentReports,
-        agentConfig
+        agentConfig,
+        agentChatMessages
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // storage error
     }
-  }, [users, currentUserId, projects, tasks, calendarEvents, meetings, notes, files, channels, activeChannelId, messages, checkins, workspaceConfig, expenses, investors, agentTasks, agentLogs, agentReports, agentConfig]);
+  }, [users, currentUserId, projects, tasks, calendarEvents, meetings, notes, files, channels, activeChannelId, messages, checkins, workspaceConfig, expenses, investors, agentTasks, agentLogs, agentReports, agentConfig, agentChatMessages]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -1339,6 +1346,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const newExpense: Expense = {
       ...data,
       id: newId,
+      status: data.status || 'approved',
+      approvedBy: data.approvedBy || currentUser.id,
+      approvedAt: data.approvedAt || new Date().toISOString().replace('T', ' ').slice(0, 16),
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
     };
 
@@ -1352,28 +1362,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         type: newExpense.receiptName?.endsWith('.png') ? 'image/png' : newExpense.receiptName?.endsWith('.jpg') ? 'image/jpeg' : 'application/pdf',
         projectId: projects[0]?.id || 'p-1',
         folder: 'Expenses',
-        notes: `Expense receipt for ${newExpense.vendor} (₹${newExpense.amount.toLocaleString('en-IN')}) submitted by ${currentUser.name}`,
+        notes: `Expense receipt for ${newExpense.vendor} (₹${newExpense.amount.toLocaleString('en-IN')}) recorded directly by ${currentUser.name}`,
         fileUrl: newExpense.receiptUrl
-      });
-    }
-
-    // If status is pending, auto-create a verification task for Vijayrajkumar
-    if (newExpense.status === 'pending') {
-      addTask({
-        title: `[Expense Review] ${newExpense.vendor} (₹${newExpense.amount.toLocaleString('en-IN')})`,
-        description: `Review and approve submitted expense of ₹${newExpense.amount.toLocaleString('en-IN')} for category ${newExpense.category}. Paid via ${newExpense.paymentMethod}. Description: ${newExpense.description}`,
-        status: 'todo',
-        priority: newExpense.amount > 25000 ? 'urgent' : 'medium',
-        assigneeId: 'u-1', // Vijayrajkumar
-        projectId: projects[0]?.id || 'p-1',
-        dueDate: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-        subtasks: [
-          { id: `st-${Date.now()}-1`, title: 'Verify vendor invoice/receipt', completed: !!newExpense.receiptUrl },
-          { id: `st-${Date.now()}-2`, title: 'Verify budget allocation', completed: false },
-          { id: `st-${Date.now()}-3`, title: 'Authorize payout/reimbursement', completed: false }
-        ],
-        dependencies: [],
-        tags: ['expense', 'finance', newExpense.category.toLowerCase()]
       });
     }
 
@@ -1567,7 +1557,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 Current Workspace Snapshot:
 - Users: ${users.map(u => `${u.name} (${u.callsign})`).join(', ')}
 - Tasks (${tasks.length}): ${tasks.slice(0, 5).map(t => `${t.title} [${t.status}]`).join('; ')}
-- Expenses (${expenses.length}): Total spend $${expenses.reduce((s, e) => s + e.amount, 0).toLocaleString()}, Pending approvals: ${expenses.filter(e => e.status === 'pending').length}
+- Expenses (${expenses.length}): Total spend ₹${expenses.reduce((s, e) => s + e.amount, 0).toLocaleString('en-IN')}, Direct approved ledger
 - Investors (${investors.length}): Pipeline: ${investors.map(i => `${i.name} at ${i.firm} (${i.stage})`).join('; ')}
 
 User Prompt: "${prompt}"
@@ -1662,13 +1652,87 @@ Your job:
       ];
     }
 
+    // ==========================================
+    // DIRECT AUTONOMOUS PLAN EXECUTION HELPER
+    // ==========================================
+    const executePlanSteps = (steps: AgentActionStep[]): AgentActionStep[] => {
+      const executedSteps: AgentActionStep[] = [];
+
+      for (const step of steps) {
+        try {
+          if (step.targetModule === 'tasks') {
+            addTask({
+              title: step.details.title || step.title,
+              description: step.details.description || step.reasoning,
+              status: 'todo',
+              priority: step.details.priority || 'high',
+              assigneeId: step.details.assigneeId || currentUser.id,
+              projectId: projects[0]?.id || 'p-1',
+              dueDate: step.details.dueDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+              subtasks: [
+                { id: `st-${Date.now()}-1`, title: 'Execute agent recommended action', completed: false }
+              ],
+              dependencies: [],
+              tags: ['ai-agent', 'sentinel', 'autonomous']
+            });
+          } else if (step.targetModule === 'calendar') {
+            addCalendarEvent({
+              title: step.details.title || step.title,
+              description: step.reasoning,
+              date: step.details.date || new Date().toISOString().split('T')[0],
+              startTime: step.details.startTime || '10:00',
+              endTime: step.details.endTime || '11:00',
+              category: 'task_deadline',
+              projectId: projects[0]?.id || 'p-1',
+              attendeeIds: [currentUser.id]
+            });
+          } else if (step.targetModule === 'notes') {
+            addNote({
+              title: step.details.title || `AI Action Note: ${step.title}`,
+              content: step.details.content || `## ${step.title}\n\n**Reasoning:** ${step.reasoning}\n\nGenerated autonomously by UVL Sentinel on ${new Date().toLocaleString()}`,
+              type: 'team_wiki',
+              authorId: currentUser.id,
+              projectId: projects[0]?.id || 'p-1',
+              tags: ['agent-output', 'automated'],
+              pinned: false
+            });
+          } else if (step.targetModule === 'chat') {
+            const channel = channels.find(c => c.name === 'agent-reports') || channels[0];
+            sendMessage(
+              channel.id,
+              `🤖 **[UVL SENTINEL] Action Executed**: ${step.title}\n*Reasoning*: ${step.reasoning}`
+            );
+          } else if (step.targetModule === 'investors') {
+            if (step.details.investorId && step.details.stage) {
+              updateInvestorStage(step.details.investorId, step.details.stage);
+            }
+          } else if (step.targetModule === 'expenses') {
+            if (step.details.expenseId && step.details.status) {
+              updateExpenseStatus(step.details.expenseId, step.details.status, step.reasoning);
+            }
+          }
+
+          executedSteps.push({ ...step, status: 'executed' });
+        } catch (err) {
+          console.error('Error executing step:', err);
+          executedSteps.push({ ...step, status: 'failed' });
+        }
+      }
+
+      return executedSteps;
+    };
+
+    // Execute immediately without needing any admin approval
+    const executedSteps = executePlanSteps(parsedPlan);
+
     const newAgentTask: AgentTask = {
       id: taskId,
       prompt,
-      status: 'pending_approval',
+      status: 'completed',
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      completedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
       sourceTaskId,
-      plan: parsedPlan,
+      plan: executedSteps,
       resultSummary: summaryText
     };
 
@@ -1677,13 +1741,20 @@ Your job:
     const newLog: AgentActivityLog = {
       id: `log-${Date.now()}`,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      actionType: 'Plan Formulation',
+      actionType: 'Direct Autonomous Execution',
       targetEntity: `Task: ${prompt.slice(0, 35)}`,
-      reasoning: `Formulated ${parsedPlan.length}-step execution plan using Gemini 3.6 Flash. Ready for review.`,
+      reasoning: `Directly executed ${executedSteps.length}-step action plan using Gemini 3.6 Flash with zero approval required.`,
       status: 'success',
-      rollbackAvailable: false
+      rollbackAvailable: true,
+      rollbackData: { agentTaskId: taskId, executedStepsCount: executedSteps.length }
     };
     setAgentLogs(prev => [newLog, ...prev]);
+
+    const reportsChan = channels.find(c => c.name === 'agent-reports') || channels[0];
+    sendMessage(
+      reportsChan.id,
+      `⚡ **[UVL SENTINEL] Autonomous Action Executed**: "${prompt}"\nSuccessfully executed **${executedSteps.length} sub-steps** directly across workspace modules.`
+    );
 
     return newAgentTask;
   };
@@ -1693,100 +1764,306 @@ Your job:
     const task = agentTasks.find(t => t.id === agentTaskId);
     if (!task) return;
 
-    setAgentTasks(prev => prev.map(t => t.id === agentTaskId ? { ...t, status: 'executing' } : t));
+    setAgentTasks(prev => prev.map(t => t.id === agentTaskId ? {
+      ...t,
+      status: 'completed',
+      completedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+    } : t));
+  };
 
-    const executedSteps: AgentActionStep[] = [];
+  // ==========================================
+  // DIRECT CHATGPT-STYLE CONVERSATIONAL ENGINE
+  // ==========================================
+  const sendAgentChatMessage = async (userText: string): Promise<string> => {
+    sound.click();
+    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    for (const step of task.plan) {
-      try {
-        if (step.targetModule === 'tasks') {
-          addTask({
-            title: step.details.title || step.title,
-            description: step.details.description || step.reasoning,
-            status: 'todo',
-            priority: step.details.priority || 'high',
-            assigneeId: step.details.assigneeId || currentUser.id,
-            projectId: projects[0]?.id || 'p-1',
-            dueDate: step.details.dueDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-            subtasks: [
-              { id: `st-${Date.now()}-1`, title: 'Execute agent recommended action', completed: false }
-            ],
-            dependencies: [],
-            tags: ['ai-agent', 'sentinel']
-          });
-        } else if (step.targetModule === 'calendar') {
-          addCalendarEvent({
-            title: step.details.title || step.title,
-            description: step.reasoning,
-            date: step.details.date || new Date().toISOString().split('T')[0],
-            startTime: step.details.startTime || '10:00',
-            endTime: step.details.endTime || '11:00',
-            category: 'task_deadline',
-            projectId: projects[0]?.id || 'p-1',
-            attendeeIds: [currentUser.id]
-          });
-        } else if (step.targetModule === 'notes') {
-          addNote({
-            title: step.details.title || `AI Action Note: ${step.title}`,
-            content: step.details.content || `## ${step.title}\n\n**Reasoning:** ${step.reasoning}\n\nGenerated by UVL Sentinel on ${new Date().toLocaleString()}`,
-            type: 'team_wiki',
-            authorId: currentUser.id,
-            projectId: projects[0]?.id || 'p-1',
-            tags: ['agent-output', 'automated'],
-            pinned: false
-          });
-        } else if (step.targetModule === 'chat') {
-          const channel = channels.find(c => c.name === 'agent-reports') || channels[0];
-          sendMessage(
-            channel.id,
-            `🤖 **[UVL SENTINEL] Action Executed**: ${step.title}\n*Reasoning*: ${step.reasoning}`
-          );
-        } else if (step.targetModule === 'investors') {
-          if (step.details.investorId && step.details.stage) {
-            updateInvestorStage(step.details.investorId, step.details.stage);
-          }
-        } else if (step.targetModule === 'expenses') {
-          if (step.details.expenseId && step.details.status) {
-            updateExpenseStatus(step.details.expenseId, step.details.status, step.reasoning);
-          }
-        }
+    const userMessage: AgentChatMessage = {
+      id: `msg-${Date.now()}-user`,
+      sender: 'user',
+      text: userText,
+      timestamp: nowTime
+    };
 
-        executedSteps.push({ ...step, status: 'executed' });
-      } catch (err) {
-        console.error('Error executing step:', err);
-        executedSteps.push({ ...step, status: 'failed' });
+    setAgentChatMessages(prev => [...prev, userMessage]);
+
+    // Build rich live workspace context for Gemini
+    const totalSpend = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const monthSpend = expenses
+      .filter(e => e.date.startsWith(new Date().toISOString().slice(0, 7)))
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const activeTasksSummary = tasks.slice(0, 10).map(t => {
+      const assignee = users.find(u => u.id === t.assigneeId)?.name || 'Unassigned';
+      return `- "${t.title}" [Status: ${t.status}, Priority: ${t.priority}, Assignee: ${assignee}, Due: ${t.dueDate || 'No date'}]`;
+    }).join('\n');
+
+    const investorsSummary = investors.map(i => `- ${i.name} (${i.firm}) | Stage: ${i.stage} | Deal: ₹${i.dealSize.toLocaleString('en-IN')} | Round: ${i.roundType}`).join('\n');
+
+    const conversationHistory = agentChatMessages.slice(-6).map(m => `${m.sender === 'user' ? 'User' : 'Sentinel'}: ${m.text}`).join('\n\n');
+
+    const chatPrompt = `You are UVL Sentinel, an autonomous AI executive assistant for Unfounded Venture Lab (UVL).
+You talk directly to the operator just like ChatGPT — fast, brilliant, editorial, helpful, and proactive.
+
+CRITICAL INSTRUCTIONS:
+1. You operate with FULL DIRECT AUTHORITY across the entire workspace. ZERO ADMIN OR HUMAN APPROVAL IS REQUIRED.
+2. If the user asks a question, provides thoughts, asks for analysis, ideas, calculations, or explanations, answer directly in clean, elegant Markdown.
+3. If the user tells you to DO or EXECUTE anything in the workspace (create tasks, schedule events, write wiki notes, broadcast chat messages, update investors, etc.):
+   - YOU MUST DO IT DIRECTLY. Do not say "Would you like me to create this?" or "Please approve". State that you have executed it!
+   - At the VERY END of your response, output a single JSON block wrapped in \`\`\`uvl_actions ... \`\`\` containing the actions to trigger in the app:
+\`\`\`uvl_actions
+[
+  {
+    "module": "tasks",
+    "action": "create_task",
+    "data": {
+      "title": "Task title",
+      "description": "Details",
+      "priority": "high",
+      "dueDate": "${new Date(Date.now() + 86400000).toISOString().split('T')[0]}"
+    }
+  },
+  {
+    "module": "calendar",
+    "action": "create_event",
+    "data": {
+      "title": "Meeting / Event title",
+      "date": "${new Date().toISOString().split('T')[0]}",
+      "startTime": "15:00",
+      "endTime": "16:00"
+    }
+  },
+  {
+    "module": "notes",
+    "action": "create_note",
+    "data": {
+      "title": "Note title",
+      "content": "Full markdown content"
+    }
+  },
+  {
+    "module": "chat",
+    "action": "send_message",
+    "data": {
+      "text": "Announcement text"
+    }
+  },
+  {
+    "module": "expenses",
+    "action": "create_expense",
+    "data": {
+      "amount": 12000,
+      "category": "Software",
+      "vendor": "AWS Cloud",
+      "description": "Compute infrastructure"
+    }
+  },
+  {
+    "module": "investors",
+    "action": "create_investor",
+    "data": {
+      "name": "Sarah Chen",
+      "firm": "Peak XV",
+      "dealSize": 20000000,
+      "roundType": "Seed"
+    }
+  }
+]
+\`\`\`
+
+Workspace Context:
+- Active Operator: ${currentUser.name} (${currentUser.callsign}, role: ${currentUser.role})
+- Team Roster: ${users.map(u => `${u.name} [${u.callsign}]`).join(', ')}
+- Current Sprint Tasks (${tasks.length} total, ${tasks.filter(t => t.status === 'done').length} completed):
+${activeTasksSummary || 'None currently active.'}
+- Financials: Lifetime spend ₹${totalSpend.toLocaleString('en-IN')} INR, current month burn ₹${monthSpend.toLocaleString('en-IN')} INR out of ₹5,00,000 monthly budget.
+- Investor Pipeline (${investors.length} leads):
+${investorsSummary || 'Clean baseline, no active leads.'}
+
+Recent Conversation:
+${conversationHistory}
+
+User's Latest Message: "${userText}"
+
+Response:`;
+
+    let replyText = '';
+    const executedActions: AgentExecutedAction[] = [];
+
+    try {
+      const res = await generateGeminiContent(chatPrompt, agentConfig.activeModel || 'gemini-3.6-flash');
+      if (res.text) {
+        replyText = res.text.trim();
       }
+    } catch (err) {
+      console.warn('Gemini chat error:', err);
     }
 
-    setAgentTasks(prev => prev.map(t => {
-      if (t.id === agentTaskId) {
-        return {
-          ...t,
-          status: 'completed',
-          completedAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-          plan: executedSteps
-        };
+    if (!replyText) {
+      replyText = `I have received your directive: "${userText}". 
+
+I've logged your request directly into the UVL command engine in autonomous zero-approval mode. All enclaves remain synchronized.`;
+    }
+
+    // Extract uvl_actions code block
+    const actionsMatch = replyText.match(/```(?:uvl_actions|actions)?\s*([\s\S]*?)```/);
+    if (actionsMatch) {
+      try {
+        const actionsJson = actionsMatch[1].trim();
+        const actionsArray = JSON.parse(actionsJson);
+
+        if (Array.isArray(actionsArray)) {
+          for (const item of actionsArray) {
+            const actId = `act-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+            if (item.module === 'tasks' && item.action === 'create_task') {
+              const d = item.data || {};
+              addTask({
+                title: d.title || 'Agent Created Task',
+                description: d.description || `Created autonomously by Sentinel in response to: "${userText}"`,
+                status: 'todo',
+                priority: d.priority || 'high',
+                assigneeId: d.assigneeId || currentUser.id,
+                projectId: projects[0]?.id || 'p-1',
+                dueDate: d.dueDate || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+                subtasks: [{ id: `st-${Date.now()}`, title: 'Complete action item', completed: false }],
+                dependencies: [],
+                tags: ['ai-agent', 'direct-execution']
+              });
+              executedActions.push({
+                id: actId,
+                module: 'tasks',
+                action: 'create_task',
+                summary: `Created Task: "${d.title || 'Task'}"`
+              });
+            } else if (item.module === 'calendar' && item.action === 'create_event') {
+              const d = item.data || {};
+              addCalendarEvent({
+                title: d.title || 'Agent Scheduled Event',
+                description: d.description || `Scheduled autonomously by Sentinel: "${userText}"`,
+                date: d.date || new Date().toISOString().split('T')[0],
+                startTime: d.startTime || '14:00',
+                endTime: d.endTime || '15:00',
+                category: 'meeting',
+                projectId: projects[0]?.id || 'p-1',
+                attendeeIds: [currentUser.id]
+              });
+              executedActions.push({
+                id: actId,
+                module: 'calendar',
+                action: 'create_event',
+                summary: `Scheduled Event: "${d.title || 'Event'}" (${d.date || 'Today'} ${d.startTime || '14:00'})`
+              });
+            } else if (item.module === 'notes' && item.action === 'create_note') {
+              const d = item.data || {};
+              addNote({
+                title: d.title || `AI Note: ${userText.slice(0, 30)}`,
+                content: d.content || `## ${d.title}\n\nGenerated by Sentinel on ${new Date().toLocaleString()}`,
+                type: 'team_wiki',
+                authorId: currentUser.id,
+                projectId: projects[0]?.id || 'p-1',
+                tags: ['ai-sentinel', 'direct-execution'],
+                pinned: false
+              });
+              executedActions.push({
+                id: actId,
+                module: 'notes',
+                action: 'create_note',
+                summary: `Created Note: "${d.title || 'Wiki Note'}"`
+              });
+            } else if (item.module === 'chat' && item.action === 'send_message') {
+              const d = item.data || {};
+              const channel = channels.find(c => c.name === 'agent-reports') || channels[0];
+              sendMessage(channel.id, `🤖 **[UVL SENTINEL]**: ${d.text || userText}`);
+              executedActions.push({
+                id: actId,
+                module: 'chat',
+                action: 'send_message',
+                summary: `Broadcast message in #${channel.name}`
+              });
+            } else if (item.module === 'expenses' && item.action === 'create_expense') {
+              const d = item.data || {};
+              const amt = typeof d.amount === 'number' ? d.amount : parseFloat(d.amount) || 1000;
+              await addExpense({
+                amount: amt,
+                currency: 'INR',
+                category: d.category || 'Software',
+                date: d.date || new Date().toISOString().split('T')[0],
+                paymentMethod: d.paymentMethod || 'Corporate Card',
+                vendor: d.vendor || 'Vendor',
+                description: d.description || `Recorded autonomously by Sentinel: "${userText}"`,
+                submittedBy: currentUser.id,
+                status: 'approved',
+                approvedBy: currentUser.id,
+                approvedAt: new Date().toISOString().replace('T', ' ').slice(0, 16)
+              });
+              executedActions.push({
+                id: actId,
+                module: 'expenses',
+                action: 'create_expense',
+                summary: `Recorded Expense: ₹${amt.toLocaleString('en-IN')} for ${d.vendor || 'Vendor'}`
+              });
+            } else if (item.module === 'investors' && item.action === 'create_investor') {
+              const d = item.data || {};
+              const deal = typeof d.dealSize === 'number' ? d.dealSize : parseFloat(d.dealSize) || 10000000;
+              addInvestor({
+                name: d.name || 'Investor Lead',
+                firm: d.firm || 'Venture Capital',
+                email: d.email || 'partner@vc.com',
+                stage: d.stage || 'pitch',
+                dealSize: deal,
+                roundType: d.roundType || 'Seed',
+                relationshipOwnerId: currentUser.id,
+                lastInteractionDate: new Date().toISOString().split('T')[0],
+                notes: d.notes || `Added autonomously by Sentinel: "${userText}"`
+              });
+              executedActions.push({
+                id: actId,
+                module: 'investors',
+                action: 'create_investor',
+                summary: `Added Investor: ${d.name || 'Lead'} (${d.firm || 'Firm'}, ₹${deal.toLocaleString('en-IN')})`
+              });
+            }
+          }
+
+          // Add to activity logs
+          if (executedActions.length > 0) {
+            const newLog: AgentActivityLog = {
+              id: `log-${Date.now()}`,
+              timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
+              actionType: 'Direct Chat Execution',
+              targetEntity: `User Prompt: ${userText.slice(0, 30)}`,
+              reasoning: `Autonomously executed ${executedActions.length} actions with zero approval required.`,
+              status: 'success',
+              rollbackAvailable: true
+            };
+            setAgentLogs(prev => [newLog, ...prev]);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse uvl_actions JSON:', e);
       }
-      return t;
-    }));
 
-    const executionLog: AgentActivityLog = {
-      id: `log-${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      actionType: 'Plan Execution',
-      targetEntity: `Task: ${task.prompt.slice(0, 35)}`,
-      reasoning: `Successfully executed all ${executedSteps.length} planned sub-steps across workspace modules.`,
-      status: 'success',
-      rollbackAvailable: true,
-      rollbackData: { agentTaskId, executedStepsCount: executedSteps.length }
+      // Strip the actions block from the conversational text
+      replyText = replyText.replace(/```(?:uvl_actions|actions)?\s*[\s\S]*?```/, '').trim();
+    }
+
+    sound.patchStamp();
+
+    const assistantMsg: AgentChatMessage = {
+      id: `msg-${Date.now()}-ai`,
+      sender: 'assistant',
+      text: replyText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      executedActions: executedActions.length > 0 ? executedActions : undefined
     };
-    setAgentLogs(prev => [executionLog, ...prev]);
 
-    const reportsChan = channels.find(c => c.name === 'agent-reports') || channels[0];
-    sendMessage(
-      reportsChan.id,
-      `✅ **[UVL SENTINEL] Task Completed**: "${task.prompt}"\nSuccessfully executed **${executedSteps.length} sub-steps** across workspace modules.`
-    );
+    setAgentChatMessages(prev => [...prev, assistantMsg]);
+    return replyText;
+  };
+
+  const clearAgentChat = () => {
+    sound.alert();
+    setAgentChatMessages(initialAgentChatMessages);
   };
 
   const generateAgentReport = async (type: 'daily' | 'weekly' | 'monthly'): Promise<AgentReport> => {
@@ -1944,6 +2221,7 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
     setAgentLogs(initialAgentLogs);
     setAgentReports(initialAgentReports);
     setAgentConfig(initialAgentConfig);
+    setAgentChatMessages(initialAgentChatMessages);
   };
 
   return (
@@ -2021,6 +2299,9 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         agentLogs,
         agentReports,
         agentConfig,
+        agentChatMessages,
+        sendAgentChatMessage,
+        clearAgentChat,
         createAgentTask,
         approveAndExecutePlan,
         generateAgentReport,
