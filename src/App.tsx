@@ -10,7 +10,6 @@ import { NotesView } from './components/notes/NotesView';
 import { FilesView } from './components/files/FilesView';
 import { ChatView } from './components/chat/ChatView';
 import { CheckinsView } from './components/checkins/CheckinsView';
-import { PatchAvatarLab } from './components/personalization/PatchAvatarLab';
 import { ExpenseView } from './components/expenses/ExpenseView';
 import { InvestorView } from './components/investors/InvestorView';
 import { AgentView } from './components/agent/AgentView';
@@ -73,8 +72,6 @@ const AppContent: React.FC = () => {
         return <InvestorView />;
       case 'agent':
         return <AgentView />;
-      case 'personalization':
-        return <PatchAvatarLab />;
       default:
         return <DashboardView />;
     }

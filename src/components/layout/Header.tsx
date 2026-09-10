@@ -58,7 +58,6 @@ export const Header: React.FC = () => {
     { id: 'investors', label: 'Investors', icon: Briefcase },
     { id: 'agent', label: 'Unfoundy AI', icon: Bot },
     { id: 'pulse', label: 'Pulse & Check-in', icon: Activity },
-    { id: 'personalization', label: 'Patch Lab', icon: Sparkles },
   ];
 
   const mobilePrimaryItems = [
@@ -209,16 +208,6 @@ export const Header: React.FC = () => {
                         <span>+ Onboard New Member</span>
                       </button>
                     )}
-                    <button
-                      onClick={() => {
-                        setActiveTab('personalization');
-                        setUserMenuOpen(false);
-                      }}
-                      className="w-full text-left p-2 rounded-xl text-[#6E6E73] hover:text-black hover:bg-[#F5F5F7] flex items-center gap-2"
-                    >
-                      <Sparkles size={13} />
-                      <span>Customize Profile</span>
-                    </button>
                     <button
                       onClick={() => {
                         setAccessModalOpen(true);

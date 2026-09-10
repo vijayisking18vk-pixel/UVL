@@ -136,7 +136,7 @@ interface WorkspaceContextType {
   updateAgentConfig: (config: Partial<import('../types').AgentConfig>) => void;
   delegateTaskToAgent: (taskId: string) => Promise<void>;
 
-  // Workspace Config & Personalization
+  // Workspace Configuration
   workspaceConfig: WorkspaceConfig;
   updateWorkspaceConfig: (config: Partial<WorkspaceConfig>) => void;
   toggleSound: () => void;
