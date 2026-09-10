@@ -322,8 +322,8 @@ export const AgentView: React.FC = () => {
             <div className="px-3.5 py-1.5 rounded-full border border-emerald-200 bg-emerald-50 text-xs font-medium text-emerald-800">
               Direct Execution Mode
             </div>
-            <div className="px-3.5 py-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-xs font-mono text-[#6E6E73]">
-              gemini-2.5-flash
+            <div className="px-3.5 py-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-xs font-medium text-[#6E6E73]">
+              Executive Intelligence
             </div>
           </div>
         </div>
@@ -542,6 +542,28 @@ export const AgentView: React.FC = () => {
 
             {/* Sticky Prompt Input Bar (Unfoundy Execution Interface) */}
             <div className="p-4 sm:p-5 border-t border-[#E5E5E7] bg-white space-y-3">
+              {/* Quick Assessment & Intelligence Chips */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
+                {[
+                  { label: '📊 Venture Status Assessment', prompt: 'Assess our current venture status, tasks, and financials, and deliver an executive report.' },
+                  { label: '💰 Treasury & Runway Audit', prompt: 'Audit our Money Tracker cash flows, lifetime earnings, burn rate, and runway in INR.' },
+                  { label: '⚡ Sprint & Blockers Review', prompt: 'Review our active sprint tasks, completion velocity, and unblock any critical bottlenecks.' },
+                  { label: '🤝 Investor Pipeline Review', prompt: 'Analyze our investor pipeline, deal stages, and total prospective capital.' }
+                ].map((chip) => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => {
+                      sound.click();
+                      sendAgentChatMessage(chip.prompt);
+                    }}
+                    className="px-3.5 py-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-[#EBEBED] hover:border-black/30 text-black text-xs font-medium whitespace-nowrap transition-all cursor-pointer shadow-2xs"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="relative flex items-end gap-2 bg-[#F5F5F7] border border-[#E5E5E7] focus-within:border-black focus-within:bg-white transition-all rounded-2xl p-2.5 sm:p-3">
                 <textarea
                   ref={textareaRef}
@@ -821,24 +843,11 @@ export const AgentView: React.FC = () => {
                 Unfoundy AI Configuration
               </h3>
               <p className="text-[#6E6E73] text-xs sm:text-sm mt-0.5">
-                Configure generative model, autonomy authority, and announcements enclaves.
+                Configure agent autonomy, naming, and operational announcement enclaves.
               </p>
             </div>
 
             <div className="space-y-5 text-xs">
-              <div>
-                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-2">
-                  Active Generative Model
-                </label>
-                <select
-                  value={agentConfig.activeModel}
-                  onChange={(e) => updateAgentConfig({ activeModel: e.target.value })}
-                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-black p-3 focus:outline-none focus:border-black focus:bg-white font-sans text-xs transition-all"
-                >
-                  <option value="gemini-2.5-flash">gemini-2.5-flash (Fast, Low Latency, Recommended)</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro (High Reasoning, Deep Analysis)</option>
-                </select>
-              </div>
 
               <div>
                 <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-2">

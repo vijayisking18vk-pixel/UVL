@@ -80,8 +80,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const { supabaseConnected } = useWorkspace();
-
   return (
     <div className="min-h-screen bg-[#FFFFFF] text-[#000000] flex flex-col selection:bg-[#E5E5E7] selection:text-[#000000]">
       {/* Top Apple Minimalist Header */}
@@ -92,20 +90,17 @@ const AppContent: React.FC = () => {
         <div className="max-w-[1200px] mx-auto flex items-center justify-between text-[11px] text-[#6E6E73]">
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-            <span className="font-medium text-black">Workspace Sync:</span>
-            <span className="meta-number text-[#6E6E73]">
-              {supabaseConnected ? 'Supabase Live' : 'Active / Fast Cloud Cache'}
-            </span>
+            <span className="font-medium text-black">Unfounded Venture Lab</span>
+            <span className="text-[#D1D1D6]">•</span>
+            <span>Direct Autonomy Engine</span>
           </div>
           <div className="hidden md:flex items-center gap-6 font-medium">
-            <span>Unfounded Venture Lab</span>
+            <span>5 Verified Operators</span>
             <span className="text-[#D1D1D6]">•</span>
             <span>Roster: Vijayrajkumar / Saai / Harish / Subanesh / Vinayak</span>
-            <span className="text-[#D1D1D6]">•</span>
-            <span>Direct Autonomy</span>
           </div>
-          <div className="flex items-center gap-2 meta-number text-[11px] text-[#6E6E73]">
-            <span>v2026.09</span>
+          <div className="flex items-center gap-2 text-[11px] text-[#6E6E73]">
+            <span>Active</span>
           </div>
         </div>
       </div>

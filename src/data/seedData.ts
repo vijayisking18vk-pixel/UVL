@@ -125,52 +125,9 @@ export const initialExpenses: import('../types').Expense[] = [];
 
 export const initialInvestors: import('../types').Investor[] = [];
 
-export const initialAgentLogs: import('../types').AgentActivityLog[] = [
-  {
-    id: 'log-1',
-    timestamp: '2026-09-10 09:00:15',
-    actionType: 'System Diagnostics',
-    targetEntity: 'Command Enclaves',
-    reasoning: 'Autonomous scan initialized: Telemetry online, currency standardized to INR (₹), enclaves awaiting operator input.',
-    status: 'success',
-    rollbackAvailable: false
-  }
-];
+export const initialAgentLogs: import('../types').AgentActivityLog[] = [];
 
-export const initialAgentReports: import('../types').AgentReport[] = [
-  {
-    id: 'rep-1',
-    type: 'weekly',
-    title: 'Executive Weekly Synthesis — System Baseline',
-    period: 'Current Sprint Cycle',
-    generatedAt: '2026-09-10 08:30:00',
-    summary: 'Command center initialized with zero expense burn, verified treasury, and clean investor deal pipeline ready for live operations.',
-    content: `# Executive Weekly Synthesis — System Baseline
-**Period**: Current Sprint Cycle  
-**Author**: Unfoundy AI Engine (Autonomous UVL Core)
-
-### Key Milestones & Accomplishments
-1. **Core Development**: Enforced uniform Grotesk typography system, mobile responsive navigation shell, and live Supabase multimedia storage enclaves.
-2. **Infrastructure**: Supabase database connected and operational.
-3. **Financial Tracking**: Money tracker (Earnings & Operational Burn) and Investor CRM active in Indian Rupees (₹ INR).
-
-### Active Status
-- Operational spend: **₹0.00 INR**.
-- Active pipeline: **₹0.00 INR**. Ready to log new institutional leads and treasury vouchers.`,
-    highlights: [
-      'Supabase multimedia storage and vault enclaves verified live',
-      'Mobile touch-optimized navigation shell deployed',
-      'Money tracker configured in Indian Rupees (₹ INR) for earnings and burn'
-    ],
-    risks: [],
-    metrics: {
-      tasksCompleted: 14,
-      totalSpend: 0,
-      activeLeads: 0,
-      sentimentScore: '⚡ Operational / 100%'
-    }
-  }
-];
+export const initialAgentReports: import('../types').AgentReport[] = [];
 
 export const initialAgentConfig: import('../types').AgentConfig = {
   name: 'Unfoundy',

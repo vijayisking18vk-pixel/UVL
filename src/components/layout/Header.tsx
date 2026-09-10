@@ -35,7 +35,6 @@ export const Header: React.FC = () => {
     currentUser,
     users,
     isVijayrajkumar,
-    switchUserById,
     logout,
     workspaceConfig,
     toggleSound,
@@ -184,29 +183,17 @@ export const Header: React.FC = () => {
                   className="absolute right-0 mt-2 w-64 bg-white border border-[#E5E5E7] rounded-2xl p-3 z-50 shadow-xl"
                   onMouseLeave={() => setUserMenuOpen(false)}
                 >
-                  <div className="pb-2 border-b border-[#E5E5E7] mb-2 px-1">
-                    <span className="micro-label text-[#6E6E73] block">
-                      Switch Active Member
+                  <div className="pb-3 border-b border-[#E5E5E7] mb-2 px-1">
+                    <span className="text-[10px] font-semibold text-[#6E6E73] uppercase tracking-wider block">
+                      Authenticated Operator
                     </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {users.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUserById(u.id);
-                          setUserMenuOpen(false);
-                        }}
-                        className={`w-full flex items-center justify-between p-2 rounded-xl text-left text-xs transition-all ${
-                          u.id === currentUser.id
-                            ? 'bg-[#F5F5F7] text-black font-semibold'
-                            : 'hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-black'
-                        }`}
-                      >
-                        <PatchAvatar user={u} size="sm" showStatus showCallsign />
-                      </button>
-                    ))}
+                    <div className="flex items-center gap-2.5 mt-2">
+                      <PatchAvatar user={currentUser} size="sm" showStatus />
+                      <div className="truncate">
+                        <span className="font-semibold text-xs text-black block truncate">{currentUser.name}</span>
+                        <span className="text-[10px] text-[#6E6E73] font-mono">{currentUser.handle} · /{currentUser.callsign}</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="mt-2 pt-2 border-t border-[#E5E5E7] flex flex-col gap-1 text-xs">

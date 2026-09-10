@@ -28,11 +28,16 @@ export const DashboardView: React.FC = () => {
     setActiveTab,
     convertMessageToTask,
     addNote,
-    supabaseConnected
+    expenses
   } = useWorkspace();
 
   const [scratchContent, setScratchContent] = useState('');
   const [scratchSaved, setScratchSaved] = useState(false);
+
+  // Financial telemetry
+  const totalEarnings = expenses.filter(e => e.type === 'earning').reduce((acc, e) => acc + e.amount, 0);
+  const totalSpend = expenses.filter(e => e.type !== 'earning').reduce((acc, e) => acc + e.amount, 0);
+  const netCash = totalEarnings - totalSpend;
 
   // Filter items for current user
   const myTasks = tasks.filter(t => t.assigneeId === currentUser.id && t.status !== 'done');
@@ -129,10 +134,9 @@ export const DashboardView: React.FC = () => {
               </span>
             </div>
             <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] flex flex-col justify-between">
-              <span className="micro-label text-[#6E6E73] block">Cloud Sync</span>
-              <span className="text-xs font-semibold text-black mt-2 block flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                {supabaseConnected ? 'Supabase Live' : 'Cloud Ready'}
+              <span className="micro-label text-[#6E6E73] block">Net Treasury</span>
+              <span className="text-xl sm:text-2xl font-semibold text-black mt-1 block font-mono">
+                {netCash >= 0 ? '+' : ''}₹{netCash.toLocaleString('en-IN')}
               </span>
             </div>
           </div>
