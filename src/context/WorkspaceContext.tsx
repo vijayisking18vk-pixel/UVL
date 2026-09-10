@@ -547,10 +547,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const addMember = async (memberData: Omit<User, 'id'>): Promise<User> => {
-    if (!isVijayrajkumar) {
-      sound.alert();
-      throw new Error('Access Denied: Only Vijayrajkumar has authority to add members.');
-    }
     sound.patchStamp();
     const newId = `u-${Date.now().toString().slice(-4)}`;
     const newMember: User = {

@@ -34,7 +34,6 @@ export const Header: React.FC = () => {
     setActiveTab,
     currentUser,
     users,
-    isVijayrajkumar,
     logout,
     workspaceConfig,
     toggleSound,
@@ -140,20 +139,18 @@ export const Header: React.FC = () => {
               <span className="micro-label text-black">Private</span>
             </button>
 
-            {/* Vijayrajkumar Exclusive Add Member Shortcut */}
-            {isVijayrajkumar && (
-              <button
-                onClick={() => {
-                  sound.click();
-                  setAccessModalOpen(true);
-                }}
-                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black bg-black text-white hover:bg-neutral-800 text-xs font-medium transition-all"
-                title="Vijayrajkumar Authorization: Add New Member"
-              >
-                <UserPlus size={13} />
-                <span>+ Member</span>
-              </button>
-            )}
+            {/* Add Member Shortcut */}
+            <button
+              onClick={() => {
+                sound.click();
+                setAccessModalOpen(true);
+              }}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-black bg-black text-white hover:bg-neutral-800 text-xs font-medium transition-all"
+              title="Add New Member"
+            >
+              <UserPlus size={13} />
+              <span>+ Member</span>
+            </button>
 
             {/* User Selector Dropdown */}
             <div className="relative">
@@ -196,18 +193,16 @@ export const Header: React.FC = () => {
                   </div>
 
                   <div className="mt-2 pt-2 border-t border-[#E5E5E7] flex flex-col gap-1 text-xs">
-                    {isVijayrajkumar && (
-                      <button
-                        onClick={() => {
-                          setAccessModalOpen(true);
-                          setUserMenuOpen(false);
-                        }}
-                        className="w-full text-left p-2 rounded-xl text-black hover:bg-[#F5F5F7] flex items-center gap-2 font-medium"
-                      >
-                        <UserPlus size={13} className="text-black" />
-                        <span>+ Onboard New Member</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setAccessModalOpen(true);
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full text-left p-2 rounded-xl text-black hover:bg-[#F5F5F7] flex items-center gap-2 font-medium"
+                    >
+                      <UserPlus size={13} className="text-black" />
+                      <span>+ Onboard New Member</span>
+                    </button>
                     <button
                       onClick={() => {
                         setAccessModalOpen(true);
@@ -409,18 +404,16 @@ export const Header: React.FC = () => {
               </button>
             </div>
 
-            {isVijayrajkumar && (
-              <button
-                onClick={() => {
-                  setAccessModalOpen(true);
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-black text-white font-medium text-xs"
-              >
-                <UserPlus size={14} />
-                <span>+ Add Team Member</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setAccessModalOpen(true);
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-black text-white font-medium text-xs"
+            >
+              <UserPlus size={14} />
+              <span>+ Add Team Member</span>
+            </button>
 
             <button
               onClick={() => {

@@ -20,7 +20,6 @@ import {
   FileText,
   MessageSquare,
   ShieldCheck,
-  ShieldAlert,
   Search,
   ExternalLink,
   ChevronRight,
@@ -69,8 +68,7 @@ export const InvestorView: React.FC = () => {
     addInvestorDocument,
     scheduleInvestorFollowUp,
     currentUser,
-    users,
-    isVijayrajkumar
+    users
   } = useWorkspace();
 
   // Search & Stage Filter
@@ -139,40 +137,6 @@ export const InvestorView: React.FC = () => {
     }
     return true;
   });
-
-  // Access Control Guard
-  if (!isVijayrajkumar && currentUser.role !== 'admin') {
-    return (
-      <div className="py-20 text-center max-w-xl mx-auto space-y-6">
-        <div className="w-16 h-16 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] mx-auto flex items-center justify-center shadow-xs">
-          <ShieldAlert size={28} className="text-black" />
-        </div>
-        <div>
-          <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider block mb-2">Enclave Security Level 1</span>
-          <h2 className="font-serif text-2xl sm:text-3xl font-normal text-black">
-            Institutional Investor Enclave Restricted.
-          </h2>
-          <p className="text-[#6E6E73] text-sm mt-3 leading-relaxed">
-            Cap table allocations, term sheet valuations, and investor correspondence are restricted to founder clearance (Vijayrajkumar / Administrative Operator).
-          </p>
-        </div>
-        <div className="p-5 border border-[#E5E5E7] bg-[#F5F5F7] rounded-2xl text-left text-xs font-sans space-y-2.5">
-          <div className="flex justify-between">
-            <span className="text-[#6E6E73]">Active Session:</span>
-            <span className="text-black font-semibold">{currentUser.name} ({currentUser.callsign})</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#6E6E73]">Authorization:</span>
-            <span className="text-black font-mono">MEMBER_CLEARANCE</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#6E6E73]">Requirement:</span>
-            <span className="text-black font-mono font-semibold">FOUNDER_EXECUTIVE_KEY</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Handle Add Investor
   const handleAddInvestorSubmit = (e: React.FormEvent) => {

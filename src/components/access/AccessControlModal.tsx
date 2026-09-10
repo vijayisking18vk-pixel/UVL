@@ -24,7 +24,6 @@ export const AccessControlModal: React.FC = () => {
     workspaceConfig,
     users,
     currentUser,
-    isVijayrajkumar,
     addMember,
     exportWorkspaceData,
     importWorkspaceData,
@@ -81,10 +80,6 @@ export const AccessControlModal: React.FC = () => {
 
   const handleAddMemberSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isVijayrajkumar) {
-      setMemberMessage({ type: 'error', text: 'Unauthorized: Only Vijayrajkumar has authority to add members.' });
-      return;
-    }
     if (!newName.trim()) {
       setMemberMessage({ type: 'error', text: 'Please enter operator name.' });
       return;
@@ -222,47 +217,34 @@ export const AccessControlModal: React.FC = () => {
             </div>
           </div>
 
-          {/* OPERATOR ENROLLMENT CLEARANCE (VIJAYRAJKUMAR EXCLUSIVE) */}
+          {/* OPERATOR ENROLLMENT CLEARANCE (ALL OPERATORS) */}
           <div className="border border-[#E5E5E7] rounded-3xl p-5 bg-[#F5F5F7] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-1.5">
                   <UserPlus size={14} className="text-[#6E6E73]" /> Member Enrollment Clearance
                 </span>
-                <span className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border ${
-                  isVijayrajkumar
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-                    : 'border-[#E5E5E7] bg-white text-[#6E6E73]'
-                }`}>
-                  {isVijayrajkumar ? 'Authorized: Vijayrajkumar' : 'Locked: Read-Only'}
+                <span className="text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border border-emerald-200 bg-emerald-50 text-emerald-800">
+                  Authorized: All Operators
                 </span>
               </div>
 
-              {isVijayrajkumar && (
-                <button
-                  onClick={() => {
-                    sound.click();
-                    setShowAddMember(!showAddMember);
-                    setMemberMessage(null);
-                  }}
-                  className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 text-white text-[11px] font-medium rounded-full flex items-center gap-1.5 transition-all shadow-xs"
-                >
-                  <UserPlus size={12} />
-                  <span>{showAddMember ? 'Cancel' : '+ Add Operator'}</span>
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  sound.click();
+                  setShowAddMember(!showAddMember);
+                  setMemberMessage(null);
+                }}
+                className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 text-white text-[11px] font-medium rounded-full flex items-center gap-1.5 transition-all shadow-xs"
+              >
+                <UserPlus size={12} />
+                <span>{showAddMember ? 'Cancel' : '+ Add Operator'}</span>
+              </button>
             </div>
 
-            {!isVijayrajkumar ? (
-              <p className="text-[#6E6E73] text-xs flex items-center gap-1.5">
-                <Lock size={12} className="text-[#6E6E73] shrink-0" />
-                <span>Roster provisioning is restricted. Only <strong>Vijayrajkumar</strong> possesses authorization to add new members to this enclave.</span>
-              </p>
-            ) : (
-              <p className="text-[#6E6E73] text-xs">
-                As <strong>Vijayrajkumar</strong>, you have exclusive authorization to add and provision new team operators. All added members are saved directly to the live Supabase database.
-              </p>
-            )}
+            <p className="text-[#6E6E73] text-xs">
+              All team operators have full authorization to provision new workspace operators. All added members are saved directly to the live Supabase database.
+            </p>
 
             {memberMessage && (
               <div className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
@@ -275,8 +257,8 @@ export const AccessControlModal: React.FC = () => {
               </div>
             )}
 
-            {/* Add Member Form (Visible only to Vijayrajkumar when toggled) */}
-            {isVijayrajkumar && showAddMember && (
+            {/* Add Member Form (Visible when toggled) */}
+            {showAddMember && (
               <form onSubmit={handleAddMemberSubmit} className="pt-4 border-t border-[#E5E5E7] space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
