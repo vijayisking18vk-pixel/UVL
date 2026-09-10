@@ -13,11 +13,11 @@ export interface GeminiResponse {
 /**
  * Generate a text response using Gemini
  * @param prompt The user or system prompt
- * @param model Model identifier (default: gemini-2.5-flash)
+ * @param model Model identifier (default: gemini-3.6-flash)
  */
 export async function generateGeminiContent(
   prompt: string,
-  model: string = 'gemini-2.5-flash'
+  model: string = 'gemini-3.6-flash'
 ): Promise<GeminiResponse> {
   if (!API_KEY) {
     return {
