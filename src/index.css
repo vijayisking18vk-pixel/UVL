@@ -1,61 +1,107 @@
 /* ==============================================================================
-   DESIGN SYSTEM: MONOCHROME EDITORIAL PORTFOLIO
-   Color: Pure Black (#000000) & Pure White (#FFFFFF)
-   Secondary Accent: Silver (#A1A1AA) - Minimal, Refined, Ultra-Clean
-   Typography: Single Grotesk Family (Inter), tight letter-spacing, huge headlines
-   Layout: Hairline 1px dividers, 0 border radius, alternating black/white panels
-   Photography: Original uploaded avatar colors preserved intact
+   DESIGN SYSTEM: MINIMALIST APPLE-INSPIRED DESIGN SYSTEM
+   Color System:
+     --color-background: #FFFFFF;      Primary background - pure white
+     --color-text-primary: #000000;    Primary text - pure black
+     --color-text-secondary: #6E6E73;  Muted gray for secondary text/labels (Apple-style)
+     --color-border: #E5E5E7;          Ultra-light hairline borders/dividers
+     --color-accent: #000000;          Buttons/CTAs - black, no bright colors
+     --color-surface: #F5F5F7;         Subtle off-white for cards/panels (Apple's signature gray)
+     --color-surface-hover: #EBEBED;
+   Typography:
+     Headlines: Playfair Display serif (large, light-to-medium weight)
+     Body & UI: SF Pro / Inter / Helvetica Neue (clean neutral sans-serif)
+     Monospace: JetBrains Mono
+   Spacing & Radius:
+     Consistent 8px base grid (8/16/24/32/48/64)
+     Apple subtle radiuses (rounded-2xl / rounded-xl / rounded-full)
    ============================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  --color-black: #000000;
-  --color-white: #FFFFFF;
-  --color-silver: #A1A1AA;
-  --color-silver-light: #E4E4E7;
-  --color-silver-muted: #71717A;
-  --color-silver-dark: #52525B;
+  --color-background: #FFFFFF;
+  --color-text-primary: #000000;
+  --color-text-secondary: #6E6E73;
+  --color-border: #E5E5E7;
+  --color-accent: #000000;
+  --color-surface: #F5F5F7;
+  --color-surface-hover: #EBEBED;
 
-  --color-background: #000000;
-  --color-background-alt: #000000;
-  --color-primary-text: #FFFFFF;
-
-  --font-editorial: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono-meta: 'JetBrains Mono', monospace;
+  --font-headline: 'Playfair Display', Georgia, Cambria, 'Times New Roman', serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
-/* ZERO BORDER-RADIUS GLOBALLY & UNIFIED MODERN GROTESK FONT STYLE ACROSS THE ENTIRE PAGE */
-*, *::before, *::after {
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  font-family: var(--font-editorial) !important;
-}
-
-/* Allow JetBrains Mono exclusively on code tags and pre elements */
-code, pre, .font-code {
-  font-family: var(--font-mono-meta) !important;
-}
-
-/* Base Body & Mobile Touch Ergonomics */
+/* Base Body & Layout */
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
+  background-color: var(--color-background);
 }
 
 body {
-  background-color: var(--color-black);
-  color: var(--color-white);
-  font-family: var(--font-editorial) !important;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: var(--font-body) !important;
   font-weight: 400;
-  letter-spacing: -0.015em;
+  line-height: 1.55;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
   touch-action: manipulation;
+}
+
+/* HEADLINES & TITLES: Playfair Display Serif strictly */
+h1, h2, h3, h4, h5, h6, .headline, .headline-display, .headline-section, .font-serif {
+  font-family: var(--font-headline) !important;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+
+.headline-display {
+  font-size: clamp(2.5rem, 5vw, 4.25rem);
+  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.headline-section {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* BODY & LABELS: Clean Neutral Sans-Serif (SF Pro / Inter) */
+p, span, label, input, textarea, select, button, .body-text {
+  font-family: var(--font-body);
+}
+
+.body-text {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.micro-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text-secondary);
+}
+
+.meta-number {
+  font-family: var(--font-body) !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+code, pre, .font-mono, .font-code {
+  font-family: var(--font-mono) !important;
 }
 
 /* AVATAR PHOTOS & IMAGES: Original uploaded color preserved completely */
@@ -66,128 +112,101 @@ img,
   image-rendering: auto;
 }
 
-/* Typography Hierarchy */
-h1, h2, h3, h4, h5, h6, .headline {
-  font-family: var(--font-editorial);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  text-transform: none; /* sentence case */
+/* APPLE COMPONENTS & SURFACES */
+.apple-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.headline-display {
-  font-size: clamp(3rem, 7vw, 6.5rem);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
-  font-weight: 800;
+.apple-card-hover:hover {
+  background-color: var(--color-surface-hover);
+  transform: translateY(-1px);
 }
 
-.headline-section {
-  font-size: clamp(1.75rem, 3.5vw, 3rem);
-  line-height: 1.05;
-  letter-spacing: -0.025em;
-  font-weight: 700;
+.apple-card-white {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* Body & Column Text: narrow, tight line-height */
-p, .body-text {
-  font-size: 14px;
-  line-height: 1.45;
-  color: inherit;
-}
-
-/* Micro Labels & Metadata */
-.micro-label {
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
-.meta-number {
-  font-family: var(--font-editorial) !important;
-  font-size: 11px;
-  letter-spacing: -0.02em;
+.apple-pill {
+  border-radius: 9999px;
+  font-size: 12px;
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
+  padding: 4px 12px;
+  transition: all 0.2s ease;
 }
 
-/* Interactive & Secondary Accent: Silver (#A1A1AA) */
-.text-accent-silver,
-.text-accent-blue,
-.text-\[\#0055FF\] {
-  color: var(--color-silver) !important;
+.apple-button-primary {
+  background-color: #000000;
+  color: #FFFFFF;
+  border-radius: 9999px;
+  font-weight: 500;
+  padding: 8px 18px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.bg-accent-silver,
-.bg-accent-blue,
-.bg-\[\#0055FF\] {
-  background-color: var(--color-silver) !important;
-  color: #000000 !important;
+.apple-button-primary:hover {
+  background-color: #262626;
 }
 
-.border-accent-silver,
-.border-accent-blue,
-.border-\[\#0055FF\] {
-  border-color: var(--color-silver) !important;
+.apple-button-secondary {
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  font-weight: 500;
+  padding: 8px 18px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Alternating Section Classes */
-.section-black {
-  background-color: #000000 !important;
-  color: #FFFFFF !important;
-  border-top: 1px solid #FFFFFF;
+.apple-button-secondary:hover {
+  background-color: var(--color-surface-hover);
+  border-color: #D1D1D6;
 }
 
-.section-white {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border-top: 1px solid #000000;
+.apple-input {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  color: var(--color-text-primary);
+  padding: 10px 14px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
 }
 
-.section-white input,
-.section-white select,
-.section-white textarea {
-  background-color: #FFFFFF !important;
-  color: #000000 !important;
-  border-color: #000000 !important;
+.apple-input:focus {
+  background-color: #FFFFFF;
+  border-color: #000000;
+  box-shadow: 0 0 0 1px #000000;
 }
 
-.section-white button.btn-outline {
-  border-color: #000000 !important;
-  color: #000000 !important;
-}
-
-.section-white button.btn-outline:hover {
-  background-color: #000000 !important;
-  color: #FFFFFF !important;
-}
-
-/* Hairline 1px rules */
+/* Hairline borders */
 .hairline-b {
-  border-bottom: 1px solid currentColor;
+  border-bottom: 1px solid var(--color-border);
 }
-
 .hairline-t {
-  border-top: 1px solid currentColor;
+  border-top: 1px solid var(--color-border);
 }
-
 .hairline-r {
-  border-right: 1px solid currentColor;
+  border-right: 1px solid var(--color-border);
 }
-
 .hairline-l {
-  border-left: 1px solid currentColor;
+  border-left: 1px solid var(--color-border);
 }
-
 .hairline-all {
-  border: 1px solid currentColor;
+  border: 1px solid var(--color-border);
 }
 
 /* Entrance moment on page load */
-@keyframes editorialReveal {
+@keyframes appleReveal {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -196,36 +215,39 @@ p, .body-text {
 }
 
 .editorial-reveal {
-  animation: editorialReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: appleReveal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Custom Minimal Silver Scrollbar */
+/* Apple Minimalist Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #000000;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333333;
+  background: #D1D1D6;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-silver);
+  background: #A1A1A6;
 }
 
-/* Brand Identity Modern Grotesk Typography */
-.brand-logo-intact,
-.brand-logo-intact *,
-.font-brand-logo {
-  font-family: var(--font-editorial) !important;
-  letter-spacing: -0.035em;
+/* REMAP LEGACY DARK MONOCHROME UTILITY CLASSES TO APPLE MINIMAL LIGHT SYSTEM */
+.bg-\[\#000000\],
+.bg-black {
+  background-color: var(--color-background) !important;
+  color: var(--color-text-primary) !important;
 }
 
-/* Remap legacy styling classes */
+.bg-white\/5,
+.bg-white\/10,
+.bg-white\/\[0\.02\],
+.bg-\[\#111111\],
 .bg-\[\#1A1A1A\],
 .bg-\[\#0D0D0D\],
 .bg-\[\#0C0E11\],
@@ -235,34 +257,61 @@ p, .body-text {
 .bg-\[\#242424\],
 .bg-\[\#2A2A2A\],
 .bg-\[\#181B20\] {
-  background-color: #000000 !important;
+  background-color: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
 }
 
+.border-white\/30,
+.border-white\/20,
+.border-white\/10,
+.border-white\/5,
+.border-white,
 .border-\[\#333333\],
 .border-\[\#262626\],
 .border-\[\#252B35\],
 .border-\[\#242930\],
 .border-\[\#2D333F\] {
-  border-color: rgba(255, 255, 255, 0.2) !important;
+  border-color: var(--color-border) !important;
 }
 
-.border-\[\#E5B869\],
-.bg-\[\#E5B869\],
-.text-\[\#E5B869\] {
-  border-color: var(--color-silver) !important;
+.text-\[\#FFFFFF\],
+.text-white {
+  color: var(--color-text-primary) !important;
 }
 
-.text-\[\#E5B869\] {
-  color: var(--color-silver) !important;
+.text-white\/90,
+.text-white\/80 {
+  color: var(--color-text-primary) !important;
 }
 
-.bg-\[\#E5B869\] {
-  background-color: var(--color-silver) !important;
+.text-white\/70,
+.text-white\/60,
+.text-white\/50,
+.text-white\/40,
+.text-white\/30,
+.text-\[\#A1A1AA\] {
+  color: var(--color-text-secondary) !important;
+}
+
+.bg-\[\#A1A1AA\] {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+
+.border-\[\#A1A1AA\] {
+  border-color: #000000 !important;
+}
+
+/* Subtle Apple Corner Rounding */
+button, select {
+  border-radius: 12px;
+}
+
+/* Modals & Dialogs */
+.apple-modal {
+  background-color: #FFFFFF !important;
   color: #000000 !important;
-}
-
-.patch-pill,
-.patch-chamfer-sm,
-.patch-chamfer-md {
-  clip-path: none !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08) !important;
 }

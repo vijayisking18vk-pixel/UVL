@@ -50,11 +50,11 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
   }[size];
 
   const statusColors = {
-    active: 'bg-[#A1A1AA] border-[#000000]',
-    focus: 'bg-[#FFFFFF] border-[#000000]',
-    reviewing: 'bg-[#D4D4D8] border-[#000000]',
-    away: 'bg-[#71717A] border-[#000000]',
-    leave: 'bg-[#3F3F46] border-[#000000]'
+    active: 'bg-emerald-500 border-white',
+    focus: 'bg-black border-white',
+    reviewing: 'bg-amber-500 border-white',
+    away: 'bg-neutral-400 border-white',
+    leave: 'bg-neutral-300 border-white'
   };
 
   return (
@@ -64,7 +64,7 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
     >
       <div className="relative">
         <div
-          className={`${dimensions.box} border border-white/40 bg-[#111111] flex items-center justify-center relative overflow-hidden transition-all`}
+          className={`${dimensions.box} rounded-full border border-[#E5E5E7] bg-[#F5F5F7] flex items-center justify-center relative overflow-hidden transition-all shadow-sm`}
           title={`${user.name} (${user.callsign})`}
         >
           {user.avatarUrl && !imgError ? (
@@ -80,10 +80,10 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
           )}
         </div>
 
-        {/* Square Status Indicator */}
+        {/* Circular Status Indicator */}
         {showStatus && (
           <span 
-            className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 border ${statusColors[user.status]}`}
+            className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${statusColors[user.status]}`}
             title={`Status: ${user.status}`}
           />
         )}
@@ -91,10 +91,10 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
 
       {showCallsign && (
         <div className="flex flex-col text-left">
-          <span className="text-xs font-semibold text-[#FFFFFF] leading-tight">
+          <span className="text-xs font-semibold text-black leading-tight">
             {user.name}
           </span>
-          <span className="meta-number text-[10px] text-[#A1A1AA]">
+          <span className="meta-number text-[10px] text-[#6E6E73]">
             /{user.callsign}
           </span>
         </div>

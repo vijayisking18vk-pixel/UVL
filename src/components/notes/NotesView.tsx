@@ -85,22 +85,22 @@ export const NotesView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-10 pb-16">
       {/* Top Editorial Header */}
-      <section className="border-b border-white/20 pb-8">
+      <section className="border-b border-[#E5E5E7] pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
-              <span>archive</span>
+            <div className="text-[11px] font-medium tracking-widest uppercase text-[#6E6E73] mb-3 flex items-center gap-2">
+              <span>Archive</span>
               <span>/</span>
-              <span className="text-[#A1A1AA]">knowledge vault</span>
+              <span className="text-black">Knowledge Vault</span>
               <span>/</span>
-              <span>documentation</span>
+              <span>Documentation</span>
             </div>
-            <h1 className="headline-section text-white font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight text-black">
               Intel vault & wiki.
             </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
+            <p className="text-[#6E6E73] text-sm mt-2 max-w-xl">
               Personal field notes, shared team intelligence wiki, and rapid stream captures.
             </p>
           </div>
@@ -108,10 +108,10 @@ export const NotesView: React.FC = () => {
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setQuickCaptureOpen(true)}
-              className="px-4 py-2.5 border border-white/20 hover:border-white text-white font-mono text-xs uppercase tracking-wider flex items-center gap-2 transition-colors"
+              className="px-4 py-2.5 border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium rounded-full flex items-center gap-2 transition-all"
             >
-              <Zap size={14} className="text-[#A1A1AA]" />
-              <span>Quick capture</span>
+              <Zap size={14} className="text-[#6E6E73]" />
+              <span>Quick Capture</span>
             </button>
 
             <button
@@ -119,48 +119,48 @@ export const NotesView: React.FC = () => {
                 setNewType(activeTabType);
                 setIsCreateModalOpen(true);
               }}
-              className="px-5 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium text-xs tracking-wide transition-all uppercase flex items-center gap-2"
+              className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white font-medium text-xs rounded-full transition-all shadow-xs flex items-center gap-2"
             >
-              <Plus size={14} />
-              <span>New document</span>
+              <Plus size={15} />
+              <span>New Document</span>
             </button>
           </div>
         </div>
 
         {/* Tab switcher: Team Wiki vs Personal Notebook vs Brain Dumps */}
-        <div className="mt-8 pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex border border-white/20">
+        <div className="mt-8 pt-6 border-t border-[#E5E5E7] flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="inline-flex p-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-full">
             <button
               onClick={() => setActiveTabType('team_wiki')}
-              className={`px-4 py-2 text-xs font-mono tracking-wider uppercase transition-colors flex items-center gap-2 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
                 activeTabType === 'team_wiki'
-                  ? 'bg-white text-black font-bold'
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-white text-black shadow-xs font-semibold'
+                  : 'text-[#6E6E73] hover:text-black'
               }`}
             >
-              <BookOpen size={12} />
-              <span>Team wiki ({notes.filter(n => n.type === 'team_wiki').length})</span>
+              <BookOpen size={13} />
+              <span>Team Wiki ({notes.filter(n => n.type === 'team_wiki').length})</span>
             </button>
             <button
               onClick={() => setActiveTabType('personal')}
-              className={`px-4 py-2 text-xs font-mono tracking-wider uppercase transition-colors flex items-center gap-2 border-l border-white/20 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
                 activeTabType === 'personal'
-                  ? 'bg-white text-black font-bold'
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-white text-black shadow-xs font-semibold'
+                  : 'text-[#6E6E73] hover:text-black'
               }`}
             >
-              <FileText size={12} />
+              <FileText size={13} />
               <span>Personal ({notes.filter(n => n.type === 'personal' && n.authorId === currentUser.id).length})</span>
             </button>
             <button
               onClick={() => setActiveTabType('quick_capture')}
-              className={`px-4 py-2 text-xs font-mono tracking-wider uppercase transition-colors flex items-center gap-2 border-l border-white/20 ${
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
                 activeTabType === 'quick_capture'
-                  ? 'bg-white text-black font-bold'
-                  : 'text-white/60 hover:text-white'
+                  ? 'bg-white text-black shadow-xs font-semibold'
+                  : 'text-[#6E6E73] hover:text-black'
               }`}
             >
-              <Zap size={12} />
+              <Zap size={13} />
               <span>Captures ({notes.filter(n => n.type === 'quick_capture').length})</span>
             </button>
           </div>
@@ -173,13 +173,13 @@ export const NotesView: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search index or tags..."
-                className="bg-black border border-white/20 text-white text-xs font-mono px-3 py-2 w-56 placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                className="bg-[#F5F5F7] border border-[#E5E5E7] text-black text-xs rounded-full px-4 py-2 w-56 placeholder-[#6E6E73] focus:bg-white focus:outline-none focus:border-black transition-all"
               />
             </div>
             <select
               value={projectFilter}
               onChange={(e) => setProjectFilter(e.target.value)}
-              className="bg-black border border-white/20 text-white text-xs font-mono px-3 py-2 focus:outline-none focus:border-[#A1A1AA]"
+              className="bg-[#F5F5F7] border border-[#E5E5E7] text-black text-xs rounded-full px-3.5 py-2 focus:bg-white focus:outline-none focus:border-black transition-all"
             >
               <option value="all">All projects</option>
               {projects.map(p => (
@@ -194,15 +194,15 @@ export const NotesView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Left Column: Note Index */}
-        <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/20 text-xs font-mono text-white/50 uppercase tracking-wider">
+        <div className="lg:col-span-4 bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-5 space-y-4 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7] text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">
             <span>Documents ({filteredNotes.length})</span>
-            <span className="text-[#A1A1AA]">Indexed</span>
+            <span className="text-black">Indexed</span>
           </div>
 
           {filteredNotes.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
-              No documents in this view. Click "New document" to author one.
+            <div className="p-8 text-center rounded-2xl border border-dashed border-[#E5E5E7] bg-white text-xs text-[#6E6E73]">
+              No documents in this view. Click "New Document" to author one.
             </div>
           ) : (
             <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
@@ -218,47 +218,47 @@ export const NotesView: React.FC = () => {
                       setSelectedNoteId(n.id);
                       setIsEditing(false);
                     }}
-                    className={`p-4 border cursor-pointer transition-all ${
+                    className={`p-4 rounded-2xl cursor-pointer transition-all border ${
                       isSelected
-                        ? 'border-[#A1A1AA] bg-white text-black'
-                        : 'border-white/20 bg-black text-white hover:border-white/60'
+                        ? 'border-black bg-white shadow-sm text-black'
+                        : 'border-[#E5E5E7] bg-white text-black hover:border-black/30'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-1.5">
-                        {n.pinned && <Pin size={11} className={isSelected ? 'text-[#A1A1AA] fill-[#A1A1AA]' : 'text-[#A1A1AA] fill-[#A1A1AA]'} />}
+                        {n.pinned && <Pin size={11} className={isSelected ? 'text-black fill-black' : 'text-[#6E6E73] fill-[#6E6E73]'} />}
                         {project && (
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 border ${
-                            isSelected ? 'border-black/30 text-black' : 'border-white/20 text-white/60'
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                            isSelected ? 'border-black bg-black text-white' : 'border-[#E5E5E7] bg-[#F5F5F7] text-black'
                           }`}>
                             {project.code}
                           </span>
                         )}
                       </div>
-                      <span className={`text-[10px] font-mono ${isSelected ? 'text-black/60' : 'text-white/40'}`}>
+                      <span className="text-[11px] text-[#6E6E73]">
                         {n.updatedAt}
                       </span>
                     </div>
 
-                    <h4 className={`text-sm font-bold tracking-tight line-clamp-1 mb-1 ${isSelected ? 'text-black' : 'text-white'}`}>
+                    <h4 className="text-sm font-semibold tracking-tight line-clamp-1 mb-1 text-black">
                       {n.title}
                     </h4>
 
-                    <p className={`text-xs line-clamp-2 ${isSelected ? 'text-black/70' : 'text-white/50'}`}>
+                    <p className="text-xs line-clamp-2 text-[#6E6E73]">
                       {n.content.replace(/#+/g, '').slice(0, 90)}
                     </p>
 
-                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-current/10">
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-[#E5E5E7]">
                       <div className="flex items-center gap-1.5">
                         {author && <PatchAvatar user={author} size="sm" />}
-                        <span className={`text-[11px] font-mono ${isSelected ? 'text-black/70' : 'text-white/60'}`}>
+                        <span className="text-xs text-[#6E6E73]">
                           {author?.name}
                         </span>
                       </div>
 
                       <div className="flex items-center gap-1">
                         {n.tags.slice(0, 2).map(tag => (
-                          <span key={tag} className={`text-[10px] font-mono ${isSelected ? 'text-black/50' : 'text-white/40'}`}>
+                          <span key={tag} className="text-[10px] text-[#6E6E73]">
                             #{tag}
                           </span>
                         ))}
@@ -273,19 +273,19 @@ export const NotesView: React.FC = () => {
 
         {/* Right Column: Note Reader & Live Editor */}
         {activeNote ? (
-          <div className="lg:col-span-8 border border-white/20 bg-black p-6 space-y-6">
+          <div className="lg:col-span-8 bg-white border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
             {/* Note Top Bar */}
-            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-white/20">
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-[#E5E5E7]">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-[#A1A1AA] text-white uppercase font-bold tracking-wider">
+                  <span className="text-[10px] px-2.5 py-0.5 bg-black text-white rounded-full uppercase font-medium tracking-wider">
                     {activeNote.type.replace('_', ' ')}
                   </span>
-                  <span className="text-xs font-mono text-white/50">
+                  <span className="text-xs text-[#6E6E73]">
                     Last modified {activeNote.updatedAt}
                   </span>
                 </div>
-                <h2 className="text-2xl font-bold tracking-tight text-white">
+                <h2 className="text-2xl sm:text-3xl font-serif font-medium tracking-tight text-black">
                   {activeNote.title}
                 </h2>
               </div>
@@ -294,22 +294,22 @@ export const NotesView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => togglePinNote(activeNote.id)}
-                  className={`p-2 border text-xs font-mono transition-colors ${
+                  className={`p-2 rounded-full border text-xs transition-all ${
                     activeNote.pinned
-                      ? 'border-[#A1A1AA] bg-white text-black'
-                      : 'border-white/20 text-white/60 hover:text-white hover:border-white'
+                      ? 'border-black bg-black text-white'
+                      : 'border-[#E5E5E7] text-[#6E6E73] hover:text-black hover:border-black'
                   }`}
                   title={activeNote.pinned ? 'Unpin note' : 'Pin note'}
                 >
-                  <Pin size={14} className={activeNote.pinned ? 'fill-[#A1A1AA] text-[#A1A1AA]' : ''} />
+                  <Pin size={14} className={activeNote.pinned ? 'fill-white text-white' : ''} />
                 </button>
 
                 <button
                   onClick={() => setIsEditing(!isEditing)}
-                  className={`px-3.5 py-2 border text-xs font-mono uppercase tracking-wider flex items-center gap-2 transition-colors ${
+                  className={`px-4 py-2 border rounded-full text-xs font-medium flex items-center gap-2 transition-all ${
                     isEditing
-                      ? 'bg-[#A1A1AA] border-[#A1A1AA] text-white'
-                      : 'border-white/20 text-white hover:border-white'
+                      ? 'bg-black border-black text-white'
+                      : 'border-[#E5E5E7] text-black hover:bg-[#F5F5F7]'
                   }`}
                 >
                   {isEditing ? <Eye size={13} /> : <Edit3 size={13} />}
@@ -318,7 +318,7 @@ export const NotesView: React.FC = () => {
 
                 <button
                   onClick={() => deleteNote(activeNote.id)}
-                  className="p-2 border border-white/20 hover:border-red-500 text-white/50 hover:text-red-500 transition-colors"
+                  className="p-2 rounded-full border border-[#E5E5E7] hover:border-red-500 text-[#6E6E73] hover:text-red-500 hover:bg-red-50 transition-colors"
                   title="Delete document"
                 >
                   <Trash2 size={14} />
@@ -327,12 +327,12 @@ export const NotesView: React.FC = () => {
             </div>
 
             {/* Tags & Metadata */}
-            <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
-              <span className="text-white/40 flex items-center gap-1.5 uppercase">
-                <Tag size={12} className="text-[#A1A1AA]" /> Tags:
+            <div className="flex items-center gap-2 flex-wrap text-xs">
+              <span className="text-[#6E6E73] flex items-center gap-1.5 uppercase font-medium">
+                <Tag size={12} className="text-[#6E6E73]" /> Tags:
               </span>
               {activeNote.tags.map(t => (
-                <span key={t} className="px-2.5 py-0.5 border border-white/20 text-white/80">
+                <span key={t} className="px-2.5 py-0.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-black text-[11px] font-medium">
                   #{t}
                 </span>
               ))}
@@ -345,29 +345,29 @@ export const NotesView: React.FC = () => {
                   rows={16}
                   value={activeNote.content}
                   onChange={(e) => updateNote({ ...activeNote, content: e.target.value })}
-                  className="w-full bg-black border border-white/20 p-5 font-mono text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-y leading-relaxed"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl p-5 text-xs text-black placeholder-[#6E6E73] focus:outline-none focus:bg-white focus:border-black transition-all resize-y leading-relaxed"
                 />
                 <div className="flex justify-end">
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-5 py-2 bg-white text-black hover:bg-[#A1A1AA] hover:text-black text-xs font-bold font-mono uppercase tracking-wider transition-colors"
+                    className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white text-xs font-medium rounded-full transition-all shadow-xs"
                   >
-                    Save & view preview
+                    Save & View Preview
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="p-6 border border-white/20 bg-black min-h-[320px]">
-                <div className="font-mono text-xs text-white/90 leading-relaxed whitespace-pre-wrap">
+              <div className="p-6 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] min-h-[320px]">
+                <div className="text-xs text-black leading-relaxed whitespace-pre-wrap">
                   {activeNote.content}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="lg:col-span-8 p-16 text-center border border-dashed border-white/20 bg-black font-mono space-y-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">No document selected</h3>
-            <p className="text-xs text-white/40 max-w-sm mx-auto">
+          <div className="lg:col-span-8 p-16 text-center rounded-3xl border border-dashed border-[#E5E5E7] bg-[#F5F5F7] space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-black">No document selected</h3>
+            <p className="text-xs text-[#6E6E73] max-w-sm mx-auto">
               Select an indexed entry or click "New document" to draft a spec or operational note.
             </p>
           </div>
@@ -376,47 +376,47 @@ export const NotesView: React.FC = () => {
 
       {/* CREATE NOTE MODAL */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <form
             onSubmit={handleCreateSubmit}
-            className="bg-black border border-white/40 max-w-xl w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+            className="bg-white border border-[#E5E5E7] shadow-2xl rounded-3xl max-w-xl w-full p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto text-black"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-[#A1A1AA]" />
-                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
-                  Create vault document
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
+              <div>
+                <h3 className="text-xl font-serif font-medium tracking-tight text-black">
+                  Create Vault Document.
                 </h3>
+                <p className="text-xs text-[#6E6E73] mt-0.5">Author a specification, architecture note, or team briefing.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="text-white/50 hover:text-white p-1"
+                className="text-[#6E6E73] hover:text-black p-1.5 rounded-full hover:bg-[#F5F5F7] transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Document title *</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Document Title *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Distributed Consensus Engine Specs"
-                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Type / Space</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Type / Space</label>
                   <select
                     value={newType}
                     onChange={(e) => setNewType(e.target.value as any)}
-                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     <option value="team_wiki">Shared team wiki</option>
                     <option value="personal">Personal notebook</option>
@@ -425,11 +425,11 @@ export const NotesView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Project scope</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Project Scope</label>
                   <select
                     value={newProjectId}
                     onChange={(e) => setNewProjectId(e.target.value)}
-                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     <option value="">General / Lab-wide</option>
                     {projects.map(p => (
@@ -440,41 +440,41 @@ export const NotesView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Tags (comma-separated)</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Tags (comma-separated)</label>
                 <input
                   type="text"
                   value={newTags}
                   onChange={(e) => setNewTags(e.target.value)}
                   placeholder="e.g. architecture, specs, crypto"
-                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Markdown content</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Markdown Content</label>
                 <textarea
                   rows={8}
                   value={newContent}
                   onChange={(e) => setNewContent(e.target.value)}
                   placeholder="# Heading&#10;&#10;Write markdown documentation here..."
-                  className="w-full bg-black border border-white/20 p-3 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-none"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl p-3.5 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/20 flex items-center justify-end gap-3 font-mono text-xs">
+            <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-end gap-3 text-xs">
               <button
                 type="button"
                 onClick={() => setIsCreateModalOpen(false)}
-                className="px-4 py-2 border border-white/20 text-white/60 hover:text-white hover:border-white transition-colors uppercase"
+                className="px-4 py-2 text-xs font-medium text-[#6E6E73] hover:text-black rounded-full hover:bg-[#F5F5F7] transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium uppercase tracking-wider transition-colors"
+                className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white font-medium rounded-full transition-all shadow-xs"
               >
-                Save document
+                Save Document
               </button>
             </div>
           </form>

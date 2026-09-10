@@ -121,21 +121,21 @@ export const PatchAvatarLab: React.FC = () => {
   return (
     <div className="space-y-12 pb-16">
       {/* Top Editorial Header */}
-      <section className="border-b border-white/20 pb-8">
+      <section className="border-b border-[#E5E5E7] pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
-              <span>operator</span>
+            <div className="text-[11px] font-medium tracking-widest uppercase text-[#6E6E73] mb-3 flex items-center gap-2">
+              <span>Preferences</span>
               <span>/</span>
-              <span className="text-[#A1A1AA]">identity badge & preferences</span>
+              <span className="text-black">Operator Identity</span>
               <span>/</span>
-              <span>customization</span>
+              <span>Customization</span>
             </div>
-            <h1 className="headline-section text-white font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight text-black">
               Patch identity & profile.
             </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
-              Design your embroidered velcro callsign patch, personalize operator credentials, and reorder dashboard widgets.
+            <p className="text-[#6E6E73] text-sm mt-2 max-w-xl">
+              Design your embroidered velcro callsign patch, personalize operator credentials, and reorder dashboard telemetry cards.
             </p>
           </div>
         </div>
@@ -144,20 +144,20 @@ export const PatchAvatarLab: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* LEFT COLUMN: LIVE EMBROIDERED PATCH PREVIEW */}
-        <div className="lg:col-span-5 border border-white/20 bg-black p-6 space-y-6">
-          <div className="pb-3 border-b border-white/20 flex items-center justify-between">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-              Tactical badge preview
+        <div className="lg:col-span-5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+          <div className="pb-3 border-b border-[#E5E5E7] flex items-center justify-between">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-black">
+              Tactical Badge Preview
             </h3>
-            <span className="font-mono text-[10px] text-[#A1A1AA] border border-[#A1A1AA] px-2 py-0.5 font-bold uppercase">
+            <span className="text-[10px] bg-white border border-[#E5E5E7] text-black px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wider">
               {callsign || 'UVL-OP'}
             </span>
           </div>
 
           {/* PHYSICAL EMBROIDERED BADGE DISPLAY */}
-          <div className="p-10 border border-white/20 bg-black flex flex-col items-center justify-center relative overflow-hidden">
+          <div className="p-10 rounded-2xl bg-white border border-[#E5E5E7] flex flex-col items-center justify-center relative overflow-hidden shadow-xs">
             <div
-              className="relative w-64 h-36 border-2 flex flex-col items-center justify-center p-4 transition-all"
+              className="relative w-64 h-36 rounded-2xl border-2 flex flex-col items-center justify-center p-4 transition-all shadow-sm"
               style={{
                 backgroundColor: avatarBg,
                 borderColor: avatarStitch,
@@ -166,7 +166,7 @@ export const PatchAvatarLab: React.FC = () => {
             >
               {/* Overlock Stitched Inner Border */}
               <div
-                className="absolute inset-[4px] pointer-events-none border border-dashed"
+                className="absolute inset-[4px] rounded-xl pointer-events-none border border-dashed"
                 style={{ borderColor: `${avatarStitch}90` }}
               />
 
@@ -186,20 +186,20 @@ export const PatchAvatarLab: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] font-mono text-white/50 mt-4 text-center">
-              Monochrome high-contrast identity badge with sharp edges.
+            <p className="text-xs text-[#6E6E73] mt-4 text-center">
+              Monochrome high-contrast identity badge with stitched finish.
             </p>
           </div>
 
           {/* Active Operator Credentials */}
-          <div className="grid grid-cols-2 gap-3 font-mono text-xs">
-            <div className="p-3 border border-white/20 bg-black">
-              <span className="text-[10px] text-white/50 uppercase block mb-1">Handle</span>
-              <span className="text-white font-bold">{handle}</span>
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-white">
+              <span className="text-[10px] text-[#6E6E73] uppercase tracking-wider block mb-1">Chat Handle</span>
+              <span className="text-black font-semibold">{handle}</span>
             </div>
-            <div className="p-3 border border-white/20 bg-black">
-              <span className="text-[10px] text-white/50 uppercase block mb-1">Callsign</span>
-              <span className="text-[#A1A1AA] font-bold">{currentUser.callsign}</span>
+            <div className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-white">
+              <span className="text-[10px] text-[#6E6E73] uppercase tracking-wider block mb-1">Callsign</span>
+              <span className="text-black font-semibold">{currentUser.callsign}</span>
             </div>
           </div>
         </div>
@@ -208,54 +208,54 @@ export const PatchAvatarLab: React.FC = () => {
         <div className="lg:col-span-7 space-y-8">
           
           {/* PROFILE & PATCH EDITOR FORM */}
-          <div className="border border-white/20 bg-black p-6 space-y-6">
-            <div className="pb-3 border-b border-white/20 flex items-center justify-between">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                Credentials & emblem settings
+          <div className="bg-white border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+            <div className="pb-3 border-b border-[#E5E5E7] flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-black">
+                Credentials & Emblem Settings
               </h3>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-5 font-mono text-xs">
+            <form onSubmit={handleSaveProfile} className="space-y-5 text-xs">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Full Name</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Full Name</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Chat @Handle</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Chat @Handle</label>
                   <input
                     type="text"
                     required
                     value={handle}
                     onChange={(e) => setHandle(e.target.value)}
-                    className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Callsign</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Callsign</label>
                   <input
                     type="text"
                     required
                     value={callsign}
                     onChange={(e) => setCallsign(e.target.value.toUpperCase())}
                     placeholder="e.g. VANCE-01"
-                    className="w-full bg-black border border-white/20 px-3 py-2 text-white font-bold focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
               {/* Emblem Selection */}
               <div>
-                <label className="block text-white/50 mb-2 uppercase text-[10px]">
-                  Select center emblem
+                <label className="block text-[#6E6E73] mb-2 uppercase text-[11px] font-medium tracking-wider">
+                  Select Center Emblem
                 </label>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
                   {emblemOptions.map(opt => {
@@ -266,14 +266,14 @@ export const PatchAvatarLab: React.FC = () => {
                         key={opt.id}
                         type="button"
                         onClick={() => setAvatarEmblem(opt.id as any)}
-                        className={`p-3 border flex flex-col items-center justify-center gap-1.5 transition-all ${
+                        className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all ${
                           isSelected
-                            ? 'border-[#A1A1AA] bg-white text-black font-bold'
-                            : 'border-white/20 bg-black text-white/60 hover:text-white hover:border-white'
+                            ? 'border-black bg-black text-white font-medium shadow-xs'
+                            : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73] hover:text-black hover:border-black'
                         }`}
                       >
                         <Icon size={18} />
-                        <span className="text-[9px] leading-tight">{opt.label}</span>
+                        <span className="text-[10px] leading-tight font-medium">{opt.label}</span>
                       </button>
                     );
                   })}
@@ -282,8 +282,8 @@ export const PatchAvatarLab: React.FC = () => {
 
               {/* Stitch Color Picker */}
               <div>
-                <label className="block text-white/50 mb-2 uppercase text-[10px]">
-                  Border overlock thread color
+                <label className="block text-[#6E6E73] mb-2 uppercase text-[11px] font-medium tracking-wider">
+                  Border Overlock Thread Color
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {stitchColors.map(c => (
@@ -291,14 +291,14 @@ export const PatchAvatarLab: React.FC = () => {
                       key={c.hex}
                       type="button"
                       onClick={() => setAvatarStitch(c.hex)}
-                      className={`px-3 py-1.5 border flex items-center gap-2 transition-all ${
+                      className={`px-3.5 py-1.5 rounded-full border flex items-center gap-2 transition-all ${
                         avatarStitch === c.hex
-                          ? 'border-[#A1A1AA] bg-white text-black font-bold'
-                          : 'border-white/20 bg-black text-white/70 hover:border-white'
+                          ? 'border-black bg-black text-white font-medium'
+                          : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73] hover:border-black hover:text-black'
                       }`}
                     >
-                      <span className="w-3 h-3 border border-black/20" style={{ backgroundColor: c.hex }} />
-                      <span className="text-[10px]">{c.label}</span>
+                      <span className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: c.hex }} />
+                      <span className="text-[11px]">{c.label}</span>
                     </button>
                   ))}
                 </div>
@@ -306,8 +306,8 @@ export const PatchAvatarLab: React.FC = () => {
 
               {/* Fabric Base */}
               <div>
-                <label className="block text-white/50 mb-2 uppercase text-[10px]">
-                  Patch base fabric
+                <label className="block text-[#6E6E73] mb-2 uppercase text-[11px] font-medium tracking-wider">
+                  Patch Base Fabric
                 </label>
                 <div className="flex items-center gap-2 flex-wrap">
                   {fabricColors.map(f => (
@@ -315,68 +315,68 @@ export const PatchAvatarLab: React.FC = () => {
                       key={f.hex}
                       type="button"
                       onClick={() => setAvatarBg(f.hex)}
-                      className={`px-3 py-1.5 border flex items-center gap-2 transition-all ${
+                      className={`px-3.5 py-1.5 rounded-full border flex items-center gap-2 transition-all ${
                         avatarBg === f.hex
-                          ? 'border-[#A1A1AA] bg-white text-black font-bold'
-                          : 'border-white/20 bg-black text-white/70 hover:border-white'
+                          ? 'border-black bg-black text-white font-medium'
+                          : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73] hover:border-black hover:text-black'
                       }`}
                     >
-                      <span className="w-3 h-3 border border-white/40" style={{ backgroundColor: f.hex }} />
-                      <span className="text-[10px]">{f.label}</span>
+                      <span className="w-3 h-3 rounded-full border border-[#E5E5E7]" style={{ backgroundColor: f.hex }} />
+                      <span className="text-[11px]">{f.label}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-white/20 flex items-center justify-between">
-                <span className="text-[#A1A1AA] font-bold">
+              <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
+                <span className="text-emerald-700 font-medium text-xs">
                   {isSaved && '✓ Identity badge saved successfully!'}
                 </span>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-medium uppercase tracking-wider flex items-center gap-2 transition-all"
+                  className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-medium flex items-center gap-2 transition-all shadow-xs"
                 >
                   <Check size={14} />
-                  <span>Save changes</span>
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
           </div>
 
           {/* DASHBOARD WIDGET REARRANGEMENT */}
-          <div className="border border-white/20 bg-black p-6 space-y-4">
-            <div className="pb-3 border-b border-white/20 flex items-center justify-between">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                Dashboard widget priority
+          <div className="bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+            <div className="pb-3 border-b border-[#E5E5E7] flex items-center justify-between">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-black">
+                Dashboard Widget Priority
               </h3>
-              <span className="text-[11px] font-mono text-white/50">
+              <span className="text-xs text-[#6E6E73]">
                 Reorder cards on command center home
               </span>
             </div>
 
-            <div className="space-y-2 font-mono text-xs">
+            <div className="space-y-2 text-xs">
               {widgetOrder.map((widgetId, idx) => {
                 const widgetMeta = availableWidgets.find(w => w.id === widgetId);
                 return (
                   <div
                     key={widgetId}
-                    className="p-3 border border-white/20 bg-black flex items-center justify-between gap-3 hover:border-white transition-colors"
+                    className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-white flex items-center justify-between gap-3 shadow-xs hover:border-black/20 transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="w-5 h-5 border border-white/20 flex items-center justify-center text-[10px] text-[#A1A1AA] font-bold">
+                      <span className="w-6 h-6 rounded-full bg-[#F5F5F7] border border-[#E5E5E7] flex items-center justify-center text-[10px] text-black font-semibold">
                         {idx + 1}
                       </span>
-                      <span className="font-semibold text-white">
+                      <span className="font-medium text-sm text-black">
                         {widgetMeta?.label || widgetId}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         disabled={idx === 0}
                         onClick={() => moveWidget(idx, 'up')}
-                        className="p-1 border border-white/20 hover:border-white disabled:opacity-30 text-white"
+                        className="p-1.5 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] disabled:opacity-30 text-black transition-colors"
                         title="Move Up"
                       >
                         <ArrowUp size={13} />
@@ -385,7 +385,7 @@ export const PatchAvatarLab: React.FC = () => {
                         type="button"
                         disabled={idx === widgetOrder.length - 1}
                         onClick={() => moveWidget(idx, 'down')}
-                        className="p-1 border border-white/20 hover:border-white disabled:opacity-30 text-white"
+                        className="p-1.5 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] disabled:opacity-30 text-black transition-colors"
                         title="Move Down"
                       >
                         <ArrowDown size={13} />

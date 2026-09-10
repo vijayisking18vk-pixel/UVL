@@ -7,7 +7,8 @@ import {
   AlertTriangle,
   Send,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  CheckCircle2
 } from 'lucide-react';
 
 export const CheckinsView: React.FC = () => {
@@ -52,55 +53,51 @@ export const CheckinsView: React.FC = () => {
     setTimeout(() => setIsSubmitted(false), 3000);
   };
 
-  const statusConfigs: Record<UserStatus, { label: string; indicator: string }> = {
-    active: { label: 'Active // Online', indicator: 'bg-white text-black' },
-    focus: { label: 'Deep Focus', indicator: 'bg-[#A1A1AA] text-white' },
-    reviewing: { label: 'Code & Deal Review', indicator: 'bg-white text-black' },
-    away: { label: 'Standby / Away', indicator: 'border border-white/40 text-white/60' },
-    leave: { label: 'Airgap / Leave', indicator: 'border border-white/20 text-white/40' }
+  const statusConfigs: Record<UserStatus, { label: string; badgeClass: string }> = {
+    active: { label: 'Active', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    focus: { label: 'Deep Focus', badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+    reviewing: { label: 'Reviewing', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' },
+    away: { label: 'Away / Standby', badgeClass: 'bg-[#F5F5F7] text-[#6E6E73] border-[#E5E5E7]' },
+    leave: { label: 'Airgap / Leave', badgeClass: 'bg-[#F5F5F7] text-[#8E8E93] border-[#E5E5E7]' }
   };
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-8 pb-16">
       {/* Top Editorial Header */}
-      <section className="border-b border-white/20 pb-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
-              <span>status</span>
-              <span>/</span>
-              <span className="text-[#A1A1AA]">team pulse & standup</span>
-              <span>/</span>
-              <span>asynchronous dispatch</span>
-            </div>
-            <h1 className="headline-section text-white font-bold tracking-tight">
-              Team pulse & standup.
-            </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
-              Daily standup telemetry, active operator status broadcasts, and blocker detection.
-            </p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-[#E5E5E7]">
+        <div>
+          <h1 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-black">
+            Team Pulse & Standup.
+          </h1>
+          <p className="text-sm text-[#6E6E73] mt-1 max-w-xl">
+            Daily standup telemetry, active operator status broadcasts, and blocker detection.
+          </p>
         </div>
-      </section>
+      </div>
 
       {/* TOP: OPERATOR LIVE STATUS CONTROLLER */}
-      <div className="border border-white/20 bg-black p-6 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-white/20">
-          <span className="text-xs font-mono uppercase tracking-wider text-white">
-            My live status broadcast ({currentUser.name} / {currentUser.callsign})
-          </span>
-          <span className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">
-            ● Transmitting
-          </span>
+      <div className="bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-5 sm:p-6 space-y-4 shadow-sm">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-black">
+              My Live Status ({currentUser.name} / {currentUser.callsign})
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Transmitting</span>
+          </div>
         </div>
 
-        <form onSubmit={handleStatusUpdate} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          <div className="md:col-span-4 font-mono text-xs">
-            <label className="block text-white/50 text-[10px] uppercase mb-1">Activity State</label>
+        <form onSubmit={handleStatusUpdate} className="grid grid-cols-1 md:grid-cols-12 gap-3.5 items-end">
+          <div className="md:col-span-4 text-xs">
+            <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
+              Activity State
+            </label>
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as UserStatus)}
-              className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+              className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-xs text-black focus:outline-none focus:border-black shadow-2xs"
             >
               <option value="active">Active (Available)</option>
               <option value="focus">Deep Focus (Muted)</option>
@@ -110,22 +107,23 @@ export const CheckinsView: React.FC = () => {
             </select>
           </div>
 
-          <div className="md:col-span-6 font-mono text-xs">
-            <label className="block text-white/50 text-[10px] uppercase mb-1">Status subject / current sprint</label>
+          <div className="md:col-span-6 text-xs">
+            <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
+              Status Subject / Current Sprint
+            </label>
             <input
               type="text"
               value={statusMessage}
               onChange={(e) => setStatusMessage(e.target.value)}
               placeholder="e.g. Tuning vector cache latency..."
-              className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
-            >
-            </input>
+              className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-xs text-black placeholder-[#8E8E93] focus:outline-none focus:border-black shadow-2xs"
+            />
           </div>
 
-          <div className="md:col-span-2 md:pt-4">
+          <div className="md:col-span-2">
             <button
               type="submit"
-              className="w-full py-2 bg-white hover:bg-[#A1A1AA] text-black hover:text-white font-bold text-xs uppercase tracking-wider transition-colors"
+              className="w-full py-2.5 bg-black hover:bg-black/90 text-white font-medium text-xs rounded-full shadow-xs transition-all cursor-pointer"
             >
               Broadcast
             </button>
@@ -134,22 +132,22 @@ export const CheckinsView: React.FC = () => {
       </div>
 
       {/* TEAM PULSE BOARD: CARDS FOR ALL MEMBERS */}
-      <section className="section-white p-8 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-black/20">
+      <section className="space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-[#E5E5E7]">
           <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-black/50 mb-1">
-              directory / operators / telemetry
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight text-black">
-              Operator pulse board ({users.length} registered).
+            <h2 className="font-serif text-2xl font-normal tracking-tight text-black">
+              Member Roster.
             </h2>
+            <p className="text-xs text-[#6E6E73] mt-0.5">
+              {users.length} registered operators synchronized.
+            </p>
           </div>
-          <span className="text-xs font-mono text-black/60 uppercase">
+          <span className="text-xs text-[#6E6E73] font-medium px-2.5 py-1 rounded-full bg-[#F5F5F7] border border-[#E5E5E7]">
             Synchronized
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {users.map(u => {
             const statusConfig = statusConfigs[u.status] || statusConfigs.active;
             const latestCheckin = checkins.find(c => c.userId === u.id);
@@ -158,45 +156,47 @@ export const CheckinsView: React.FC = () => {
             return (
               <div
                 key={u.id}
-                className="p-5 border border-black/20 bg-white text-black flex flex-col justify-between space-y-4 hover:border-black transition-all"
+                className="p-5 rounded-3xl border border-[#E5E5E7] bg-white text-black flex flex-col justify-between space-y-4 hover:border-black/30 hover:shadow-md transition-all shadow-xs"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex items-center gap-3">
                       <PatchAvatar user={u} size="md" showStatus />
                       <div>
-                        <h4 className="font-bold text-base text-black leading-tight">
+                        <h4 className="font-semibold text-sm text-black leading-tight">
                           {u.name}
                         </h4>
-                        <span className="font-mono text-[11px] text-black/50">
+                        <span className="text-[11px] text-[#6E6E73]">
                           {u.callsign}
                         </span>
                       </div>
                     </div>
 
-                    <span className={`text-[10px] font-mono px-2 py-0.5 uppercase tracking-wider font-bold ${
-                      u.status === 'focus' ? 'bg-[#A1A1AA] text-white' : 'border border-black text-black'
-                    }`}>
-                      {u.status}
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider font-semibold border ${statusConfig.badgeClass}`}>
+                      {statusConfig.label}
                     </span>
                   </div>
 
                   {/* Focus message */}
-                  <div className="p-3 border border-black/10 bg-black/[0.02] my-2 text-xs font-mono">
-                    <span className="text-[10px] text-black/50 uppercase block mb-1">Current focus:</span>
-                    <p className="text-black font-medium italic">"{u.statusMessage || 'Standby for deployment'}"</p>
+                  <div className="p-3 bg-[#F5F5F7] rounded-2xl border border-[#E5E5E7] my-2 text-xs">
+                    <span className="text-[10px] text-[#6E6E73] uppercase tracking-wider font-semibold block mb-1">
+                      Current focus:
+                    </span>
+                    <p className="text-black font-medium italic">
+                      "{u.statusMessage || 'Standby for deployment'}"
+                    </p>
                   </div>
 
                   {/* Latest Checkin details */}
                   {latestCheckin && (
-                    <div className="space-y-1.5 text-xs font-mono mt-3">
-                      <div className="flex items-center justify-between text-[11px] text-black/60">
+                    <div className="space-y-2 text-xs mt-3 pt-2 border-t border-[#E5E5E7]">
+                      <div className="flex items-center justify-between text-[11px] text-[#6E6E73]">
                         <span>Check-in: {latestCheckin.timestamp}</span>
-                        <span className="font-bold text-black">{latestCheckin.mood}</span>
+                        <span className="font-semibold text-black">{latestCheckin.mood}</span>
                       </div>
 
                       {hasBlocker && (
-                        <div className="p-2.5 border border-red-600/30 bg-red-50 flex items-start gap-2 text-red-600 text-[11px]">
+                        <div className="p-2.5 border border-red-200 bg-red-50 rounded-xl flex items-start gap-2 text-red-700 text-[11px]">
                           <AlertTriangle size={13} className="shrink-0 mt-0.5" />
                           <span>Blocker: {latestCheckin.blockers}</span>
                         </div>
@@ -205,16 +205,17 @@ export const CheckinsView: React.FC = () => {
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-black/10 flex items-center justify-between text-[11px] font-mono">
-                  <span className="text-black/50">
+                <div className="pt-3 border-t border-[#E5E5E7] flex items-center justify-between text-[11px]">
+                  <span className="text-[#6E6E73]">
                     Active: {u.lastActive}
                   </span>
 
                   <button
                     onClick={() => setActiveTab('chat')}
-                    className="text-[#A1A1AA] hover:underline flex items-center gap-1 uppercase tracking-wider font-bold"
+                    className="text-black hover:text-[#6E6E73] flex items-center gap-1 font-medium transition-colors cursor-pointer"
                   >
-                    <MessageSquare size={11} /> Ping
+                    <MessageSquare size={12} />
+                    <span>Ping</span>
                   </button>
                 </div>
               </div>
@@ -224,22 +225,26 @@ export const CheckinsView: React.FC = () => {
       </section>
 
       {/* ASYNC CHECK-IN SUBMISSION FORM */}
-      <div className="border border-white/20 bg-black p-6 space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-white/20">
-          <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[#A1A1AA]" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white font-mono">
-              Submit daily standup check-in
-            </h3>
+      <div className="bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+        <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-white border border-[#E5E5E7] flex items-center justify-center text-black">
+              <Sparkles size={16} />
+            </div>
+            <div>
+              <h3 className="font-serif text-xl font-normal text-black">
+                Submit Daily Standup.
+              </h3>
+              <p className="text-xs text-[#6E6E73]">
+                Visible to all lab members asynchronously.
+              </p>
+            </div>
           </div>
-          <span className="text-[11px] font-mono text-white/50">
-            Visible to all lab members asynchronously
-          </span>
         </div>
 
-        <form onSubmit={handleCheckinSubmit} className="space-y-5 font-mono text-xs">
+        <form onSubmit={handleCheckinSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-white/70 font-semibold mb-1 uppercase text-[11px]">
+            <label className="block text-black font-medium mb-1.5 text-xs">
               1. Key operations executed or shipped today *
             </label>
             <textarea
@@ -248,12 +253,12 @@ export const CheckinsView: React.FC = () => {
               value={completedToday}
               onChange={(e) => setCompletedToday(e.target.value)}
               placeholder="e.g. Audited enclave charge-dump circuitry, pushed firmware commit v1.4..."
-              className="w-full bg-black border border-white/20 p-3 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-none"
+              className="w-full bg-white border border-[#E5E5E7] rounded-2xl p-3.5 text-xs text-black placeholder-[#8E8E93] focus:outline-none focus:border-black resize-none shadow-2xs"
             />
           </div>
 
           <div>
-            <label className="block text-white/70 font-semibold mb-1 uppercase text-[11px]">
+            <label className="block text-black font-medium mb-1.5 text-xs">
               2. Next tactical objective
             </label>
             <input
@@ -261,13 +266,13 @@ export const CheckinsView: React.FC = () => {
               value={workingOnNext}
               onChange={(e) => setWorkingOnNext(e.target.value)}
               placeholder="e.g. Enter Vault B for hardware root of trust ceremony..."
-              className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+              className="w-full bg-white border border-[#E5E5E7] rounded-2xl px-3.5 py-2.5 text-xs text-black placeholder-[#8E8E93] focus:outline-none focus:border-black shadow-2xs"
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-white/70 font-semibold mb-1 uppercase text-[11px]">
+              <label className="block text-black font-medium mb-1.5 text-xs">
                 3. Blockers, dependencies, or access limitations
               </label>
               <input
@@ -275,12 +280,12 @@ export const CheckinsView: React.FC = () => {
                 value={blockers}
                 onChange={(e) => setBlockers(e.target.value)}
                 placeholder="e.g. None, or Need Jax physical key"
-                className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                className="w-full bg-white border border-[#E5E5E7] rounded-2xl px-3.5 py-2.5 text-xs text-black placeholder-[#8E8E93] focus:outline-none focus:border-black shadow-2xs"
               />
             </div>
 
             <div>
-              <label className="block text-white/70 font-semibold mb-1 uppercase text-[11px]">
+              <label className="block text-black font-medium mb-1.5 text-xs">
                 4. Operational velocity / mood
               </label>
               <div className="grid grid-cols-4 gap-2">
@@ -289,10 +294,10 @@ export const CheckinsView: React.FC = () => {
                     key={m}
                     type="button"
                     onClick={() => setMood(m)}
-                    className={`py-2 text-[11px] border transition-colors ${
+                    className={`py-2 text-[11px] rounded-xl border transition-all cursor-pointer ${
                       mood === m
-                        ? 'border-[#A1A1AA] bg-white text-black font-bold'
-                        : 'border-white/20 bg-black text-white hover:border-white'
+                        ? 'border-black bg-black text-white font-medium shadow-xs'
+                        : 'border-[#E5E5E7] bg-white text-[#6E6E73] hover:text-black hover:border-black/30'
                     }`}
                   >
                     {m}
@@ -302,30 +307,40 @@ export const CheckinsView: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-white/20 flex items-center justify-between">
-            <span className="text-[#A1A1AA] font-bold text-xs">
-              {isSubmitted && '✓ Check-in dispatched successfully to Pulse Board!'}
-            </span>
+          <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
+            <div>
+              {isSubmitted && (
+                <span className="text-emerald-600 font-medium text-xs flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  <span>Check-in dispatched successfully to Pulse Board!</span>
+                </span>
+              )}
+            </div>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs font-medium uppercase tracking-wider flex items-center gap-2 transition-all"
+              className="px-6 py-2.5 bg-black hover:bg-black/90 text-white rounded-full text-xs font-medium flex items-center gap-2 transition-all shadow-xs cursor-pointer"
             >
               <Send size={13} />
-              <span>Transmit check-in</span>
+              <span>Transmit Check-in</span>
             </button>
           </div>
         </form>
       </div>
 
       {/* CHRONOLOGICAL CHECK-IN STREAM */}
-      <div className="border border-white/20 bg-black p-6 space-y-4">
-        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white/50 pb-3 border-b border-white/20">
-          Daily check-in transmissions ({checkins.length})
-        </h3>
+      <div className="bg-white border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-4 shadow-sm">
+        <div className="pb-3 border-b border-[#E5E5E7]">
+          <h3 className="font-serif text-xl font-normal text-black">
+            Daily Check-in Transmissions.
+          </h3>
+          <p className="text-xs text-[#6E6E73] mt-0.5">
+            {checkins.length} recorded today.
+          </p>
+        </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {checkins.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
+            <div className="p-8 text-center rounded-2xl border border-dashed border-[#E5E5E7] bg-[#F5F5F7] text-xs text-[#6E6E73]">
               No check-ins logged for today yet. Use the transmitter above to post your status.
             </div>
           ) : (
@@ -335,20 +350,20 @@ export const CheckinsView: React.FC = () => {
               return (
                 <div
                   key={ci.id}
-                  className="p-5 border border-white/20 bg-black hover:border-white transition-all space-y-3 font-mono text-xs"
+                  className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7]/50 hover:bg-[#F5F5F7] hover:border-[#D1D1D6] transition-all space-y-3 text-xs"
                 >
-                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                  <div className="flex items-center justify-between border-b border-[#E5E5E7] pb-2.5">
                     <div className="flex items-center gap-2.5">
                       {author && <PatchAvatar user={author} size="sm" />}
-                      <span className="font-bold text-white text-sm">{author?.name}</span>
-                      <span className="text-[11px] text-white/50">[{author?.callsign}]</span>
+                      <span className="font-semibold text-black text-sm">{author?.name}</span>
+                      <span className="text-[11px] text-[#6E6E73]">[{author?.callsign}]</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="px-2 py-0.5 border border-white/20 text-white/80 text-[10px]">
+                    <div className="flex items-center gap-2.5">
+                      <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#E5E5E7] text-black text-[10px] font-medium">
                         {ci.mood}
                       </span>
-                      <span className="text-[10px] text-white/40">
+                      <span className="text-[10px] text-[#8E8E93]">
                         {ci.timestamp}
                       </span>
                     </div>
@@ -356,19 +371,19 @@ export const CheckinsView: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <span className="text-[10px] uppercase text-white/40 block mb-0.5">Completed today:</span>
-                      <p className="text-white/90">{ci.completedToday}</p>
+                      <span className="text-[10px] uppercase font-semibold text-[#6E6E73] block mb-1">Completed today:</span>
+                      <p className="text-black leading-relaxed">{ci.completedToday}</p>
                     </div>
 
                     <div>
-                      <span className="text-[10px] uppercase text-white/40 block mb-0.5">Working on next:</span>
-                      <p className="text-white/90">{ci.workingOnNext || 'Ongoing backlog items'}</p>
+                      <span className="text-[10px] uppercase font-semibold text-[#6E6E73] block mb-1">Working on next:</span>
+                      <p className="text-black leading-relaxed">{ci.workingOnNext || 'Ongoing backlog items'}</p>
                     </div>
                   </div>
 
                   {ci.blockers && ci.blockers.toLowerCase() !== 'none' && (
-                    <div className="p-2.5 border border-red-600/40 bg-red-950/20 text-red-400 text-xs flex items-center gap-2">
-                      <AlertTriangle size={13} className="shrink-0" />
+                    <div className="p-3 border border-red-200 bg-red-50 text-red-700 rounded-xl text-xs flex items-center gap-2">
+                      <AlertTriangle size={14} className="shrink-0" />
                       <span>Blocker: {ci.blockers}</span>
                     </div>
                   )}

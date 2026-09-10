@@ -83,35 +83,35 @@ const AppContent: React.FC = () => {
   const { supabaseConnected } = useWorkspace();
 
   return (
-    <div className="min-h-screen bg-[#000000] text-[#FFFFFF] flex flex-col selection:bg-[#A1A1AA] selection:text-[#000000]">
-      {/* Top Editorial Header */}
+    <div className="min-h-screen bg-[#FFFFFF] text-[#000000] flex flex-col selection:bg-[#E5E5E7] selection:text-[#000000]">
+      {/* Top Apple Minimalist Header */}
       <Header />
 
-      {/* Editorial Marquee Ticker Strip: hairline borders, text-only, single-speed */}
-      <div className="bg-[#000000] border-b border-white/20 py-1.5 px-4 overflow-hidden select-none">
-        <div className="max-w-[1700px] mx-auto flex items-center justify-between text-[11px] text-white/70">
+      {/* Quiet Status Pill Strip */}
+      <div className="bg-[#F5F5F7] border-b border-[#E5E5E7] py-2 px-4 select-none">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between text-[11px] text-[#6E6E73]">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-[#A1A1AA] inline-block" />
-            <span className="micro-label">Database sync:</span>
-            <span className={`meta-number ${supabaseConnected ? 'text-[#A1A1AA]' : 'text-white'}`}>
-              {supabaseConnected ? 'Active / Supabase Live' : 'Ready / Local & Cloud Cache'}
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="font-medium text-black">Workspace Sync:</span>
+            <span className="meta-number text-[#6E6E73]">
+              {supabaseConnected ? 'Supabase Live' : 'Active / Fast Cloud Cache'}
             </span>
           </div>
-          <div className="hidden md:flex items-center gap-6">
-            <span>Protocol: Autonomous Command Center</span>
-            <span className="text-white/30">/</span>
+          <div className="hidden md:flex items-center gap-6 font-medium">
+            <span>Unfounded Venture Lab</span>
+            <span className="text-[#D1D1D6]">•</span>
             <span>Roster: Vijayrajkumar / Saai / Harish / Subanesh / Vinayak</span>
-            <span className="text-white/30">/</span>
-            <span className="text-[#A1A1AA]">Zero Mock Fallback</span>
+            <span className="text-[#D1D1D6]">•</span>
+            <span>Direct Autonomy</span>
           </div>
-          <div className="flex items-center gap-2 meta-number text-[10px] text-white/50">
-            <span>UVL·CORE·2026</span>
+          <div className="flex items-center gap-2 meta-number text-[11px] text-[#6E6E73]">
+            <span>v2026.09</span>
           </div>
         </div>
       </div>
 
-      {/* Main Workspace Viewport */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 pb-24 md:pb-8 editorial-reveal">
+      {/* Main Apple Content Viewport (max-w ~1200px, centered, generous negative space) */}
+      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12 editorial-reveal">
         {renderActiveModule()}
       </main>
 
@@ -120,22 +120,21 @@ const AppContent: React.FC = () => {
       <CommandPalette />
       <AccessControlModal />
 
-      {/* Monochrome Editorial Status Footer */}
-      <footer className="border-t border-white/20 bg-[#000000] py-4 px-4 text-xs text-white/60">
-        <div className="max-w-[1700px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      {/* Apple Minimalist Footer */}
+      <footer className="border-t border-[#E5E5E7] bg-[#FFFFFF] py-6 px-4 text-xs text-[#6E6E73]">
+        <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="w-1.5 h-1.5 bg-[#A1A1AA]" />
-            <span className="micro-label text-white">
-              Unfounded Venture Lab / Private Operator Roster
+            <span className="w-1.5 h-1.5 rounded-full bg-black inline-block" />
+            <span className="font-medium text-black">
+              Unfounded Venture Lab
             </span>
-            <span className="text-white/30">/</span>
-            <span className="meta-number text-[11px] text-white/50">BUILD 2026.09</span>
+            <span className="text-[#D1D1D6]">•</span>
+            <span className="meta-number text-[11px] text-[#6E6E73]">Autonomous Team Command Center</span>
           </div>
 
-          <div className="flex items-center gap-4 micro-label text-white/70">
-            <span>Shortcuts / <kbd className="border border-white/30 px-1 py-0.5 bg-white/5 text-white meta-number text-[10px]">Ctrl+K</kbd> Search</span>
-            <span><kbd className="border border-white/30 px-1 py-0.5 bg-white/5 text-white meta-number text-[10px]">Ctrl+Shift+N</kbd> Quick Capture</span>
-            <span className="text-[#A1A1AA] font-medium">Session Authenticated / Secure Vault</span>
+          <div className="flex items-center gap-4 text-[#6E6E73]">
+            <span>Shortcuts: <kbd className="border border-[#E5E5E7] rounded-md px-1.5 py-0.5 bg-[#F5F5F7] text-black meta-number text-[10px]">⌘K / Ctrl+K</kbd> Search</span>
+            <span><kbd className="border border-[#E5E5E7] rounded-md px-1.5 py-0.5 bg-[#F5F5F7] text-black meta-number text-[10px]">⌘⇧N</kbd> Capture</span>
           </div>
         </div>
       </footer>

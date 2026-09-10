@@ -110,11 +110,11 @@ export const CommandPalette: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-start justify-center pt-24 p-4">
-      <div className="bg-black border border-white/40 max-w-xl w-full p-5 space-y-4 font-mono text-xs">
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-start justify-center pt-20 p-4 animate-in fade-in duration-200">
+      <div className="bg-white border border-[#E5E5E7] shadow-2xl rounded-3xl max-w-xl w-full p-6 space-y-4 text-xs font-sans text-black">
         {/* Search Bar */}
-        <div className="flex items-center gap-3 pb-3 border-b border-white/20">
-          <Search size={18} className="text-[#A1A1AA]" />
+        <div className="flex items-center gap-3 pb-4 border-b border-[#E5E5E7]">
+          <Search size={18} className="text-[#6E6E73]" />
           <input
             ref={inputRef}
             type="text"
@@ -122,11 +122,11 @@ export const CommandPalette: React.FC = () => {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search tasks, notes, files, meetings, or commands..."
-            className="flex-1 bg-transparent text-sm text-white placeholder-white/30 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-black placeholder-[#6E6E73] focus:outline-none"
           />
           <button
             onClick={() => setCommandPaletteOpen(false)}
-            className="text-white/50 hover:text-white p-1"
+            className="text-[#6E6E73] hover:text-black p-1.5 rounded-full hover:bg-[#F5F5F7] transition-colors"
           >
             <X size={16} />
           </button>
@@ -137,7 +137,7 @@ export const CommandPalette: React.FC = () => {
           {/* Quick Actions if query is empty */}
           {!q && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2">
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1">
                 Quick shortcuts
               </span>
               <div className="space-y-1">
@@ -150,13 +150,15 @@ export const CommandPalette: React.FC = () => {
                         sound.click();
                         act.action();
                       }}
-                      className="w-full flex items-center justify-between p-2.5 hover:bg-white hover:text-black text-left text-white border border-transparent hover:border-white transition-colors"
+                      className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-[#F5F5F7] text-left text-black transition-colors"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Icon size={14} className="text-[#A1A1AA]" />
-                        <span className="font-medium">{act.title}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 rounded-lg bg-[#F5F5F7] flex items-center justify-center text-black">
+                          <Icon size={14} />
+                        </div>
+                        <span className="font-medium text-sm">{act.title}</span>
                       </div>
-                      <span className="text-[10px] opacity-60 uppercase">
+                      <span className="text-[11px] text-[#6E6E73] font-medium">
                         {act.category}
                       </span>
                     </button>
@@ -169,8 +171,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Tasks */}
           {matchedTasks.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <CheckSquare size={11} className="text-[#A1A1AA]" /> Tasks
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <CheckSquare size={13} className="text-[#6E6E73]" /> Tasks
               </span>
               <div className="space-y-1">
                 {matchedTasks.map(t => (
@@ -181,10 +183,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('tasks');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{t.title}</span>
-                    <span className="text-[9px] uppercase font-bold border border-current px-1.5 py-0.2">
+                    <span className="truncate font-medium">{t.title}</span>
+                    <span className="text-[10px] uppercase font-semibold border border-[#E5E5E7] group-hover:border-white/30 px-2 py-0.5 rounded-full">
                       {t.status}
                     </span>
                   </button>
@@ -196,8 +198,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Notes */}
           {matchedNotes.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <FileText size={11} className="text-[#A1A1AA]" /> Notes & Wiki
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <FileText size={13} className="text-[#6E6E73]" /> Notes & Wiki
               </span>
               <div className="space-y-1">
                 {matchedNotes.map(n => (
@@ -208,10 +210,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('notes');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{n.title}</span>
-                    <span className="text-[10px] opacity-60">{n.updatedAt}</span>
+                    <span className="truncate font-medium">{n.title}</span>
+                    <span className="text-[11px] text-[#6E6E73] group-hover:text-white/70">{n.updatedAt}</span>
                   </button>
                 ))}
               </div>
@@ -221,8 +223,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Files */}
           {matchedFiles.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <FolderArchive size={11} className="text-[#A1A1AA]" /> Files & Documents
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <FolderArchive size={13} className="text-[#6E6E73]" /> Files & Documents
               </span>
               <div className="space-y-1">
                 {matchedFiles.map(f => (
@@ -233,10 +235,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('files');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{f.name}</span>
-                    <span className="text-[10px] opacity-60">{f.size}</span>
+                    <span className="truncate font-medium">{f.name}</span>
+                    <span className="text-[11px] text-[#6E6E73] group-hover:text-white/70">{f.size}</span>
                   </button>
                 ))}
               </div>
@@ -246,8 +248,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Meetings */}
           {matchedMeetings.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <Users size={11} className="text-[#A1A1AA]" /> War Rooms
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <Users size={13} className="text-[#6E6E73]" /> War Rooms
               </span>
               <div className="space-y-1">
                 {matchedMeetings.map(m => (
@@ -258,10 +260,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('meetings');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{m.title}</span>
-                    <span className="text-[10px] opacity-60">{m.date}</span>
+                    <span className="truncate font-medium">{m.title}</span>
+                    <span className="text-[11px] text-[#6E6E73] group-hover:text-white/70">{m.date}</span>
                   </button>
                 ))}
               </div>
@@ -271,8 +273,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Expenses */}
           {matchedExpenses.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <FileText size={11} className="text-[#A1A1AA]" /> Expenses & Receipts
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <FileText size={13} className="text-[#6E6E73]" /> Treasury & Expenses
               </span>
               <div className="space-y-1">
                 {matchedExpenses.map(e => (
@@ -283,10 +285,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('expenses');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{e.vendor} - {e.description || e.category}</span>
-                    <span className="text-[10px] font-bold meta-number">${e.amount.toFixed(2)}</span>
+                    <span className="truncate font-medium">{e.vendor} - {e.description || e.category}</span>
+                    <span className="text-[11px] font-semibold">₹{e.amount.toLocaleString('en-IN')}</span>
                   </button>
                 ))}
               </div>
@@ -296,8 +298,8 @@ export const CommandPalette: React.FC = () => {
           {/* Matched Investors */}
           {matchedInvestors.length > 0 && (
             <div>
-              <span className="text-[10px] text-white/50 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
-                <Users size={11} className="text-[#A1A1AA]" /> Investor Leads
+              <span className="text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider block mb-2 px-1 flex items-center gap-1.5">
+                <Users size={13} className="text-[#6E6E73]" /> Investor Leads
               </span>
               <div className="space-y-1">
                 {matchedInvestors.map(i => (
@@ -308,10 +310,10 @@ export const CommandPalette: React.FC = () => {
                       setActiveTab('investors');
                       setCommandPaletteOpen(false);
                     }}
-                    className="w-full flex items-center justify-between p-2.5 bg-black hover:bg-white hover:text-black text-left text-white border border-white/20 hover:border-white transition-colors"
+                    className="w-full flex items-center justify-between p-3 rounded-xl bg-[#F5F5F7] hover:bg-black hover:text-white text-left text-black border border-transparent transition-all group"
                   >
-                    <span className="truncate">{i.name} ({i.firm})</span>
-                    <span className="text-[10px] font-bold uppercase">{i.stage.replace('_', ' ')}</span>
+                    <span className="truncate font-medium">{i.name} ({i.firm})</span>
+                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border border-[#E5E5E7] group-hover:border-white/30">{i.stage.replace('_', ' ')}</span>
                   </button>
                 ))}
               </div>
@@ -319,16 +321,16 @@ export const CommandPalette: React.FC = () => {
           )}
 
           {q && matchedTasks.length === 0 && matchedNotes.length === 0 && matchedFiles.length === 0 && matchedMeetings.length === 0 && matchedExpenses.length === 0 && matchedInvestors.length === 0 && (
-            <div className="p-8 text-center text-white/40">
+            <div className="p-8 text-center text-[#6E6E73]">
               No lab artifacts matching "{query}"
             </div>
           )}
         </div>
 
         {/* Footer info */}
-        <div className="pt-3 border-t border-white/20 flex items-center justify-between text-[10px] text-white/40">
-          <span>Escape to dismiss</span>
-          <span>UNFOUNDED LAB / FAST INDEX</span>
+        <div className="pt-3 border-t border-[#E5E5E7] flex items-center justify-between text-[11px] text-[#6E6E73]">
+          <span>Press ESC to dismiss</span>
+          <span>UVL Command Quick Index</span>
         </div>
       </div>
     </div>

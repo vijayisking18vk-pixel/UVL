@@ -107,32 +107,32 @@ export const MeetingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-12 pb-16">
+    <div className="space-y-10 pb-16">
       {/* Editorial Header Section */}
-      <section className="border-b border-white/20 pb-8">
+      <section className="border-b border-[#E5E5E7] pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
-              <span>operations</span>
+            <div className="text-[11px] font-medium tracking-widest uppercase text-[#6E6E73] mb-3 flex items-center gap-2">
+              <span>Operations</span>
               <span>/</span>
-              <span className="text-[#A1A1AA]">war rooms & briefings</span>
+              <span className="text-black">War Rooms & Briefings</span>
               <span>/</span>
-              <span>live dispatch</span>
+              <span>Live Dispatch</span>
             </div>
-            <h1 className="headline-section text-white font-bold tracking-tight">
+            <h1 className="text-4xl sm:text-5xl font-serif font-medium tracking-tight text-black">
               War room & briefings.
             </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
+            <p className="text-[#6E6E73] text-sm mt-2 max-w-xl">
               Agenda planning, live collaborative notes, and one-click action item to task conversions.
             </p>
           </div>
 
           <button
             onClick={() => setIsScheduleOpen(true)}
-            className="self-start md:self-auto flex items-center gap-2 px-5 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium text-xs tracking-wide transition-all uppercase"
+            className="self-start md:self-auto flex items-center gap-2 px-5 py-2.5 bg-black hover:bg-neutral-800 text-white font-medium text-xs rounded-full transition-all shadow-xs"
           >
-            <Plus size={14} />
-            <span>Schedule war room</span>
+            <Plus size={15} />
+            <span>Schedule War Room</span>
           </button>
         </div>
       </section>
@@ -141,16 +141,16 @@ export const MeetingsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Left Column: Scheduled Sessions List */}
-        <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-white/20 text-xs font-mono text-white/50 uppercase tracking-wider">
+        <div className="lg:col-span-4 bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-5 space-y-4 shadow-xs">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7] text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">
             <span>Sessions ({meetings.length})</span>
-            <span className="text-[#A1A1AA]">Synchronized</span>
+            <span className="text-black">Synchronized</span>
           </div>
 
           <div className="space-y-3">
             {meetings.length === 0 ? (
-              <div className="p-8 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
-                No scheduled war rooms. Click "Schedule war room" to convene a session.
+              <div className="p-8 text-center rounded-2xl border border-dashed border-[#E5E5E7] bg-white text-xs text-[#6E6E73]">
+                No scheduled war rooms. Click "Schedule War Room" to convene a session.
               </div>
             ) : (
               meetings.map(m => {
@@ -160,27 +160,27 @@ export const MeetingsView: React.FC = () => {
                   <div
                     key={m.id}
                     onClick={() => setActiveMeetingId(m.id)}
-                    className={`p-4 border cursor-pointer transition-all ${
+                    className={`p-4 rounded-2xl cursor-pointer transition-all border ${
                       isActive
-                        ? 'border-[#A1A1AA] bg-white text-black'
-                        : 'border-white/20 bg-black text-white hover:border-white/60'
+                        ? 'border-black bg-white shadow-sm text-black'
+                        : 'border-[#E5E5E7] bg-white text-black hover:border-black/30'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className={`text-[11px] font-mono font-bold flex items-center gap-1.5 ${isActive ? 'text-[#A1A1AA]' : 'text-[#A1A1AA]'}`}>
-                        <Calendar size={12} /> {m.date}
+                      <span className="text-xs font-semibold text-black flex items-center gap-1.5">
+                        <Calendar size={13} className="text-[#6E6E73]" /> {m.date}
                       </span>
-                      <span className={`text-[11px] font-mono ${isActive ? 'text-black/60' : 'text-white/40'}`}>
+                      <span className="text-xs text-[#6E6E73]">
                         {m.time} ({m.duration})
                       </span>
                     </div>
 
-                    <h4 className={`text-sm font-bold tracking-tight mb-3 ${isActive ? 'text-black' : 'text-white'}`}>
+                    <h4 className="text-sm font-semibold tracking-tight mb-3 text-black">
                       {m.title}
                     </h4>
 
-                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-current/10">
-                      <div className="flex items-center -space-x-1">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#E5E5E7]">
+                      <div className="flex items-center -space-x-1.5">
                         {m.attendeeIds.slice(0, 4).map(uid => {
                           const user = users.find(u => u.id === uid);
                           return user ? (
@@ -190,11 +190,7 @@ export const MeetingsView: React.FC = () => {
                       </div>
 
                       {pendingActions > 0 && (
-                        <span className={`text-[10px] font-mono px-2 py-0.5 border ${
-                          isActive
-                            ? 'border-[#A1A1AA] text-[#A1A1AA] bg-[#A1A1AA]/10'
-                            : 'border-[#A1A1AA]/60 text-[#A1A1AA] bg-[#A1A1AA]/10'
-                        }`}>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-800">
                           {pendingActions} action item{pendingActions > 1 ? 's' : ''}
                         </span>
                       )}
@@ -211,18 +207,18 @@ export const MeetingsView: React.FC = () => {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Active Session Top Card */}
-            <div className="border border-white/20 bg-black p-6 space-y-6">
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-white/20">
+            <div className="bg-white border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-[#E5E5E7]">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-[#A1A1AA] text-white uppercase font-bold tracking-wider">
-                      Briefing dossier
+                    <span className="text-[10px] px-2.5 py-0.5 bg-black text-white rounded-full uppercase font-medium tracking-wider">
+                      Briefing Dossier
                     </span>
-                    <span className="text-xs font-mono text-white/50 flex items-center gap-1">
-                      <Clock size={12} /> {activeMeeting.date} @ {activeMeeting.time} ({activeMeeting.duration})
+                    <span className="text-xs text-[#6E6E73] flex items-center gap-1 font-medium">
+                      <Clock size={13} /> {activeMeeting.date} @ {activeMeeting.time} ({activeMeeting.duration})
                     </span>
                   </div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white">
+                  <h2 className="text-2xl sm:text-3xl font-serif font-medium tracking-tight text-black">
                     {activeMeeting.title}
                   </h2>
                 </div>
@@ -232,10 +228,10 @@ export const MeetingsView: React.FC = () => {
                     href={activeMeeting.link}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 border border-white/20 hover:border-white text-white text-xs font-mono uppercase tracking-wider transition-colors self-start"
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium rounded-full transition-all self-start"
                   >
                     <ExternalLink size={13} />
-                    <span>Join room link</span>
+                    <span>Join Room</span>
                   </a>
                 )}
               </div>
@@ -243,17 +239,17 @@ export const MeetingsView: React.FC = () => {
               {/* Attendees and Agenda Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Attendees */}
-                <div className="p-4 border border-white/20 bg-black">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-white/50 block mb-3">
-                    Confirmed attendees ({activeMeeting.attendeeIds.length})
+                <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6E6E73] block mb-3">
+                    Confirmed Attendees ({activeMeeting.attendeeIds.length})
                   </span>
                   <div className="flex flex-wrap gap-2">
                     {activeMeeting.attendeeIds.map(uid => {
                       const attendee = users.find(u => u.id === uid);
                       return attendee ? (
-                        <div key={uid} className="flex items-center gap-2 px-2.5 py-1.5 border border-white/20 bg-black">
+                        <div key={uid} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#E5E5E7] bg-white shadow-2xs">
                           <PatchAvatar user={attendee} size="sm" />
-                          <span className="text-xs font-medium text-white">{attendee.name}</span>
+                          <span className="text-xs font-medium text-black">{attendee.name}</span>
                         </div>
                       ) : null;
                     })}
@@ -261,14 +257,14 @@ export const MeetingsView: React.FC = () => {
                 </div>
 
                 {/* Agenda Items */}
-                <div className="p-4 border border-white/20 bg-black">
-                  <span className="text-[11px] font-mono uppercase tracking-wider text-white/50 block mb-3">
-                    Agenda protocol
+                <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7]">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6E6E73] block mb-3">
+                    Agenda Protocol
                   </span>
-                  <ul className="space-y-2 text-xs font-mono text-white/80">
+                  <ul className="space-y-2 text-xs text-black">
                     {activeMeeting.agenda.map((ag, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="text-[#A1A1AA] font-bold">0{i + 1}.</span>
+                      <li key={i} className="flex items-start gap-2 font-medium">
+                        <span className="text-[#6E6E73]">0{i + 1}.</span>
                         <span>{ag}</span>
                       </li>
                     ))}
@@ -279,11 +275,11 @@ export const MeetingsView: React.FC = () => {
               {/* Collaborative Notes Markdown Editor */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono uppercase tracking-wider text-white flex items-center gap-2">
-                    <FileText size={14} className="text-[#A1A1AA]" />
-                    Collaborative briefing notes
+                  <span className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-2">
+                    <FileText size={15} className="text-[#6E6E73]" />
+                    Collaborative Briefing Notes
                   </span>
-                  <span className="text-[10px] font-mono text-[#A1A1AA] uppercase tracking-wider">
+                  <span className="text-[10px] text-[#6E6E73] uppercase tracking-wider font-medium">
                     ● Live sync to Supabase
                   </span>
                 </div>
@@ -292,20 +288,20 @@ export const MeetingsView: React.FC = () => {
                   value={activeMeeting.notes}
                   onChange={(e) => handleNotesChange(e.target.value)}
                   placeholder="Record discussions, decisions, and tactical notes..."
-                  className="w-full bg-black border border-white/20 p-4 font-mono text-xs text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-y leading-relaxed"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl p-4 text-xs text-black placeholder-[#6E6E73] focus:bg-white focus:outline-none focus:border-black transition-all resize-y leading-relaxed"
                 />
               </div>
 
               {/* ACTION ITEMS ENGINE */}
-              <div className="pt-6 border-t border-white/20 space-y-4">
+              <div className="pt-6 border-t border-[#E5E5E7] space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-[#A1A1AA]" />
-                    <h3 className="text-xs font-mono uppercase tracking-wider font-bold text-white">
-                      Action items engine ({activeMeeting.actionItems.length})
+                    <Sparkles size={16} className="text-black" />
+                    <h3 className="text-xs uppercase tracking-wider font-semibold text-black">
+                      Action Items Engine ({activeMeeting.actionItems.length})
                     </h3>
                   </div>
-                  <span className="text-[10px] font-mono text-white/40">
+                  <span className="text-[11px] text-[#6E6E73]">
                     Auto-converts into real tasks and calendar events
                   </span>
                 </div>
@@ -313,7 +309,7 @@ export const MeetingsView: React.FC = () => {
                 {/* Action Items List */}
                 <div className="space-y-2">
                   {activeMeeting.actionItems.length === 0 ? (
-                    <div className="p-6 text-center border border-dashed border-white/20 bg-black font-mono text-xs text-white/40">
+                    <div className="p-6 text-center rounded-2xl border border-dashed border-[#E5E5E7] bg-[#F5F5F7] text-xs text-[#6E6E73]">
                       No action items logged. Add one below to dispatch directly into the task backlog.
                     </div>
                   ) : (
@@ -323,23 +319,23 @@ export const MeetingsView: React.FC = () => {
                       return (
                         <div
                           key={ai.id}
-                          className="p-3.5 border border-white/20 bg-black flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                          className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                         >
                           <div className="flex items-start sm:items-center gap-3">
                             {isConverted ? (
-                              <CheckCircle2 size={16} className="text-white shrink-0 mt-0.5 sm:mt-0" />
+                              <CheckCircle2 size={16} className="text-black shrink-0 mt-0.5 sm:mt-0" />
                             ) : (
-                              <div className="w-4 h-4 border border-[#A1A1AA] text-[#A1A1AA] flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 sm:mt-0">
+                              <div className="w-5 h-5 rounded-full border border-black bg-white text-black flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 sm:mt-0">
                                 !
                               </div>
                             )}
                             <div>
-                              <span className={`text-xs ${isConverted ? 'text-white/40 line-through' : 'text-white font-medium'}`}>
+                              <span className={`text-xs ${isConverted ? 'text-[#6E6E73] line-through' : 'text-black font-medium'}`}>
                                 {ai.text}
                               </span>
-                              <div className="flex items-center gap-3 mt-1 text-[11px] font-mono text-white/50">
+                              <div className="flex items-center gap-3 mt-1 text-[11px] text-[#6E6E73]">
                                 <span>Assigned: {assignee?.name || 'Unassigned'}</span>
-                                <span>/</span>
+                                <span>•</span>
                                 <span>Due: {ai.dueDate}</span>
                               </div>
                             </div>
@@ -349,16 +345,16 @@ export const MeetingsView: React.FC = () => {
                             {isConverted ? (
                               <button
                                 onClick={() => setActiveTab('tasks')}
-                                className="px-3 py-1 border border-white/20 text-white/60 text-[11px] font-mono hover:border-white hover:text-white transition-colors"
+                                className="px-3 py-1 border border-[#E5E5E7] bg-white text-[#6E6E73] rounded-full text-xs hover:text-black transition-colors"
                               >
-                                View task #{ai.convertedToTaskId}
+                                View Task #{ai.convertedToTaskId}
                               </button>
                             ) : (
                               <button
                                 onClick={() => convertActionItemToTask(activeMeeting.id, ai.id)}
-                                className="px-3 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-[11px] font-medium font-mono uppercase tracking-wide flex items-center gap-1.5 transition-all"
+                                className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-full text-[11px] font-medium flex items-center gap-1.5 transition-all shadow-xs"
                               >
-                                <ListTodo size={12} /> Convert to task
+                                <ListTodo size={12} /> Convert to Task
                               </button>
                             )}
                           </div>
@@ -371,7 +367,7 @@ export const MeetingsView: React.FC = () => {
                 {/* Add Action Item Inline Form */}
                 <form
                   onSubmit={handleAddActionItem}
-                  className="bg-black p-3.5 border border-white/20 flex flex-col md:flex-row items-stretch gap-2 font-mono text-xs"
+                  className="bg-[#F5F5F7] p-3.5 rounded-2xl border border-[#E5E5E7] flex flex-col md:flex-row items-stretch gap-2 text-xs"
                 >
                   <input
                     type="text"
@@ -379,13 +375,13 @@ export const MeetingsView: React.FC = () => {
                     value={actionText}
                     onChange={(e) => setActionText(e.target.value)}
                     placeholder="New action item description..."
-                    className="flex-1 bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                    className="flex-1 bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black"
                   />
 
                   <select
                     value={actionAssignee}
                     onChange={(e) => setActionAssignee(e.target.value)}
-                    className="bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-black focus:outline-none focus:border-black"
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.name}</option>
@@ -396,14 +392,14 @@ export const MeetingsView: React.FC = () => {
                     type="date"
                     value={actionDue}
                     onChange={(e) => setActionDue(e.target.value)}
-                    className="bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-black focus:outline-none focus:border-black"
                   />
 
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-white text-black hover:bg-[#A1A1AA] hover:text-black text-xs font-bold uppercase tracking-wider transition-colors whitespace-nowrap"
+                    className="px-5 py-2 bg-black text-white hover:bg-neutral-800 rounded-full text-xs font-medium transition-all shadow-xs whitespace-nowrap"
                   >
-                    + Add item
+                    + Add Item
                   </button>
                 </form>
               </div>
@@ -411,9 +407,9 @@ export const MeetingsView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-8 p-16 text-center border border-dashed border-white/20 bg-black font-mono space-y-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">No session selected</h3>
-            <p className="text-xs text-white/40 max-w-sm mx-auto">
+          <div className="lg:col-span-8 p-16 text-center rounded-3xl border border-dashed border-[#E5E5E7] bg-[#F5F5F7] space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-black">No session selected</h3>
+            <p className="text-xs text-[#6E6E73] max-w-sm mx-auto">
               Select a briefing from the list or schedule a new one to view meeting agendas and take notes.
             </p>
           </div>
@@ -422,88 +418,88 @@ export const MeetingsView: React.FC = () => {
 
       {/* SCHEDULE WAR ROOM MODAL */}
       {isScheduleOpen && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
           <form
             onSubmit={handleScheduleSubmit}
-            className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+            className="bg-white border border-[#E5E5E7] shadow-2xl rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto text-black"
           >
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-[#A1A1AA]" />
-                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
-                  Schedule war room
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
+              <div>
+                <h3 className="text-xl font-serif font-medium tracking-tight text-black">
+                  Schedule War Room.
                 </h3>
+                <p className="text-xs text-[#6E6E73] mt-0.5">Convene an executive sync or tactical briefing.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsScheduleOpen(false)}
-                className="text-white/50 hover:text-white p-1"
+                className="text-[#6E6E73] hover:text-black p-1.5 rounded-full hover:bg-[#F5F5F7] transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="space-y-4 font-mono text-xs">
+            <div className="space-y-4 text-xs">
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Session topic *</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Session Topic *</label>
                 <input
                   type="text"
                   required
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   placeholder="e.g. Series-A Deal Evaluation"
-                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Date *</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Date *</label>
                   <input
                     type="date"
                     required
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-2 py-2 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Time</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Time</label>
                   <input
                     type="text"
                     value={newTime}
                     onChange={(e) => setNewTime(e.target.value)}
                     placeholder="10:00 AM"
-                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-2 py-2 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
                 <div>
-                  <label className="block text-white/50 mb-1 uppercase text-[10px]">Duration</label>
+                  <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Duration</label>
                   <input
                     type="text"
                     value={newDuration}
                     onChange={(e) => setNewDuration(e.target.value)}
                     placeholder="60 min"
-                    className="w-full bg-black border border-white/20 px-2 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-2 py-2 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
               {/* Attendee Selection */}
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Attendees</label>
-                <div className="grid grid-cols-2 gap-2 border border-white/20 p-3 bg-black">
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Attendees</label>
+                <div className="grid grid-cols-2 gap-2 border border-[#E5E5E7] rounded-2xl p-3 bg-[#F5F5F7]">
                   {users.map(u => {
                     const isSelected = newAttendees.includes(u.id);
                     return (
                       <div
                         key={u.id}
                         onClick={() => toggleAttendeeSelection(u.id)}
-                        className={`p-2 flex items-center gap-2 cursor-pointer border ${
-                          isSelected ? 'border-[#A1A1AA] bg-white text-black font-bold' : 'border-white/10 text-white/70'
+                        className={`p-2.5 rounded-xl flex items-center gap-2 cursor-pointer border transition-all ${
+                          isSelected ? 'border-black bg-white text-black font-medium shadow-xs' : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73]'
                         }`}
                       >
-                        <input type="checkbox" checked={isSelected} readOnly className="accent-[#A1A1AA]" />
+                        <input type="checkbox" checked={isSelected} readOnly className="accent-black rounded" />
                         <span className="text-xs truncate">{u.name}</span>
                       </div>
                     );
@@ -512,39 +508,39 @@ export const MeetingsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Agenda items (1 per line)</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Agenda Items (1 per line)</label>
                 <textarea
                   rows={3}
                   value={newAgendaStr}
                   onChange={(e) => setNewAgendaStr(e.target.value)}
-                  className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-none"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black placeholder-[#6E6E73] focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-white/50 mb-1 uppercase text-[10px]">Virtual room link</label>
+                <label className="block text-[#6E6E73] mb-1.5 uppercase text-[11px] font-medium tracking-wider">Virtual Room Link</label>
                 <input
                   type="text"
                   value={newLink}
                   onChange={(e) => setNewLink(e.target.value)}
-                  className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/20 flex items-center justify-end gap-3 font-mono text-xs">
+            <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-end gap-3 text-xs">
               <button
                 type="button"
                 onClick={() => setIsScheduleOpen(false)}
-                className="px-4 py-2 border border-white/20 text-white/60 hover:text-white hover:border-white transition-colors uppercase"
+                className="px-4 py-2 text-xs font-medium text-[#6E6E73] hover:text-black rounded-full hover:bg-[#F5F5F7] transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium uppercase tracking-wider transition-colors"
+                className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full font-medium transition-all shadow-xs"
               >
-                Confirm session
+                Confirm Session
               </button>
             </div>
           </form>

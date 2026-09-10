@@ -45,19 +45,19 @@ export const QuickCaptureModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-      <div className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto font-mono text-xs">
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white border border-[#E5E5E7] shadow-2xl rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto font-sans text-black">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/20">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-[#A1A1AA]" />
-            <h3 className="text-base font-bold text-white uppercase tracking-wider">
-              Quick capture
+        <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+          <div>
+            <h3 className="text-xl font-serif font-medium tracking-tight text-black">
+              Quick Capture.
             </h3>
+            <p className="text-xs text-[#6E6E73] mt-0.5">Rapidly log ideas, terminal snippets, or operational thoughts.</p>
           </div>
           <button
             onClick={() => setQuickCaptureOpen(false)}
-            className="text-white/50 hover:text-white p-1"
+            className="text-[#6E6E73] hover:text-black p-1.5 rounded-full hover:bg-[#F5F5F7] transition-colors"
           >
             <X size={18} />
           </button>
@@ -65,21 +65,21 @@ export const QuickCaptureModal: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-white/50 text-[10px] uppercase mb-1">
-              Title / subject (optional)
+            <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
+              Title / Subject (Optional)
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Rapid topic or deal code..."
-              className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+              placeholder="Topic or operational label..."
+              className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-sm text-black placeholder-[#6E6E73] focus:bg-white focus:border-black focus:outline-none transition-all"
             />
           </div>
 
           <div>
-            <label className="block text-white/50 text-[10px] uppercase mb-1">
-              Notes / stream content *
+            <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
+              Notes / Content *
             </label>
             <textarea
               rows={5}
@@ -87,18 +87,18 @@ export const QuickCaptureModal: React.FC = () => {
               autoFocus
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Dump thoughts, links, hardware specs, terminal snippets, or meeting notes..."
-              className="w-full bg-black border border-white/20 p-3 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA] resize-none"
+              placeholder="Dump thoughts, architecture links, hardware specs, or meeting notes..."
+              className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl p-3.5 text-sm text-black placeholder-[#6E6E73] focus:bg-white focus:border-black focus:outline-none transition-all resize-none"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-white/50 text-[10px] uppercase mb-1">Project link</label>
+              <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">Project Link</label>
               <select
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full bg-black border border-white/20 px-3 py-2 text-white focus:outline-none focus:border-[#A1A1AA]"
+                className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-sm text-black focus:bg-white focus:border-black focus:outline-none transition-all"
               >
                 <option value="">None / General</option>
                 {projects.map(p => (
@@ -108,35 +108,35 @@ export const QuickCaptureModal: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-white/50 text-[10px] uppercase mb-1">Tags</label>
+              <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">Tags</label>
               <input
                 type="text"
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="brain-dump, idea"
-                className="w-full bg-black border border-white/20 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:border-[#A1A1AA]"
+                className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-sm text-black placeholder-[#6E6E73] focus:bg-white focus:border-black focus:outline-none transition-all"
               />
             </div>
           </div>
 
-          <div className="pt-4 border-t border-white/20 flex items-center justify-between">
-            <span className="text-[10px] text-white/40">
-              Escape to dismiss
+          <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
+            <span className="text-[11px] text-[#6E6E73]">
+              Press ESC to dismiss
             </span>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setQuickCaptureOpen(false)}
-                className="px-4 py-2 border border-white/20 text-white/60 hover:text-white hover:border-white transition-colors uppercase"
+                className="px-4 py-2 text-xs font-medium text-[#6E6E73] hover:text-black transition-colors rounded-full hover:bg-[#F5F5F7]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium uppercase tracking-wider flex items-center gap-1.5 transition-all"
+                className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs"
               >
-                {isSaved ? <Check size={13} /> : <Zap size={13} />}
-                <span>{isSaved ? 'Archived' : 'Commit capture'}</span>
+                {isSaved ? <Check size={14} /> : <Zap size={14} />}
+                <span>{isSaved ? 'Archived' : 'Commit Capture'}</span>
               </button>
             </div>
           </div>

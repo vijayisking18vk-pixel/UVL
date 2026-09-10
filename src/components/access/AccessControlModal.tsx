@@ -136,26 +136,26 @@ export const AccessControlModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-      <div className="bg-black border border-white/40 max-w-2xl w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto font-mono text-xs text-white">
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white border border-[#E5E5E7] shadow-2xl rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto font-sans text-black">
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/20">
+        <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
           <div className="flex items-center gap-3">
-            <div className="p-2 border border-[#A1A1AA] text-[#A1A1AA]">
+            <div className="w-10 h-10 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] flex items-center justify-center text-black">
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className="text-base font-bold uppercase tracking-wider text-white">
-                Private workspace & access control
+              <h3 className="text-xl font-serif font-medium tracking-tight text-black">
+                Private Enclave & Access Control.
               </h3>
-              <span className="text-[10px] text-white/50">
-                INTERNAL OPERATOR ENCLAVE / ZERO PUBLIC REGISTRATION
-              </span>
+              <p className="text-xs text-[#6E6E73] mt-0.5">
+                Internal operator enclave • Zero public registration
+              </p>
             </div>
           </div>
           <button
             onClick={() => setAccessModalOpen(false)}
-            className="text-white/50 hover:text-white p-1"
+            className="text-[#6E6E73] hover:text-black p-1.5 rounded-full hover:bg-[#F5F5F7] transition-colors"
           >
             <X size={18} />
           </button>
@@ -163,16 +163,16 @@ export const AccessControlModal: React.FC = () => {
 
         <div className="space-y-6">
           {/* PRIVATE ENVIRONMENT BANNER */}
-          <div className="p-4 border border-white/20 bg-black space-y-2">
+          <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-white font-bold text-xs uppercase flex items-center gap-1.5">
-                <Lock size={13} className="text-[#A1A1AA]" /> Enclave Security Protocol
+              <span className="text-black font-semibold text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Lock size={13} className="text-[#6E6E73]" /> Enclave Security Protocol
               </span>
-              <span className="text-[10px] text-[#A1A1AA] px-2 py-0.5 border border-[#A1A1AA] uppercase font-bold">
+              <span className="text-[10px] text-black px-2.5 py-0.5 bg-white border border-[#E5E5E7] rounded-full uppercase font-semibold">
                 Hard-locked
               </span>
             </div>
-            <p className="text-white/60 text-[11px] leading-relaxed">
+            <p className="text-[#6E6E73] text-xs leading-relaxed">
               This instance is hard-locked to the Unfounded Venture Lab core partnership and accredited technical operators. Public registration is disabled.
             </p>
           </div>
@@ -180,7 +180,7 @@ export const AccessControlModal: React.FC = () => {
           {/* INVITE CODE & SECRET KEY */}
           <div className="space-y-4">
             <div>
-              <label className="block text-white/50 text-[10px] uppercase mb-1">
+              <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
                 Workspace Invite Token (For Onboarding New Operators)
               </label>
               <div className="flex items-center gap-2">
@@ -188,20 +188,20 @@ export const AccessControlModal: React.FC = () => {
                   type="text"
                   readOnly
                   value={`https://unfoundedlab.internal/join?code=${workspaceConfig.inviteCode}`}
-                  className="flex-1 bg-black border border-white/20 px-3 py-2 text-white font-bold"
+                  className="flex-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-xs text-black font-medium"
                 />
                 <button
                   onClick={handleCopyInvite}
-                  className="px-4 py-2 border border-white/20 hover:border-white text-white flex items-center gap-1.5 uppercase transition-colors"
+                  className="px-4 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-medium flex items-center gap-1.5 transition-all shadow-xs"
                 >
-                  {copiedInvite ? <Check size={13} className="text-[#A1A1AA]" /> : <Copy size={13} />}
-                  <span>{copiedInvite ? 'Copied' : 'Copy'}</span>
+                  {copiedInvite ? <Check size={13} /> : <Copy size={13} />}
+                  <span>{copiedInvite ? 'Copied' : 'Copy Link'}</span>
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-white/50 text-[10px] uppercase mb-1">
+              <label className="block text-[#6E6E73] text-[11px] font-medium uppercase tracking-wider mb-1.5">
                 Workspace Root Secret Key (Airgap Recovery)
               </label>
               <div className="flex items-center gap-2">
@@ -209,13 +209,13 @@ export const AccessControlModal: React.FC = () => {
                   type="password"
                   readOnly
                   value={workspaceConfig.secretKey}
-                  className="flex-1 bg-black border border-white/20 px-3 py-2 text-[#A1A1AA] tracking-widest"
+                  className="flex-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-xs text-black tracking-widest"
                 />
                 <button
                   onClick={handleCopyKey}
-                  className="px-4 py-2 border border-white/20 hover:border-white text-white flex items-center gap-1.5 uppercase transition-colors"
+                  className="px-4 py-2.5 border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black rounded-full text-xs font-medium flex items-center gap-1.5 transition-all"
                 >
-                  {copiedKey ? <Check size={13} className="text-[#A1A1AA]" /> : <Copy size={13} />}
+                  {copiedKey ? <Check size={13} /> : <Copy size={13} />}
                   <span>{copiedKey ? 'Copied' : 'Copy Key'}</span>
                 </button>
               </div>
@@ -223,16 +223,16 @@ export const AccessControlModal: React.FC = () => {
           </div>
 
           {/* OPERATOR ENROLLMENT CLEARANCE (VIJAYRAJKUMAR EXCLUSIVE) */}
-          <div className="border border-white/20 p-4 bg-black space-y-3">
+          <div className="border border-[#E5E5E7] rounded-3xl p-5 bg-[#F5F5F7] space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase text-white flex items-center gap-1.5">
-                  <UserPlus size={14} className="text-[#A1A1AA]" /> Member Enrollment Clearance
+                <span className="text-xs font-semibold uppercase tracking-wider text-black flex items-center gap-1.5">
+                  <UserPlus size={14} className="text-[#6E6E73]" /> Member Enrollment Clearance
                 </span>
-                <span className={`text-[9px] px-1.5 py-0.5 border uppercase font-bold ${
+                <span className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase font-medium border ${
                   isVijayrajkumar
-                    ? 'border-[#A1A1AA] text-[#A1A1AA] bg-white/5'
-                    : 'border-white/30 text-white/50'
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                    : 'border-[#E5E5E7] bg-white text-[#6E6E73]'
                 }`}>
                   {isVijayrajkumar ? 'Authorized: Vijayrajkumar' : 'Locked: Read-Only'}
                 </span>
@@ -245,30 +245,30 @@ export const AccessControlModal: React.FC = () => {
                     setShowAddMember(!showAddMember);
                     setMemberMessage(null);
                   }}
-                  className="px-3 py-1 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors"
+                  className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 text-white text-[11px] font-medium rounded-full flex items-center gap-1.5 transition-all shadow-xs"
                 >
-                  <UserPlus size={11} />
+                  <UserPlus size={12} />
                   <span>{showAddMember ? 'Cancel' : '+ Add Operator'}</span>
                 </button>
               )}
             </div>
 
             {!isVijayrajkumar ? (
-              <p className="text-white/50 text-[11px] flex items-center gap-1.5">
-                <Lock size={12} className="text-white/40 shrink-0" />
+              <p className="text-[#6E6E73] text-xs flex items-center gap-1.5">
+                <Lock size={12} className="text-[#6E6E73] shrink-0" />
                 <span>Roster provisioning is restricted. Only <strong>Vijayrajkumar</strong> possesses authorization to add new members to this enclave.</span>
               </p>
             ) : (
-              <p className="text-white/60 text-[11px]">
+              <p className="text-[#6E6E73] text-xs">
                 As <strong>Vijayrajkumar</strong>, you have exclusive authorization to add and provision new team operators. All added members are saved directly to the live Supabase database.
               </p>
             )}
 
             {memberMessage && (
-              <div className={`p-2.5 border text-xs flex items-center gap-2 ${
+              <div className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
                 memberMessage.type === 'success'
-                  ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-300'
-                  : 'border-red-500/50 bg-red-500/10 text-red-300'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-red-200 bg-red-50 text-red-800'
               }`}>
                 {memberMessage.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
                 <span>{memberMessage.text}</span>
@@ -277,10 +277,10 @@ export const AccessControlModal: React.FC = () => {
 
             {/* Add Member Form (Visible only to Vijayrajkumar when toggled) */}
             {isVijayrajkumar && showAddMember && (
-              <form onSubmit={handleAddMemberSubmit} className="pt-3 border-t border-white/20 space-y-3">
+              <form onSubmit={handleAddMemberSubmit} className="pt-4 border-t border-[#E5E5E7] space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-white/50 text-[10px] uppercase mb-1">
+                    <label className="block text-[#6E6E73] text-[10px] font-medium uppercase tracking-wider mb-1">
                       Full Name *
                     </label>
                     <input
@@ -289,12 +289,12 @@ export const AccessControlModal: React.FC = () => {
                       placeholder="e.g. Kiran Kumar"
                       value={newName}
                       onChange={e => setNewName(e.target.value)}
-                      className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#A1A1AA]"
+                      className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-xs text-black placeholder-[#6E6E73] focus:border-black focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-white/50 text-[10px] uppercase mb-1">
+                    <label className="block text-[#6E6E73] text-[10px] font-medium uppercase tracking-wider mb-1">
                       Callsign / Code
                     </label>
                     <input
@@ -302,12 +302,12 @@ export const AccessControlModal: React.FC = () => {
                       placeholder="e.g. KIRAN-06"
                       value={newCallsign}
                       onChange={e => setNewCallsign(e.target.value)}
-                      className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#A1A1AA]"
+                      className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-xs text-black placeholder-[#6E6E73] focus:border-black focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-white/50 text-[10px] uppercase mb-1">
+                    <label className="block text-[#6E6E73] text-[10px] font-medium uppercase tracking-wider mb-1">
                       Chat Handle
                     </label>
                     <input
@@ -315,12 +315,12 @@ export const AccessControlModal: React.FC = () => {
                       placeholder="e.g. @kiran"
                       value={newHandle}
                       onChange={e => setNewHandle(e.target.value)}
-                      className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#A1A1AA]"
+                      className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-xs text-black placeholder-[#6E6E73] focus:border-black focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-white/50 text-[10px] uppercase mb-1">
+                    <label className="block text-[#6E6E73] text-[10px] font-medium uppercase tracking-wider mb-1">
                       Security PIN (4 Digits) *
                     </label>
                     <input
@@ -330,13 +330,13 @@ export const AccessControlModal: React.FC = () => {
                       placeholder="e.g. 1006"
                       value={newPin}
                       onChange={e => setNewPin(e.target.value)}
-                      className="w-full bg-black border border-white/30 px-3 py-1.5 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#A1A1AA]"
+                      className="w-full bg-white border border-[#E5E5E7] rounded-xl px-3 py-2 text-xs text-black placeholder-[#6E6E73] focus:border-black focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-white/50 text-[10px] uppercase mb-1">
+                  <label className="block text-[#6E6E73] text-[10px] font-medium uppercase tracking-wider mb-1">
                     Patch Emblem
                   </label>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -345,10 +345,10 @@ export const AccessControlModal: React.FC = () => {
                         key={emblem}
                         type="button"
                         onClick={() => setNewEmblem(emblem)}
-                        className={`px-2.5 py-1 text-[10px] uppercase font-bold border transition-colors ${
+                        className={`px-3 py-1 rounded-full text-[10px] uppercase font-semibold border transition-all ${
                           newEmblem === emblem
-                            ? 'border-[#A1A1AA] bg-white/10 text-white'
-                            : 'border-white/20 text-white/50 hover:border-white/40'
+                            ? 'border-black bg-black text-white'
+                            : 'border-[#E5E5E7] bg-white text-[#6E6E73] hover:border-black hover:text-black'
                         }`}
                       >
                         {emblem}
@@ -361,16 +361,16 @@ export const AccessControlModal: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowAddMember(false)}
-                    className="px-3 py-1.5 border border-white/20 hover:border-white text-white text-[11px] uppercase transition-colors"
+                    className="px-4 py-2 text-xs font-medium text-[#6E6E73] hover:text-black rounded-full hover:bg-white transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmittingMember}
-                    className="px-4 py-1.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] disabled:opacity-40 text-black text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+                    className="px-5 py-2 bg-black hover:bg-neutral-800 disabled:opacity-40 text-white text-xs font-medium rounded-full flex items-center gap-1.5 transition-all shadow-xs"
                   >
-                    <UserPlus size={12} />
+                    <UserPlus size={13} />
                     <span>{isSubmittingMember ? 'Saving to Database...' : 'Save & Onboard Member'}</span>
                   </button>
                 </div>
@@ -380,26 +380,26 @@ export const AccessControlModal: React.FC = () => {
 
           {/* TEAM ROSTER TABLE */}
           <div>
-            <div className="flex items-center justify-between pb-2 border-b border-white/20 mb-3 text-[10px] text-white/50 uppercase">
+            <div className="flex items-center justify-between pb-2 border-b border-[#E5E5E7] mb-3 text-[11px] font-medium text-[#6E6E73] uppercase tracking-wider">
               <span>Team Roster ({users.length} Members)</span>
               <span>Status</span>
             </div>
 
-            <div className="space-y-2 max-h-[180px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {users.map(u => (
                 <div
                   key={u.id}
-                  className="p-3 border border-white/20 bg-black flex items-center justify-between gap-3"
+                  className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-white flex items-center justify-between gap-3 shadow-xs hover:border-black/20 transition-all"
                 >
                   <div className="flex items-center gap-3">
                     <PatchAvatar user={u} size="sm" />
                     <div>
-                      <span className="font-bold text-white block leading-none">{u.name}</span>
-                      <span className="text-[10px] text-white/50">{u.callsign}</span>
+                      <span className="font-medium text-sm text-black block leading-snug">{u.name}</span>
+                      <span className="text-xs text-[#6E6E73]">{u.callsign}</span>
                     </div>
                   </div>
 
-                  <span className="text-[10px] px-2 py-0.5 border border-white/30 text-white uppercase font-bold">
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-black font-semibold uppercase tracking-wider">
                     {u.status}
                   </span>
                 </div>
@@ -408,20 +408,20 @@ export const AccessControlModal: React.FC = () => {
           </div>
 
           {/* BACKUP EXPORT & RESTORE */}
-          <div className="pt-4 border-t border-white/20 space-y-3">
-            <span className="block text-[10px] text-white/50 uppercase font-bold">
+          <div className="pt-4 border-t border-[#E5E5E7] space-y-3">
+            <span className="block text-[11px] text-[#6E6E73] font-medium uppercase tracking-wider">
               Full Workspace Backup & Airgap Snapshot
             </span>
             <div className="flex items-center gap-3 flex-wrap">
               <button
                 onClick={exportWorkspaceData}
-                className="px-4 py-2 border border-white/20 hover:border-white text-white flex items-center gap-2 uppercase transition-colors"
+                className="px-4 py-2 border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black rounded-full flex items-center gap-2 text-xs font-medium transition-all"
               >
                 <Download size={13} />
                 <span>Export JSON Snapshot</span>
               </button>
 
-              <label className="px-4 py-2 border border-white/20 hover:border-white text-white flex items-center gap-2 uppercase transition-colors cursor-pointer">
+              <label className="px-4 py-2 border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black rounded-full flex items-center gap-2 text-xs font-medium transition-all cursor-pointer">
                 <Upload size={13} />
                 <span>Restore Snapshot</span>
                 <input
@@ -434,7 +434,7 @@ export const AccessControlModal: React.FC = () => {
 
               <button
                 onClick={resetWorkspaceData}
-                className="px-4 py-2 border border-red-500/40 hover:border-red-500 text-red-400 flex items-center gap-2 uppercase transition-colors"
+                className="px-4 py-2 border border-red-200 hover:bg-red-50 text-red-600 rounded-full flex items-center gap-2 text-xs font-medium transition-all"
               >
                 <RefreshCw size={13} />
                 <span>Reset to Seed</span>
@@ -442,15 +442,15 @@ export const AccessControlModal: React.FC = () => {
             </div>
 
             {importStatus && (
-              <p className="text-[11px] mt-1 text-[#A1A1AA]">{importStatus}</p>
+              <p className="text-xs mt-1 text-[#6E6E73]">{importStatus}</p>
             )}
           </div>
         </div>
 
-        <div className="pt-4 border-t border-white/20 flex justify-end">
+        <div className="pt-4 border-t border-[#E5E5E7] flex justify-end">
           <button
             onClick={() => setAccessModalOpen(false)}
-            className="px-6 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold font-medium uppercase tracking-wider transition-colors"
+            className="px-6 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-full text-xs font-medium transition-all shadow-xs"
           >
             Done
           </button>

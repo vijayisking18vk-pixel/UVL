@@ -42,11 +42,11 @@ export const BrandPatchBadge: React.FC<BrandPatchBadgeProps> = ({
       } transition-all duration-150 group`}
       title="Unfounded Venture Lab"
     >
-      <div className={`flex flex-col text-left leading-[0.92] ${textStyles.gap}`}>
-        <span className={`font-extrabold text-white ${textStyles.title}`}>
+      <div className={`flex flex-col text-left leading-[0.98] ${textStyles.gap}`}>
+        <span className={`font-serif font-semibold text-black ${textStyles.title}`}>
           Unfounded
         </span>
-        <span className={`font-extrabold text-[#A1A1AA] ${textStyles.subtitle}`}>
+        <span className={`font-medium text-[#6E6E73] ${textStyles.subtitle}`}>
           Venture Lab.
         </span>
       </div>

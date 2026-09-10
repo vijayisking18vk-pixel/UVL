@@ -143,31 +143,31 @@ export const InvestorView: React.FC = () => {
   // Access Control Guard
   if (!isVijayrajkumar && currentUser.role !== 'admin') {
     return (
-      <div className="py-16 text-center max-w-xl mx-auto space-y-6">
-        <div className="w-16 h-16 border border-white/20 bg-white/5 mx-auto flex items-center justify-center">
-          <ShieldAlert size={32} className="text-[#A1A1AA]" />
+      <div className="py-20 text-center max-w-xl mx-auto space-y-6">
+        <div className="w-16 h-16 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] mx-auto flex items-center justify-center shadow-xs">
+          <ShieldAlert size={28} className="text-black" />
         </div>
         <div>
-          <span className="micro-label text-white/50 block mb-2">Enclave Security Level 1</span>
-          <h2 className="headline text-2xl font-bold text-white">
+          <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider block mb-2">Enclave Security Level 1</span>
+          <h2 className="font-serif text-2xl sm:text-3xl font-normal text-black">
             Institutional Investor Enclave Restricted.
           </h2>
-          <p className="text-white/60 text-xs mt-3 leading-relaxed">
+          <p className="text-[#6E6E73] text-sm mt-3 leading-relaxed">
             Cap table allocations, term sheet valuations, and investor correspondence are restricted to founder clearance (Vijayrajkumar / Administrative Operator).
           </p>
         </div>
-        <div className="p-4 border border-white/20 bg-black text-left text-xs font-mono space-y-2">
+        <div className="p-5 border border-[#E5E5E7] bg-[#F5F5F7] rounded-2xl text-left text-xs font-sans space-y-2.5">
           <div className="flex justify-between">
-            <span className="text-white/50">Active Session:</span>
-            <span className="text-white font-bold">{currentUser.name} ({currentUser.callsign})</span>
+            <span className="text-[#6E6E73]">Active Session:</span>
+            <span className="text-black font-semibold">{currentUser.name} ({currentUser.callsign})</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/50">Authorization:</span>
-            <span className="text-[#A1A1AA]">MEMBER_CLEARANCE</span>
+            <span className="text-[#6E6E73]">Authorization:</span>
+            <span className="text-black font-mono">MEMBER_CLEARANCE</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-white/50">Requirement:</span>
-            <span className="text-white">FOUNDER_EXECUTIVE_KEY</span>
+            <span className="text-[#6E6E73]">Requirement:</span>
+            <span className="text-black font-mono font-semibold">FOUNDER_EXECUTIVE_KEY</span>
           </div>
         </div>
       </div>
@@ -286,39 +286,39 @@ export const InvestorView: React.FC = () => {
 
   return (
     <div className="space-y-10 pb-16">
-      {/* Top Editorial Header */}
-      <section className="border-b border-white/20 pb-8">
+      {/* Top Header */}
+      <section className="border-b border-[#E5E5E7] pb-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
-              <span>capitalization</span>
-              <span>/</span>
-              <span className="text-[#A1A1AA]">investor pipeline</span>
-              <span>/</span>
-              <span>fundraising telemetry</span>
+            <div className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-2.5 flex items-center gap-2">
+              <span>Capitalization</span>
+              <span>•</span>
+              <span className="text-black font-semibold">Investor Pipeline</span>
+              <span>•</span>
+              <span>Fundraising Telemetry</span>
             </div>
-            <h1 className="headline-section text-white font-bold tracking-tight">
+            <h1 className="font-serif text-3xl sm:text-4xl text-black font-normal tracking-tight">
               Institutional investor tracking.
             </h1>
-            <p className="text-white/60 text-sm mt-2 max-w-xl">
+            <p className="text-[#6E6E73] text-sm sm:text-base mt-2 max-w-xl leading-relaxed">
               Stage pipeline, term sheets, deal size allocations, communication audit trails, and automatic follow-up tasks.
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex border border-white/20 text-xs font-mono">
+            <div className="inline-flex p-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-full text-xs font-medium">
               <button
                 onClick={() => setViewMode('kanban')}
-                className={`px-3 py-2 uppercase transition-colors ${
-                  viewMode === 'kanban' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+                className={`px-4 py-1.5 rounded-full transition-all ${
+                  viewMode === 'kanban' ? 'bg-white text-black shadow-xs font-semibold' : 'text-[#6E6E73] hover:text-black'
                 }`}
               >
                 Kanban
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`px-3 py-2 uppercase transition-colors border-l border-white/20 ${
-                  viewMode === 'table' ? 'bg-white text-black font-bold' : 'text-white/60 hover:text-white'
+                className={`px-4 py-1.5 rounded-full transition-all ${
+                  viewMode === 'table' ? 'bg-white text-black shadow-xs font-semibold' : 'text-[#6E6E73] hover:text-black'
                 }`}
               >
                 List
@@ -330,7 +330,7 @@ export const InvestorView: React.FC = () => {
                 sound.click();
                 setIsAddOpen(true);
               }}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-semibold text-xs tracking-wide transition-all uppercase"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs tracking-wide transition-all shadow-xs cursor-pointer"
             >
               <Plus size={15} />
               <span>Add Investor Lead</span>
@@ -340,53 +340,53 @@ export const InvestorView: React.FC = () => {
 
         {/* 4 Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-          <div className="p-4 border border-white/20 bg-black">
+          <div className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] shadow-xs">
             <div className="flex items-center justify-between mb-1">
-              <span className="micro-label text-white/50">Target Round Size</span>
-              <span className="meta-number text-[10px] text-[#A1A1AA]">GOAL</span>
+              <span className="text-xs font-medium text-[#6E6E73]">Target Round Size</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-black font-medium">GOAL</span>
             </div>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
+            <div className="text-2xl lg:text-3xl font-normal text-black font-serif mt-1">
               ₹{TARGET_RAISE.toLocaleString('en-IN')}
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">Seed Equity & SAFE</span>
+            <span className="text-xs text-[#6E6E73] mt-1 block">Seed Equity & SAFE</span>
           </div>
 
-          <div className="p-4 border border-white/20 bg-black">
+          <div className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] shadow-xs">
             <div className="flex items-center justify-between mb-1">
-              <span className="micro-label text-white/50">Committed Capital</span>
-              <span className="meta-number text-[10px] text-emerald-400 font-bold">{fundingProgressPercent}%</span>
+              <span className="text-xs font-medium text-[#6E6E73]">Committed Capital</span>
+              <span className="text-xs text-emerald-700 font-semibold">{fundingProgressPercent}%</span>
             </div>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number">
+            <div className="text-2xl lg:text-3xl font-normal text-black font-serif mt-1">
               ₹{totalCommitted.toLocaleString('en-IN')}
             </div>
             {/* Visual Progress Bar */}
-            <div className="w-full bg-white/10 h-1.5 mt-2 overflow-hidden">
+            <div className="w-full bg-[#E5E5E7] h-1.5 rounded-full mt-2.5 overflow-hidden">
               <div
-                className="bg-emerald-400 h-full transition-all duration-500"
+                className="bg-emerald-600 h-full rounded-full transition-all duration-500"
                 style={{ width: `${fundingProgressPercent}%` }}
               />
             </div>
           </div>
 
-          <div className="p-4 border border-white/20 bg-black">
-            <span className="micro-label text-white/50 block mb-1">Active Pipeline Value</span>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-[#E4E4E7] meta-number">
+          <div className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] shadow-xs">
+            <span className="text-xs font-medium text-[#6E6E73] block mb-1">Active Pipeline Value</span>
+            <div className="text-2xl lg:text-3xl font-normal text-black font-serif mt-1">
               ₹{totalPipelinePotential.toLocaleString('en-IN')}
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">
+            <span className="text-xs text-[#6E6E73] mt-1 block">
               Across {investors.length} institutions
             </span>
           </div>
 
-          <div className="p-4 border border-white/20 bg-black">
-            <span className="micro-label text-white/50 block mb-1">Conversion Velocity</span>
-            <div className="text-2xl lg:text-3xl font-bold tracking-tight text-white meta-number flex items-center gap-2">
+          <div className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] shadow-xs">
+            <span className="text-xs font-medium text-[#6E6E73] block mb-1">Conversion Velocity</span>
+            <div className="text-2xl lg:text-3xl font-normal text-black font-serif mt-1 flex items-center gap-2">
               <span>{Math.round((investors.filter(i => i.stage === 'term_sheet' || i.stage === 'committed').length / (investors.length || 1)) * 100)}%</span>
-              <span className="text-[10px] px-1.5 py-0.5 border border-[#A1A1AA] text-[#A1A1AA] font-normal uppercase">
-                Term Sheets Active
+              <span className="text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 font-medium">
+                Active
               </span>
             </div>
-            <span className="text-[11px] text-white/40 mt-1 block">Pitched to Term Sheet ratio</span>
+            <span className="text-xs text-[#6E6E73] mt-1 block">Pitched to Term Sheet ratio</span>
           </div>
         </div>
       </section>
@@ -397,13 +397,13 @@ export const InvestorView: React.FC = () => {
         <div className="lg:col-span-8 space-y-6">
           {/* Search bar */}
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6E6E73]" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search investor name, venture firm, notes..."
-              className="w-full bg-black border border-white/20 focus:border-[#A1A1AA] text-white text-xs pl-9 pr-4 py-2 focus:outline-none transition-colors"
+              className="w-full bg-[#F5F5F7] border border-[#E5E5E7] focus:border-black focus:bg-white text-black text-xs pl-10 pr-4 py-2.5 rounded-full focus:outline-none transition-all"
             />
           </div>
 
@@ -415,29 +415,29 @@ export const InvestorView: React.FC = () => {
                 const colTotal = stageInvestors.reduce((s, i) => s + i.dealSize, 0);
 
                 return (
-                  <div key={col.id} className="border border-white/20 bg-black flex flex-col min-h-[380px]">
+                  <div key={col.id} className="border border-[#E5E5E7] bg-[#F5F5F7] rounded-3xl flex flex-col min-h-[380px] shadow-xs overflow-hidden">
                     {/* Stage Header */}
-                    <div className="p-3 border-b border-white/20 bg-white/5 flex items-center justify-between">
+                    <div className="p-4 border-b border-[#E5E5E7] bg-[#F5F5F7] flex items-center justify-between">
                       <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-xs text-white uppercase">{col.label}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 border border-white/30 text-white/60 meta-number">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs text-black uppercase tracking-wide">{col.label}</span>
+                          <span className="text-[11px] px-2 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-[#6E6E73] font-medium">
                             {stageInvestors.length}
                           </span>
                         </div>
-                        <span className="text-[10px] text-white/40 block mt-0.5">{col.description}</span>
+                        <span className="text-[11px] text-[#6E6E73] block mt-1">{col.description}</span>
                       </div>
                       {colTotal > 0 && (
-                        <span className="meta-number text-xs font-semibold text-[#A1A1AA]">
+                        <span className="text-xs font-semibold text-black">
                           ₹{colTotal >= 10000000 ? `${(colTotal / 10000000).toFixed(2)}Cr` : colTotal >= 100000 ? `${(colTotal / 100000).toFixed(1)}L` : `${Math.round(colTotal / 1000)}k`}
                         </span>
                       )}
                     </div>
 
                     {/* Stage Cards */}
-                    <div className="p-3 space-y-3 flex-1 overflow-y-auto max-h-[500px]">
+                    <div className="p-3.5 space-y-3 flex-1 overflow-y-auto max-h-[500px]">
                       {stageInvestors.length === 0 ? (
-                        <div className="h-28 border border-dashed border-white/10 flex items-center justify-center text-[10px] text-white/30 font-mono">
+                        <div className="h-32 border border-dashed border-[#E5E5E7] rounded-2xl flex items-center justify-center text-xs text-[#6E6E73] bg-white/40">
                           No leads in stage
                         </div>
                       ) : (
@@ -452,40 +452,40 @@ export const InvestorView: React.FC = () => {
                                 sound.click();
                                 setSelectedInvestor(inv);
                               }}
-                              className={`p-3.5 border transition-all cursor-pointer space-y-2.5 ${
+                              className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2.5 bg-white shadow-xs hover:shadow-sm ${
                                 isSelected
-                                  ? 'border-white bg-white/10'
-                                  : 'border-white/20 bg-black hover:border-white/50'
+                                  ? 'border-black ring-1 ring-black'
+                                  : 'border-[#E5E5E7] hover:border-black/30'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <h4 className="font-bold text-sm text-white hover:text-[#A1A1AA] transition-colors">
+                                  <h4 className="font-serif text-sm font-normal text-black">
                                     {inv.name}
                                   </h4>
-                                  <span className="text-xs text-white/60 flex items-center gap-1 mt-0.5">
-                                    <Building size={11} className="text-[#A1A1AA]" />
+                                  <span className="text-xs text-[#6E6E73] flex items-center gap-1.5 mt-0.5">
+                                    <Building size={12} className="text-[#6E6E73]" />
                                     {inv.firm}
                                   </span>
                                 </div>
-                                <span className="text-[10px] px-1.5 py-0.5 border border-[#A1A1AA] text-[#A1A1AA] font-bold meta-number shrink-0">
+                                <span className="text-xs font-semibold text-black px-2.5 py-0.5 rounded-full bg-[#F5F5F7] border border-[#E5E5E7] shrink-0">
                                   ₹{inv.dealSize >= 10000000 ? `${(inv.dealSize / 10000000).toFixed(2)}Cr` : inv.dealSize >= 100000 ? `${(inv.dealSize / 100000).toFixed(1)}L` : `${Math.round(inv.dealSize / 1000)}k`}
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between text-[11px] text-white/50 pt-1 border-t border-white/10">
-                                <span className="uppercase text-[10px] font-mono">{inv.roundType}</span>
+                              <div className="flex items-center justify-between text-xs text-[#6E6E73] pt-2 border-t border-[#E5E5E7]">
+                                <span className="uppercase text-[10px] font-semibold">{inv.roundType}</span>
                                 {owner && (
                                   <div className="flex items-center gap-1.5" title={`Owner: ${owner.name}`}>
                                     <PatchAvatar user={owner} size="sm" />
-                                    <span className="text-[10px] text-white/70">{owner.callsign}</span>
+                                    <span className="text-xs text-black font-medium">{owner.callsign}</span>
                                   </div>
                                 )}
                               </div>
 
                               {/* Stage advance shortcuts */}
-                              <div className="flex items-center justify-between pt-1 text-[10px]">
-                                <span className="text-white/40 meta-number">
+                              <div className="flex items-center justify-between pt-1 text-xs">
+                                <span className="text-[#6E6E73] font-mono text-[11px]">
                                   Last: {inv.lastInteractionDate}
                                 </span>
                                 <div className="flex items-center gap-1">
@@ -498,11 +498,11 @@ export const InvestorView: React.FC = () => {
                                           updateInvestorStage(inv.id, PIPELINE_STAGES[currentIdx + 1].id);
                                         }
                                       }}
-                                      className="px-1.5 py-0.5 border border-white/30 hover:border-white text-white/80 hover:text-white uppercase flex items-center gap-0.5"
+                                      className="px-2.5 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-black text-[11px] font-medium flex items-center gap-1 transition-all"
                                       title="Advance stage"
                                     >
                                       <span>Advance</span>
-                                      <ChevronRight size={10} />
+                                      <ChevronRight size={11} />
                                     </button>
                                   )}
                                 </div>
@@ -518,64 +518,64 @@ export const InvestorView: React.FC = () => {
             </div>
           ) : (
             /* TABLE LIST VIEW */
-            <div className="border border-white/20 bg-black overflow-x-auto">
+            <div className="border border-[#E5E5E7] bg-white rounded-3xl overflow-hidden shadow-xs">
               <table className="w-full text-left text-xs">
                 <thead>
-                  <tr className="border-b border-white/20 bg-white/5 font-mono text-[10px] text-white/50 uppercase">
-                    <th className="py-3 px-4">Investor & Firm</th>
-                    <th className="py-3 px-4">Stage</th>
-                    <th className="py-3 px-4">Round</th>
-                    <th className="py-3 px-4 text-right">Deal Size</th>
-                    <th className="py-3 px-4 text-right">Valuation</th>
-                    <th className="py-3 px-4">Owner</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                  <tr className="border-b border-[#E5E5E7] bg-[#F5F5F7] text-[11px] text-[#6E6E73] uppercase font-semibold">
+                    <th className="py-3.5 px-4">Investor & Firm</th>
+                    <th className="py-3.5 px-4">Stage</th>
+                    <th className="py-3.5 px-4">Round</th>
+                    <th className="py-3.5 px-4 text-right">Deal Size</th>
+                    <th className="py-3.5 px-4 text-right">Valuation</th>
+                    <th className="py-3.5 px-4">Owner</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/10">
+                <tbody className="divide-y divide-[#E5E5E7]">
                   {filteredInvestors.map(inv => {
                     const owner = users.find(u => u.id === inv.relationshipOwnerId);
                     return (
                       <tr
                         key={inv.id}
                         onClick={() => setSelectedInvestor(inv)}
-                        className={`hover:bg-white/5 cursor-pointer ${
-                          selectedInvestor?.id === inv.id ? 'bg-white/10' : ''
+                        className={`hover:bg-[#F5F5F7] cursor-pointer transition-colors ${
+                          selectedInvestor?.id === inv.id ? 'bg-[#F5F5F7]' : ''
                         }`}
                       >
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-white">{inv.name}</div>
-                          <div className="text-[11px] text-white/50">{inv.firm}</div>
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-black">{inv.name}</div>
+                          <div className="text-xs text-[#6E6E73]">{inv.firm}</div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 border border-white/20 text-[10px] uppercase font-bold text-white">
+                        <td className="py-3.5 px-4">
+                          <span className="px-2.5 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-[10px] uppercase font-semibold text-black">
                             {inv.stage.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-white/70 uppercase text-[11px] font-mono">
+                        <td className="py-3.5 px-4 text-black uppercase text-xs">
                           {inv.roundType}
                         </td>
-                        <td className="py-3 px-4 text-right meta-number font-bold text-white">
+                        <td className="py-3.5 px-4 text-right font-semibold text-black font-mono">
                           ₹{inv.dealSize.toLocaleString('en-IN')}
                         </td>
-                        <td className="py-3 px-4 text-right meta-number text-white/70">
+                        <td className="py-3.5 px-4 text-right text-[#6E6E73] font-mono">
                           {inv.valuation ? `₹${inv.valuation.toLocaleString('en-IN')}` : 'N/A'}
                         </td>
-                        <td className="py-3 px-4">
+                        <td className="py-3.5 px-4">
                           {owner && (
                             <div className="flex items-center gap-1.5">
                               <PatchAvatar user={owner} size="sm" />
-                              <span className="text-white/80">{owner.name}</span>
+                              <span className="text-black font-medium">{owner.name}</span>
                             </div>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedInvestor(inv);
                               setIsScheduleFollowUpOpen(true);
                             }}
-                            className="px-2 py-1 border border-white/30 hover:border-white text-[10px] uppercase text-white"
+                            className="px-3 py-1 rounded-full border border-[#E5E5E7] hover:border-black bg-white text-xs font-medium text-black transition-all"
                           >
                             Follow Up
                           </button>
@@ -590,42 +590,42 @@ export const InvestorView: React.FC = () => {
         </div>
 
         {/* Right Column: Active Investor Detail Drawer */}
-        <div className="lg:col-span-4 border border-white/20 bg-black p-5 space-y-6">
+        <div className="lg:col-span-4 border border-[#E5E5E7] bg-white rounded-3xl p-6 sm:p-7 space-y-6 shadow-xs">
           {selectedInvestor ? (
             <>
               {/* Profile Card */}
               <div>
-                <div className="flex items-center justify-between pb-3 border-b border-white/20">
+                <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
                   <div>
-                    <span className="micro-label text-white/50 block">Investor Dossier</span>
-                    <h2 className="text-xl font-bold text-white mt-0.5">{selectedInvestor.name}</h2>
-                    <span className="text-xs text-[#A1A1AA] font-semibold block">{selectedInvestor.firm}</span>
+                    <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider block">Investor Dossier</span>
+                    <h2 className="font-serif text-2xl font-normal text-black mt-1">{selectedInvestor.name}</h2>
+                    <span className="text-xs text-[#6E6E73] font-medium block mt-0.5">{selectedInvestor.firm}</span>
                   </div>
-                  <span className="text-xs px-2.5 py-1 border border-white font-bold uppercase text-white">
+                  <span className="text-xs px-3 py-1 rounded-full border border-black bg-black text-white font-medium uppercase">
                     {selectedInvestor.stage.replace('_', ' ')}
                   </span>
                 </div>
 
                 {/* Contact Strip */}
-                <div className="mt-3 space-y-1.5 text-xs text-white/70">
+                <div className="mt-4 space-y-2 text-xs text-[#6E6E73]">
                   {selectedInvestor.email && (
                     <div className="flex items-center gap-2">
-                      <Mail size={12} className="text-[#A1A1AA]" />
-                      <a href={`mailto:${selectedInvestor.email}`} className="hover:text-white underline">
+                      <Mail size={13} className="text-[#6E6E73]" />
+                      <a href={`mailto:${selectedInvestor.email}`} className="text-black hover:underline font-medium">
                         {selectedInvestor.email}
                       </a>
                     </div>
                   )}
                   {selectedInvestor.phone && (
                     <div className="flex items-center gap-2">
-                      <Phone size={12} className="text-[#A1A1AA]" />
-                      <span>{selectedInvestor.phone}</span>
+                      <Phone size={13} className="text-[#6E6E73]" />
+                      <span className="text-black font-medium">{selectedInvestor.phone}</span>
                     </div>
                   )}
                   {selectedInvestor.website && (
                     <div className="flex items-center gap-2">
-                      <ExternalLink size={12} className="text-[#A1A1AA]" />
-                      <a href={selectedInvestor.website} target="_blank" rel="noreferrer" className="hover:text-white underline">
+                      <ExternalLink size={13} className="text-[#6E6E73]" />
+                      <a href={selectedInvestor.website} target="_blank" rel="noreferrer" className="text-black hover:underline font-medium">
                         {selectedInvestor.website}
                       </a>
                     </div>
@@ -634,43 +634,43 @@ export const InvestorView: React.FC = () => {
               </div>
 
               {/* Deal Terms Grid */}
-              <div className="p-3 border border-white/10 bg-white/5 space-y-2 text-xs font-mono">
+              <div className="p-4 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] space-y-2.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-white/50">Deal Size:</span>
-                  <span className="text-white font-bold meta-number">₹{selectedInvestor.dealSize.toLocaleString('en-IN')}</span>
+                  <span className="text-[#6E6E73]">Deal Size:</span>
+                  <span className="text-black font-semibold font-mono">₹{selectedInvestor.dealSize.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">Valuation:</span>
-                  <span className="text-white font-bold meta-number">
+                  <span className="text-[#6E6E73]">Valuation:</span>
+                  <span className="text-black font-semibold font-mono">
                     {selectedInvestor.valuation ? `₹${selectedInvestor.valuation.toLocaleString('en-IN')}` : 'Uncapped / TBD'}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">Instrument:</span>
-                  <span className="text-white font-bold uppercase">{selectedInvestor.roundType}</span>
+                  <span className="text-[#6E6E73]">Instrument:</span>
+                  <span className="text-black font-semibold uppercase">{selectedInvestor.roundType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">Relationship Lead:</span>
-                  <span className="text-white">
+                  <span className="text-[#6E6E73]">Relationship Lead:</span>
+                  <span className="text-black font-medium">
                     {users.find(u => u.id === selectedInvestor.relationshipOwnerId)?.name || 'Vijayrajkumar'}
                   </span>
                 </div>
                 {selectedInvestor.nextFollowUpDate && (
-                  <div className="flex justify-between border-t border-white/10 pt-1.5 text-emerald-400">
-                    <span>Follow-Up Due:</span>
-                    <span className="font-bold">{selectedInvestor.nextFollowUpDate}</span>
+                  <div className="flex justify-between border-t border-[#E5E5E7] pt-2 text-emerald-700">
+                    <span className="font-medium">Follow-Up Due:</span>
+                    <span className="font-semibold font-mono">{selectedInvestor.nextFollowUpDate}</span>
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <button
                   onClick={() => {
                     sound.click();
                     setIsLogInteractionOpen(true);
                   }}
-                  className="px-3 py-2 border border-white/30 hover:border-white text-white text-xs font-semibold uppercase flex items-center justify-center gap-1.5"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium flex items-center justify-center gap-1.5 transition-all shadow-xs"
                 >
                   <MessageSquare size={13} />
                   <span>Log Meeting</span>
@@ -680,7 +680,7 @@ export const InvestorView: React.FC = () => {
                     sound.click();
                     setIsScheduleFollowUpOpen(true);
                   }}
-                  className="px-3 py-2 bg-white text-black font-bold text-xs uppercase flex items-center justify-center gap-1.5"
+                  className="px-4 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs"
                 >
                   <Calendar size={13} />
                   <span>Schedule Task</span>
@@ -688,10 +688,10 @@ export const InvestorView: React.FC = () => {
               </div>
 
               {/* Documents & Vault Attachments */}
-              <div className="space-y-3 pt-4 border-t border-white/20">
+              <div className="space-y-3 pt-4 border-t border-[#E5E5E7]">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs uppercase font-bold text-white tracking-wider flex items-center gap-1.5">
-                    <FileText size={13} className="text-[#A1A1AA]" />
+                  <span className="text-xs uppercase font-semibold text-black tracking-wider flex items-center gap-1.5">
+                    <FileText size={13} className="text-black" />
                     <span>Dossier Vault ({selectedInvestor.documents?.length || 0})</span>
                   </span>
                   <button
@@ -699,7 +699,7 @@ export const InvestorView: React.FC = () => {
                       sound.click();
                       setIsUploadDocOpen(true);
                     }}
-                    className="text-[11px] text-[#A1A1AA] hover:text-white uppercase underline"
+                    className="text-xs text-black font-medium hover:underline"
                   >
                     + Upload Doc
                   </button>
@@ -707,15 +707,15 @@ export const InvestorView: React.FC = () => {
 
                 <div className="space-y-2">
                   {!selectedInvestor.documents || selectedInvestor.documents.length === 0 ? (
-                    <div className="p-4 border border-dashed border-white/10 text-center text-[10px] text-white/40 font-mono">
+                    <div className="p-4 border border-dashed border-[#E5E5E7] rounded-2xl text-center text-xs text-[#6E6E73] bg-[#F5F5F7]">
                       No pitch decks or term sheets uploaded yet.
                     </div>
                   ) : (
                     selectedInvestor.documents.map(doc => (
-                      <div key={doc.id} className="p-2.5 border border-white/20 bg-black flex items-center justify-between gap-2">
+                      <div key={doc.id} className="p-3 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] flex items-center justify-between gap-2">
                         <div className="truncate">
-                          <div className="text-xs font-bold text-white truncate">{doc.name}</div>
-                          <span className="text-[10px] text-white/40 meta-number">
+                          <div className="text-xs font-semibold text-black truncate">{doc.name}</div>
+                          <span className="text-[10px] text-[#6E6E73] font-mono">
                             v{doc.version}.0 · {doc.uploadedAt}
                           </span>
                         </div>
@@ -725,10 +725,10 @@ export const InvestorView: React.FC = () => {
                             target="_blank"
                             rel="noreferrer"
                             download={doc.name}
-                            className="p-1 border border-white/30 hover:border-white text-white"
+                            className="p-1.5 rounded-full border border-[#E5E5E7] bg-white hover:border-black text-black transition-all"
                             title="Download document"
                           >
-                            <Download size={12} />
+                            <Download size={13} />
                           </a>
                         )}
                       </div>
@@ -738,28 +738,28 @@ export const InvestorView: React.FC = () => {
               </div>
 
               {/* Interaction Timeline Log */}
-              <div className="space-y-3 pt-4 border-t border-white/20">
-                <span className="text-xs uppercase font-bold text-white tracking-wider block">
+              <div className="space-y-3 pt-4 border-t border-[#E5E5E7]">
+                <span className="text-xs uppercase font-semibold text-black tracking-wider block">
                   Interaction Timeline ({selectedInvestor.interactions?.length || 0})
                 </span>
 
-                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
                   {!selectedInvestor.interactions || selectedInvestor.interactions.length === 0 ? (
-                    <p className="text-[11px] text-white/40 italic">No interactions logged yet.</p>
+                    <p className="text-xs text-[#6E6E73] italic">No interactions logged yet.</p>
                   ) : (
                     selectedInvestor.interactions.map(int => {
                       const author = users.find(u => u.id === int.authorId);
                       return (
-                        <div key={int.id} className="p-3 border border-white/15 bg-white/5 space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between text-[10px] text-white/50">
-                            <span className="px-1.5 py-0.2 border border-white/20 uppercase text-white font-mono">
+                        <div key={int.id} className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-[11px] text-[#6E6E73]">
+                            <span className="px-2 py-0.5 rounded-full border border-[#E5E5E7] bg-white uppercase text-black font-semibold">
                               {int.type}
                             </span>
-                            <span className="meta-number">{int.date}</span>
+                            <span className="font-mono">{int.date}</span>
                           </div>
-                          <p className="text-white/80 leading-snug">{int.summary}</p>
+                          <p className="text-black leading-relaxed">{int.summary}</p>
                           {author && (
-                            <span className="text-[10px] text-white/40 block font-mono">
+                            <span className="text-[11px] text-[#6E6E73] block">
                               By {author.name}
                             </span>
                           )}
@@ -771,7 +771,7 @@ export const InvestorView: React.FC = () => {
               </div>
             </>
           ) : (
-            <div className="py-20 text-center text-white/40 font-mono text-xs">
+            <div className="py-20 text-center text-[#6E6E73] text-xs">
               Select an investor to inspect deal terms, interactions, and documents.
             </div>
           )}
@@ -780,74 +780,79 @@ export const InvestorView: React.FC = () => {
 
       {/* ADD INVESTOR MODAL */}
       {isAddOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-black border border-white/40 max-w-lg w-full p-6 space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <h3 className="text-base font-bold text-white uppercase tracking-tight flex items-center gap-2">
-                <Briefcase size={18} className="text-[#A1A1AA]" />
-                <span>Onboard Investor Lead</span>
-              </h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-white/50 hover:text-white p-1">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+              <div>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">New Institutional Lead</span>
+                <h3 className="font-serif text-xl sm:text-2xl font-normal text-black">
+                  Onboard Investor Lead
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddOpen(false)}
+                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+              >
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAddInvestorSubmit} className="space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Investor Contact Name *</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Investor Contact Name *</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Elena Rostova"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Venture Firm / Angel *</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Venture Firm / Angel *</label>
                   <input
                     type="text"
                     required
                     value={firm}
                     onChange={(e) => setFirm(e.target.value)}
                     placeholder="e.g. Apex Frontier Capital"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Email Address</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Email Address</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="partner@firm.vc"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Phone / WhatsApp</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Phone / WhatsApp</label>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+1 (555) 000-0000"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Pipeline Stage *</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Pipeline Stage *</label>
                   <select
                     value={stage}
                     onChange={(e) => setStage(e.target.value as InvestorStage)}
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     {PIPELINE_STAGES.map(s => (
                       <option key={s.id} value={s.id}>{s.label}</option>
@@ -856,22 +861,22 @@ export const InvestorView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Target Ticket (₹ INR) *</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Target Ticket (₹ INR) *</label>
                   <input
                     type="number"
                     value={dealSize}
                     onChange={(e) => setDealSize(e.target.value)}
                     placeholder="2500000"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Round Structure</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Round Structure</label>
                   <select
                     value={roundType}
                     onChange={(e) => setRoundType(e.target.value as InvestorRoundType)}
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     {ROUND_TYPES.map(r => (
                       <option key={r} value={r}>{r}</option>
@@ -880,24 +885,24 @@ export const InvestorView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Target Valuation (₹ INR)</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Target Valuation (₹ INR)</label>
                   <input
                     type="number"
                     value={valuation}
                     onChange={(e) => setValuation(e.target.value)}
                     placeholder="50000000"
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="micro-label text-white/70 block mb-1.5">Relationship Lead</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Relationship Lead</label>
                   <select
                     value={relationshipOwnerId}
                     onChange={(e) => setRelationshipOwnerId(e.target.value)}
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
@@ -907,27 +912,27 @@ export const InvestorView: React.FC = () => {
               </div>
 
               <div>
-                <label className="micro-label text-white/70 block mb-1.5">Initial Notes & Thesis</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Initial Notes & Thesis</label>
                 <textarea
                   rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Thesis match, sector focus, check size criteria..."
-                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
                 />
               </div>
 
-              <div className="pt-4 border-t border-white/20 flex items-center justify-end gap-3">
+              <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-end gap-3">
                 <button
                   type="button"
                   onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2 border border-white/30 text-white text-xs hover:border-white"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-[#A1A1AA] hover:bg-[#D4D4D8] text-black font-bold text-xs uppercase"
+                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all"
                 >
                   Enroll Investor
                 </button>
@@ -939,25 +944,31 @@ export const InvestorView: React.FC = () => {
 
       {/* LOG INTERACTION MODAL */}
       {isLogInteractionOpen && selectedInvestor && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <h3 className="text-sm font-bold text-white uppercase">
-                Log Meeting / Note: {selectedInvestor.name}
-              </h3>
-              <button onClick={() => setIsLogInteractionOpen(false)} className="text-white/50 hover:text-white">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-xs shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+              <div>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Log Meeting</span>
+                <h3 className="font-serif text-xl font-normal text-black mt-0.5">
+                  {selectedInvestor.name}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsLogInteractionOpen(false)}
+                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+              >
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleLogInteractionSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="micro-label text-white/70 block mb-1">Interaction Type</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Interaction Type</label>
                   <select
                     value={interactionType}
                     onChange={(e) => setInteractionType(e.target.value as any)}
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                   >
                     <option value="Video Call">Video Call</option>
                     <option value="Email">Email</option>
@@ -968,40 +979,40 @@ export const InvestorView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="micro-label text-white/70 block mb-1">Date</label>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Date</label>
                   <input
                     type="date"
                     required
                     value={interactionDate}
                     onChange={(e) => setInteractionDate(e.target.value)}
-                    className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="micro-label text-white/70 block mb-1">Discussion Summary & Action Points</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Discussion Summary & Action Points</label>
                 <textarea
                   rows={4}
                   required
                   value={interactionSummary}
                   onChange={(e) => setInteractionSummary(e.target.value)}
                   placeholder="Key questions asked, valuation response, next steps promised..."
-                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none leading-relaxed"
                 />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E5E7]">
                 <button
                   type="button"
                   onClick={() => setIsLogInteractionOpen(false)}
-                  className="px-3 py-1.5 border border-white/30 text-white"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-[#A1A1AA] text-black font-bold uppercase"
+                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all"
                 >
                   Save to Timeline
                 </button>
@@ -1013,32 +1024,38 @@ export const InvestorView: React.FC = () => {
 
       {/* UPLOAD DOCUMENT MODAL */}
       {isUploadDocOpen && selectedInvestor && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <h3 className="text-sm font-bold text-white uppercase">
-                Attach Document: {selectedInvestor.firm}
-              </h3>
-              <button onClick={() => setIsUploadDocOpen(false)} className="text-white/50 hover:text-white">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-xs shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+              <div>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Attach Document</span>
+                <h3 className="font-serif text-xl font-normal text-black mt-0.5">
+                  {selectedInvestor.firm}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsUploadDocOpen(false)}
+                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+              >
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleDocUploadSubmit} className="space-y-4">
               <div>
-                <label className="micro-label text-white/70 block mb-1">Document Title / Description</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Document Title / Description</label>
                 <input
                   type="text"
                   required
                   value={docName}
                   onChange={(e) => setDocName(e.target.value)}
                   placeholder="e.g. UVL_Term_Sheet_Apex_Draft.pdf"
-                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
                 />
               </div>
 
               <div>
-                <label className="micro-label text-white/70 block mb-1">File Attachment (PDF, DOCX, Deck)</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">File Attachment (PDF, DOCX, Deck)</label>
                 <input
                   ref={docFileInputRef}
                   type="file"
@@ -1053,35 +1070,35 @@ export const InvestorView: React.FC = () => {
                 />
                 <div
                   onClick={() => docFileInputRef.current?.click()}
-                  className="p-4 border border-dashed border-white/30 hover:border-white bg-white/5 text-center cursor-pointer"
+                  className="p-5 border border-dashed border-[#E5E5E7] hover:border-black rounded-2xl bg-[#F5F5F7] hover:bg-white text-center cursor-pointer transition-all"
                 >
                   {docFile ? (
-                    <div className="flex items-center justify-center gap-2 text-white">
-                      <CheckCircle2 size={15} className="text-emerald-400" />
-                      <span className="font-mono truncate">{docFile.name}</span>
+                    <div className="flex items-center justify-center gap-2 text-black">
+                      <CheckCircle2 size={16} className="text-emerald-600" />
+                      <span className="font-medium truncate">{docFile.name}</span>
                     </div>
                   ) : (
-                    <div className="space-y-1">
-                      <UploadCloud size={20} className="mx-auto text-white/40" />
-                      <span className="text-xs text-white block">Click to select pitch deck or NDA</span>
-                      <span className="text-[10px] text-white/40 block">Stored in Supabase and Central File Repo</span>
+                    <div className="space-y-1.5">
+                      <UploadCloud size={22} className="mx-auto text-[#6E6E73]" />
+                      <span className="text-xs text-black font-medium block">Click to select pitch deck or NDA</span>
+                      <span className="text-[11px] text-[#6E6E73] block">Stored in Supabase central repository</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E5E7]">
                 <button
                   type="button"
                   onClick={() => setIsUploadDocOpen(false)}
-                  className="px-3 py-1.5 border border-white/30 text-white"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isUploadingDoc}
-                  className="px-4 py-1.5 bg-[#A1A1AA] text-black font-bold uppercase"
+                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all"
                 >
                   {isUploadingDoc ? 'Uploading...' : 'Save Document'}
                 </button>
@@ -1093,56 +1110,61 @@ export const InvestorView: React.FC = () => {
 
       {/* SCHEDULE FOLLOW-UP TASK MODAL */}
       {isScheduleFollowUpOpen && selectedInvestor && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-          <div className="bg-black border border-white/40 max-w-md w-full p-6 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-white/20">
-              <h3 className="text-sm font-bold text-white uppercase flex items-center gap-1.5">
-                <CheckSquare size={16} className="text-[#A1A1AA]" />
-                <span>Auto-Generate Follow-Up Task</span>
-              </h3>
-              <button onClick={() => setIsScheduleFollowUpOpen(false)} className="text-white/50 hover:text-white">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 text-xs shadow-2xl">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7]">
+              <div>
+                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">Autonomous Task</span>
+                <h3 className="font-serif text-xl font-normal text-black mt-0.5">
+                  Schedule Follow-Up Task
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsScheduleFollowUpOpen(false)}
+                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+              >
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleScheduleFollowUpSubmit} className="space-y-4">
               <div>
-                <label className="micro-label text-white/70 block mb-1">Target Follow-Up Date</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Target Follow-Up Date</label>
                 <input
                   type="date"
                   required
                   value={followUpDate}
                   onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA] meta-number"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white font-mono transition-all"
                 />
               </div>
 
               <div>
-                <label className="micro-label text-white/70 block mb-1">Action Task Details</label>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Action Task Details</label>
                 <textarea
                   rows={3}
                   value={followUpNote}
                   onChange={(e) => setFollowUpNote(e.target.value)}
                   placeholder={`Send revised pro-forma cap table to ${selectedInvestor.name} (${selectedInvestor.firm})`}
-                  className="w-full bg-black border border-white/30 text-white p-2 focus:outline-none focus:border-[#A1A1AA]"
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none leading-relaxed"
                 />
               </div>
 
-              <div className="p-3 border border-white/10 bg-white/5 text-[11px] text-white/60">
+              <div className="p-3.5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7] text-xs text-[#6E6E73] leading-relaxed">
                 ⚡ This automatically creates a high-priority task in the **Tasks Kanban** assigned to the relationship owner.
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-[#E5E5E7]">
                 <button
                   type="button"
                   onClick={() => setIsScheduleFollowUpOpen(false)}
-                  className="px-3 py-1.5 border border-white/30 text-white"
+                  className="px-4 py-2 rounded-full border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black text-xs font-medium transition-all"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-white text-black font-bold uppercase"
+                  className="px-5 py-2 rounded-full bg-black hover:opacity-90 text-white font-medium text-xs shadow-xs transition-all"
                 >
                   Schedule & Create Task
                 </button>
