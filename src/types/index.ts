@@ -179,8 +179,10 @@ export interface WorkspaceConfig {
 }
 
 // ==========================================
-// EXPENSE TRACKER TYPES
+// MONEY TRACKER & TREASURY TYPES (EARNINGS & EXPENSES)
 // ==========================================
+export type MoneyTransactionType = 'expense' | 'earning';
+
 export type ExpenseCategory =
   | 'Software'
   | 'Travel'
@@ -191,6 +193,19 @@ export type ExpenseCategory =
   | 'Office'
   | 'Misc';
 
+export type EarningCategory =
+  | 'Client Retainer'
+  | 'Pilot Project'
+  | 'SaaS Subscription'
+  | 'Government Grant'
+  | 'Consulting'
+  | 'Angel / SAFE'
+  | 'Product Sales'
+  | 'Licensing'
+  | 'Misc Inflow';
+
+export type MoneyCategory = ExpenseCategory | EarningCategory;
+
 export type ExpenseStatus = 'pending' | 'approved' | 'reimbursed' | 'rejected';
 
 export type PaymentMethod =
@@ -199,19 +214,21 @@ export type PaymentMethod =
   | 'UPI'
   | 'Personal Card'
   | 'Cash'
-  | 'Reimbursement';
+  | 'Reimbursement'
+  | 'Cheque / Draft';
 
 export interface Expense {
   id: string;
+  type?: MoneyTransactionType; // 'expense' (default) | 'earning'
   amount: number;
   currency: string;
-  category: ExpenseCategory;
+  category: string; // ExpenseCategory | EarningCategory
   date: string; // YYYY-MM-DD
   paymentMethod: PaymentMethod;
-  vendor: string;
+  vendor: string; // Payee for expense, Client / Payer / Source for earning
   description: string;
   submittedBy: string; // user ID
-  receiptUrl?: string;
+  receiptUrl?: string; // invoice or receipt
   receiptName?: string;
   status: ExpenseStatus;
   approverComment?: string;
@@ -219,6 +236,8 @@ export interface Expense {
   approvedAt?: string;
   createdAt: string;
 }
+
+export type MoneyTransaction = Expense;
 
 // ==========================================
 // INVESTOR TRACKING TYPES

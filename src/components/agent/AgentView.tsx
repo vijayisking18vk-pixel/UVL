@@ -144,31 +144,31 @@ export const AgentView: React.FC = () => {
     }
   }, [agentChatMessages, activeSubTab]);
 
-  // Quick Action / Prompt Suggestions
+  // Quick Action / Prompt Suggestions (Direct Execution into Workspace)
   const quickPrompts = [
     {
-      title: 'Active Sprint & Velocity',
-      prompt: 'Summarize all active sprint tasks, current velocity, assignees, and identify any critical blockers.'
+      title: 'Record Company Earning',
+      prompt: 'Record company earning of ₹2,50,000 from Client Retainer for Autonomous Drone Navigation Pilot.'
+    },
+    {
+      title: 'Record Operational Expense',
+      prompt: 'Record an expense of ₹38,500 for Cloud GPU Compute Clusters under Software category.'
     },
     {
       title: 'Create Urgent Task',
       prompt: 'Create a high-priority task for Vijayrajkumar titled "Audit Operator Security PINs & Biometric Enclaves" due tomorrow.'
     },
     {
-      title: 'Financial Burn in ₹ INR',
-      prompt: 'Analyze current month expense burn against our ₹5,00,000 budget and highlight top category allocations.'
+      title: 'Schedule Investor Sync',
+      prompt: 'Schedule an investor pitch sync with Peak XV Partners for tomorrow at 4:00 PM.'
     },
     {
-      title: 'Investor Pipeline Review',
-      prompt: 'Review all institutional venture leads in our pipeline, stage status, and recommend follow-up actions.'
-    },
-    {
-      title: 'Schedule Team Sync',
-      prompt: 'Schedule an engineering architecture sync event for tomorrow at 3:00 PM.'
-    },
-    {
-      title: 'Draft Executive Memo',
+      title: 'Draft Strategic Memo',
       prompt: 'Draft an executive team briefing note in our wiki regarding our Supabase multimedia architecture.'
+    },
+    {
+      title: 'Workspace Health & Runway',
+      prompt: 'Analyze our net cash position, company earnings vs burn in ₹ INR, and team velocity.'
     }
   ];
 
@@ -178,12 +178,12 @@ export const AgentView: React.FC = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      alert('Speech Recognition is not supported by your browser. Please type directly into the prompt box.');
+      alert('Voice dictation is not supported by your current browser.');
       return;
     }
 
     if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
+      recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
@@ -195,14 +195,13 @@ export const AgentView: React.FC = () => {
       recognition.lang = 'en-US';
 
       recognition.onstart = () => setIsListening(true);
+      recognition.onend = () => setIsListening(false);
+      recognition.onerror = () => setIsListening(false);
+
       recognition.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        setInputText(prev => (prev ? `${prev} ${transcript}` : transcript));
-        setIsListening(false);
-        if (textareaRef.current) textareaRef.current.focus();
+        setInputText((prev) => (prev ? `${prev} ${transcript}` : transcript));
       };
-      recognition.onerror = () => setIsListening(false);
-      recognition.onend = () => setIsListening(false);
 
       recognitionRef.current = recognition;
       recognition.start();
@@ -212,7 +211,7 @@ export const AgentView: React.FC = () => {
     }
   };
 
-  // Send Message (Direct ChatGPT Style, Zero Approval Required)
+  // Send Message (Direct Unfoundy Style, Zero Approval Required)
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputText).trim();
     if (!text || isSending) return;
@@ -223,7 +222,7 @@ export const AgentView: React.FC = () => {
     try {
       await sendAgentChatMessage(text);
     } catch (err) {
-      console.error('Failed to send message to Sentinel:', err);
+      console.error('Failed to send message to Unfoundy:', err);
     } finally {
       setIsSending(false);
     }
@@ -292,15 +291,15 @@ export const AgentView: React.FC = () => {
             <div className="text-[11px] font-mono tracking-widest uppercase text-white/50 mb-3 flex items-center gap-2">
               <span>autonomous intelligence</span>
               <span>/</span>
-              <span className="text-[#A1A1AA]">sentinel agent</span>
+              <span className="text-emerald-400">unfoundy core</span>
               <span>/</span>
-              <span>direct execution mode</span>
+              <span>direct execution engine</span>
             </div>
             <h1 className="headline-section text-white font-bold tracking-tight">
-              Autonomous AI Sentinel.
+              Unfoundy AI engine.
             </h1>
             <p className="text-white/60 text-sm mt-2 max-w-2xl">
-              Direct conversational interface like ChatGPT. Query workspace intelligence or instruct direct actions across tasks, calendar, notes, and chat — executed autonomously with zero admin approval required.
+              Autonomous execution engine for Unfounded Venture Lab. Directives across tasks, calendar, treasury, and notes are executed immediately with zero approval required.
             </p>
           </div>
 
@@ -308,14 +307,14 @@ export const AgentView: React.FC = () => {
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="px-3 py-2 border border-white/20 bg-black flex items-center gap-2 text-xs">
               <span className="w-2 h-2 bg-emerald-400 animate-pulse" />
-              <span className="font-bold text-white">{agentConfig.name}</span>
-              <span className="meta-number text-[#A1A1AA]">/{agentConfig.callsign}</span>
+              <span className="font-bold text-white">Unfoundy</span>
+              <span className="meta-number text-[#A1A1AA]">/UNFOUNDY-AI</span>
             </div>
             <div className="px-3 py-2 border border-emerald-500/40 bg-emerald-950/20 text-xs font-mono text-emerald-400 font-bold uppercase">
-              Zero-Approval Mode
+              Direct Execution Mode
             </div>
             <div className="px-3 py-2 border border-white/20 bg-black text-xs font-mono text-white/70">
-              {agentConfig.activeModel}
+              gemini-2.5-flash
             </div>
           </div>
         </div>
@@ -331,7 +330,7 @@ export const AgentView: React.FC = () => {
             }`}
           >
             <Bot size={14} />
-            <span>Chat (ChatGPT)</span>
+            <span>Unfoundy Chat</span>
           </button>
 
           <button
@@ -373,7 +372,7 @@ export const AgentView: React.FC = () => {
       </section>
 
       {/* ======================================================== */}
-      {/* 1. CHAT TAB: DIRECT CHATGPT-STYLE CONVERSATIONAL UI      */}
+      {/* 1. CHAT TAB: DIRECT UNFOUNDY CONVERSATIONAL UI           */}
       {/* ======================================================== */}
       {activeSubTab === 'chat' && (
         <section className="space-y-6">
@@ -419,7 +418,7 @@ export const AgentView: React.FC = () => {
                   key={msg.id}
                   className={`flex gap-3.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  {/* Sentinel AI Avatar */}
+                  {/* Unfoundy AI Avatar */}
                   {msg.sender === 'assistant' && (
                     <div className="w-8 h-8 rounded-none bg-white text-black flex items-center justify-center font-bold shrink-0 border border-white shadow-sm mt-0.5">
                       <Bot size={16} />
@@ -437,7 +436,7 @@ export const AgentView: React.FC = () => {
                     {/* Header: Name + Timestamp */}
                     <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-2 text-[10px] font-mono">
                       <span className="text-white/60 font-bold uppercase tracking-wider">
-                        {msg.sender === 'user' ? currentUser.name : 'UVL Sentinel AI'}
+                        {msg.sender === 'user' ? currentUser.name : 'Unfoundy / UNFOUNDY-AI'}
                       </span>
                       <div className="flex items-center gap-2">
                         <span className="text-white/40">{msg.timestamp}</span>
@@ -518,7 +517,7 @@ export const AgentView: React.FC = () => {
                   </div>
                   <div className="p-4 border border-white/20 bg-black text-white text-xs font-mono flex items-center gap-3">
                     <span className="w-2 h-2 bg-white animate-ping" />
-                    <span>Sentinel is processing & executing actions autonomously...</span>
+                    <span>Unfoundy is processing & executing actions autonomously...</span>
                   </div>
                 </div>
               )}
@@ -526,7 +525,7 @@ export const AgentView: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Sticky Prompt Input Bar (ChatGPT Style) */}
+            {/* Sticky Prompt Input Bar (Unfoundy Execution Interface) */}
             <div className="p-4 border-t border-white/20 bg-black space-y-2.5">
               <div className="relative flex items-end gap-2 bg-black border border-white/30 focus-within:border-white transition-colors p-2">
                 <textarea
@@ -535,7 +534,7 @@ export const AgentView: React.FC = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Message Sentinel... (e.g. 'Create high-priority task for motor telemetry' or 'What are our key deliverables?')"
+                  placeholder="Message Unfoundy... (e.g. 'Create task for motor telemetry' or 'Record earning of ₹2,50,000')"
                   className="w-full bg-transparent text-white text-sm focus:outline-none resize-none placeholder-white/40 leading-relaxed max-h-36 font-sans px-1"
                 />
 
@@ -572,7 +571,7 @@ export const AgentView: React.FC = () => {
               {/* Bottom Metadata & Controls */}
               <div className="flex items-center justify-between text-[10px] font-mono text-white/40 px-1">
                 <div className="flex items-center gap-3">
-                  <span>Direct ChatGPT Execution Mode</span>
+                  <span>Direct Unfoundy Execution Mode</span>
                   <span>•</span>
                   <span>Zero Admin Approval Required</span>
                   <span>•</span>
@@ -749,7 +748,7 @@ export const AgentView: React.FC = () => {
                   Autonomous Activity Ledger
                 </h3>
                 <p className="text-white/60 text-xs mt-0.5">
-                  Transparent, tamper-evident log of all direct actions, tasks, and calendar events executed by Sentinel.
+                  Transparent, tamper-evident log of all direct actions, tasks, and calendar events executed by Unfoundy.
                 </p>
               </div>
               <span className="meta-number text-xs text-[#A1A1AA]">
@@ -804,7 +803,7 @@ export const AgentView: React.FC = () => {
           <div className="border border-white/20 bg-black p-6 space-y-6">
             <div className="pb-4 border-b border-white/10">
               <h3 className="text-sm font-bold text-white uppercase tracking-tight">
-                Sentinel AI Configuration
+                Unfoundy AI Configuration
               </h3>
               <p className="text-white/60 text-xs mt-0.5">
                 Configure generative model, autonomy authority, and announcements enclaves.
@@ -821,8 +820,8 @@ export const AgentView: React.FC = () => {
                   onChange={(e) => updateAgentConfig({ activeModel: e.target.value })}
                   className="w-full bg-black border border-white/30 text-white p-2.5 focus:outline-none focus:border-white font-mono"
                 >
-                  <option value="gemini-3.6-flash">gemini-3.6-flash (Fast, Low Latency, Recommended)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (High Reasoning, Deep Analysis)</option>
+                  <option value="gemini-2.5-flash">gemini-2.5-flash (Fast, Low Latency, Recommended)</option>
+                  <option value="gemini-2.5-pro">gemini-2.5-pro (High Reasoning, Deep Analysis)</option>
                 </select>
               </div>
 

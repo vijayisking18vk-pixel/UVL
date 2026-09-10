@@ -55,9 +55,9 @@ export const Header: React.FC = () => {
     { id: 'notes', label: 'Notes & Wiki', icon: FileText },
     { id: 'files', label: 'Files', icon: FolderArchive },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'expenses', label: 'Expenses', icon: IndianRupee },
+    { id: 'expenses', label: 'Money Tracker', icon: IndianRupee },
     { id: 'investors', label: 'Investors', icon: Briefcase },
-    { id: 'agent', label: 'AI Agent', icon: Bot },
+    { id: 'agent', label: 'Unfoundy AI', icon: Bot },
     { id: 'pulse', label: 'Pulse & Check-in', icon: Activity },
     { id: 'personalization', label: 'Patch Lab', icon: Sparkles },
   ];
@@ -65,9 +65,9 @@ export const Header: React.FC = () => {
   const mobilePrimaryItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
-    { id: 'expenses', label: 'Spend', icon: IndianRupee },
+    { id: 'expenses', label: 'Money', icon: IndianRupee },
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'agent', label: 'Agent', icon: Bot },
+    { id: 'agent', label: 'Unfoundy', icon: Bot },
   ];
 
   const isPrimaryActive = mobilePrimaryItems.some(i => i.id === activeTab);

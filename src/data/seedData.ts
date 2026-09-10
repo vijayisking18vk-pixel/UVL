@@ -144,23 +144,23 @@ export const initialAgentReports: import('../types').AgentReport[] = [
     title: 'Executive Weekly Synthesis — System Baseline',
     period: 'Current Sprint Cycle',
     generatedAt: '2026-09-10 08:30:00',
-    summary: 'Command center initialized with zero expense burn and clean investor deal pipeline ready for live operations.',
+    summary: 'Command center initialized with zero expense burn, verified treasury, and clean investor deal pipeline ready for live operations.',
     content: `# Executive Weekly Synthesis — System Baseline
 **Period**: Current Sprint Cycle  
-**Author**: UVL Sentinel AI Agent (Gemini 3.6 Flash Engine)
+**Author**: Unfoundy AI Engine (Autonomous UVL Core)
 
 ### Key Milestones & Accomplishments
 1. **Core Development**: Enforced uniform Grotesk typography system, mobile responsive navigation shell, and live Supabase multimedia storage enclaves.
 2. **Infrastructure**: Supabase database connected and operational.
-3. **Financial Tracking**: Expense tracker and Investor CRM active in Indian Rupees (₹ INR).
+3. **Financial Tracking**: Money tracker (Earnings & Operational Burn) and Investor CRM active in Indian Rupees (₹ INR).
 
 ### Active Status
 - Operational spend: **₹0.00 INR**.
-- Active pipeline: **₹0.00 INR**. Ready to log new institutional leads and expense vouchers.`,
+- Active pipeline: **₹0.00 INR**. Ready to log new institutional leads and treasury vouchers.`,
     highlights: [
       'Supabase multimedia storage and vault enclaves verified live',
       'Mobile touch-optimized navigation shell deployed',
-      'Financial systems configured in Indian Rupees (₹ INR)'
+      'Money tracker configured in Indian Rupees (₹ INR) for earnings and burn'
     ],
     risks: [],
     metrics: {
@@ -173,27 +173,30 @@ export const initialAgentReports: import('../types').AgentReport[] = [
 ];
 
 export const initialAgentConfig: import('../types').AgentConfig = {
-  name: 'UVL Sentinel',
-  callsign: 'SENTINEL-AI',
+  name: 'Unfoundy',
+  callsign: 'UNFOUNDY-AI',
   autonomousMode: true,
   requireApprovalForSensitive: false,
   announcementsChannelId: 'ch-agent-reports',
-  activeModel: 'gemini-3.6-flash'
+  activeModel: 'gemini-2.5-flash'
 };
 
 export const initialAgentChatMessages: import('../types').AgentChatMessage[] = [
   {
     id: 'msg-agent-init',
     sender: 'assistant',
-    text: `Hello, I'm **UVL Sentinel**, your autonomous executive AI assistant.
+    text: `Hello, I'm **Unfoundy**, the autonomous AI execution engine for Unfounded Venture Lab.
 
-I operate with **full direct authority** across Unfounded Venture Lab enclaves — **zero human approval required**.
+I operate with **full direct authority** across all UVL enclaves — **zero admin approval required**.
 
-You can talk to me directly just like **ChatGPT**:
-- **Ask anything**: Workspace telemetry, team workloads, financial burn in ₹ INR, investor updates, or engineering architecture.
-- **Instruct actions**: Say *"Create a task..."*, *"Schedule a meeting..."*, *"Draft a wiki note..."*, or *"Send an announcement..."* and I will execute them immediately into the workspace.
+Give me any directive and I will execute it directly:
+- **Tasks**: *"Create a task to review motor telemetry with urgent priority"*
+- **Calendar**: *"Schedule investor sync tomorrow at 3 PM"*
+- **Treasury**: *"Record expense of ₹15,000 for AWS cloud"* or *"Log earning of ₹5,00,000 from client Alpha Corp"*
+- **Notes & Wiki**: *"Write a note on Delaware compliance"*
+- **Intelligence**: *"What is our treasury balance and sprint status?"*
 
-How can I assist today?`,
+How can I assist you right now?`,
     timestamp: 'Online'
   }
 ];
