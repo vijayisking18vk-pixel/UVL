@@ -50,6 +50,7 @@ export const ChatView: React.FC = () => {
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'chat' | 'channels'>('chat');
 
   // New Channel Form
   const [newChannelName, setNewChannelName] = useState('');
@@ -324,7 +325,18 @@ export const ChatView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left Column: Channels & Direct Messages Directory */}
-        <div className="lg:col-span-3 bg-[#000000] border border-white/20 p-4 space-y-6">
+        <div className={`lg:col-span-3 bg-[#000000] border border-white/20 p-4 space-y-6 ${mobileView === 'channels' ? 'block' : 'hidden lg:block'}`}>
+          {/* Mobile Back Button */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/20 lg:hidden">
+            <span className="text-xs font-bold text-white uppercase">Channels & Comms</span>
+            <button
+              onClick={() => setMobileView('chat')}
+              className="text-xs text-[#A1A1AA] hover:text-white flex items-center gap-1"
+            >
+              <span>Back to Chat →</span>
+            </button>
+          </div>
+
           {/* Public / Private Topic Channels */}
           <div>
             <div className="flex items-center justify-between pb-2 border-b border-white/20 mb-3 micro-label text-white/60">
@@ -343,6 +355,7 @@ export const ChatView: React.FC = () => {
                     onClick={() => {
                       setActiveChannelId(c.id);
                       setActiveThreadMessageId(null);
+                      setMobileView('chat');
                     }}
                     className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors text-left cursor-pointer border ${
                       isActive
@@ -373,6 +386,7 @@ export const ChatView: React.FC = () => {
                     onClick={() => {
                       setActiveChannelId(dm.id);
                       setActiveThreadMessageId(null);
+                      setMobileView('chat');
                     }}
                     className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs transition-colors text-left cursor-pointer border ${
                       isActive
@@ -408,10 +422,18 @@ export const ChatView: React.FC = () => {
         </div>
 
         {/* Center / Right Column: Active Room Messages */}
-        <div className={`bg-[#000000] border border-white/20 p-6 flex flex-col justify-between h-[700px] ${activeThreadMessageId ? 'lg:col-span-5' : 'lg:col-span-9'}`}>
+        <div className={`bg-[#000000] border border-white/20 p-4 sm:p-6 flex flex-col justify-between h-[650px] sm:h-[700px] ${mobileView === 'chat' ? 'flex' : 'hidden lg:flex'} ${activeThreadMessageId ? 'lg:col-span-5' : 'lg:col-span-9'}`}>
           {/* Room Header */}
-          <div className="pb-3 border-b border-white/20 flex items-center justify-between">
+          <div className="pb-3 border-b border-white/20 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMobileView('channels')}
+                className="lg:hidden p-1.5 border border-white/20 hover:border-white text-white mr-1 flex items-center gap-1 text-[11px]"
+                title="View All Channels"
+              >
+                <Hash size={13} className="text-[#A1A1AA]" />
+                <span className="hidden sm:inline">Rooms</span>
+              </button>
               {activeChannel.isPrivate ? <Lock size={16} className="text-[#A1A1AA]" /> : <Hash size={18} className="text-white/40" />}
               <div>
                 <h3 className="text-sm font-bold text-white">

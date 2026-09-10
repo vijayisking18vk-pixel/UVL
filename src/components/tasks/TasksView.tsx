@@ -28,6 +28,7 @@ export const TasksView: React.FC = () => {
   } = useWorkspace();
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [mobileColumn, setMobileColumn] = useState<TaskStatus | 'all'>('all');
   const [scopeFilter, setScopeFilter] = useState<'all' | 'my'>('all');
   const [projectFilter, setProjectFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
@@ -227,14 +228,48 @@ export const TasksView: React.FC = () => {
 
       {/* KANBAN VIEW */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
-          {columns.map(col => {
-            const colTasks = filteredTasks.filter(t => t.status === col.id);
-            return (
-              <div
-                key={col.id}
-                className="bg-[#000000] border border-white/20 p-4 min-h-[550px] flex flex-col justify-between"
-              >
+        <>
+          {/* Mobile Column Quick Switcher */}
+          <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 border-b border-white/20 mb-4 no-scrollbar">
+            <button
+              onClick={() => setMobileColumn('all')}
+              className={`px-3 py-1 text-xs border uppercase tracking-wider transition-colors shrink-0 ${
+                mobileColumn === 'all'
+                  ? 'border-[#A1A1AA] bg-white text-black font-bold'
+                  : 'border-white/20 text-white/60 hover:text-white'
+              }`}
+            >
+              All ({filteredTasks.length})
+            </button>
+            {columns.map(col => {
+              const count = filteredTasks.filter(t => t.status === col.id).length;
+              const isColActive = mobileColumn === col.id;
+              return (
+                <button
+                  key={col.id}
+                  onClick={() => setMobileColumn(col.id)}
+                  className={`px-3 py-1 text-xs border uppercase tracking-wider transition-colors shrink-0 ${
+                    isColActive
+                      ? 'border-[#A1A1AA] bg-white text-black font-bold'
+                      : 'border-white/20 text-white/60 hover:text-white'
+                  }`}
+                >
+                  {col.label} ({count})
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
+            {columns.map(col => {
+              const colTasks = filteredTasks.filter(t => t.status === col.id);
+              return (
+                <div
+                  key={col.id}
+                  className={`bg-[#000000] border border-white/20 p-4 min-h-[420px] md:min-h-[550px] flex flex-col justify-between ${
+                    mobileColumn !== 'all' && mobileColumn !== col.id ? 'hidden md:flex' : 'flex'
+                  }`}
+                >
                 <div>
                   {/* Column Header */}
                   <div className="pb-3 mb-4 border-b border-white/20 flex items-center justify-between">
@@ -380,7 +415,8 @@ export const TasksView: React.FC = () => {
             );
           })}
         </div>
-      )}
+      </>
+    )}
 
       {/* LIST CATALOG VIEW */}
       {viewMode === 'list' && (

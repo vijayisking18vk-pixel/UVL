@@ -102,7 +102,7 @@ const AppContent: React.FC = () => {
       </div>
 
       {/* Main Workspace Viewport */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto px-4 sm:px-6 py-8 editorial-reveal">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto px-3 sm:px-6 py-6 sm:py-8 pb-24 md:pb-8 editorial-reveal">
         {renderActiveModule()}
       </main>
 

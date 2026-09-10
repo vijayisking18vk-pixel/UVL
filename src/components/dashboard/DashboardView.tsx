@@ -83,7 +83,7 @@ export const DashboardView: React.FC = () => {
 
             <h1 className="headline-display font-extrabold tracking-tight">
               Unfounded <br />
-              <span className="text-white/40">Venture Lab.</span>
+              <span className="text-[#A1A1AA]">Venture Lab.</span>
             </h1>
 
             <div className="flex items-center gap-4 pt-2">

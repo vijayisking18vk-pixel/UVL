@@ -7,7 +7,7 @@
    Photography: Original uploaded avatar colors preserved intact
    ============================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400;500;700&family=VT323&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @import "tailwindcss";
 
@@ -27,22 +27,35 @@
   --font-mono-meta: 'JetBrains Mono', monospace;
 }
 
-/* ZERO BORDER-RADIUS GLOBALLY: Minimal, refined, sharp architectural lines */
+/* ZERO BORDER-RADIUS GLOBALLY & UNIFIED MODERN GROTESK FONT STYLE ACROSS THE ENTIRE PAGE */
 *, *::before, *::after {
   border-radius: 0 !important;
   box-shadow: none !important;
+  font-family: var(--font-editorial) !important;
 }
 
-/* Base Body */
-html,
+/* Allow JetBrains Mono exclusively on code tags and pre elements */
+code, pre, .font-code {
+  font-family: var(--font-mono-meta) !important;
+}
+
+/* Base Body & Mobile Touch Ergonomics */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: var(--color-black);
   color: var(--color-white);
-  font-family: var(--font-editorial);
+  font-family: var(--font-editorial) !important;
   font-weight: 400;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 /* AVATAR PHOTOS & IMAGES: Original uploaded color preserved completely */
@@ -91,9 +104,11 @@ p, .body-text {
 }
 
 .meta-number {
-  font-family: var(--font-mono-meta);
+  font-family: var(--font-editorial) !important;
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Interactive & Secondary Accent: Silver (#A1A1AA) */
@@ -202,11 +217,12 @@ p, .body-text {
   background: var(--color-silver);
 }
 
-/* Brand Identity Patch Badge Emblem Protection */
+/* Brand Identity Modern Grotesk Typography */
 .brand-logo-intact,
 .brand-logo-intact *,
 .font-brand-logo {
-  font-family: 'VT323', monospace !important;
+  font-family: var(--font-editorial) !important;
+  letter-spacing: -0.035em;
 }
 
 /* Remap legacy styling classes */
