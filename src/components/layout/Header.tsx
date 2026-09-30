@@ -222,7 +222,7 @@ export const Header: React.FC = () => {
                     {currentUser.name}
                   </span>
                   <span className="meta-number text-[9px] text-[#6E6E73]">
-                    /{currentUser.callsign}
+                    {currentUser.callsign} · {currentUser.role}
                   </span>
                 </div>
                 <ChevronDown size={12} className="text-[#6E6E73] ml-0.5" />
@@ -242,6 +242,7 @@ export const Header: React.FC = () => {
                       <PatchAvatar user={currentUser} size="sm" showStatus />
                       <div className="truncate">
                         <span className="font-semibold text-xs text-black block truncate">{currentUser.name}</span>
+                        <span className="text-[11px] text-black font-medium block truncate">{currentUser.role}</span>
                         <span className="text-[10px] text-[#6E6E73] font-mono">{currentUser.handle} · /{currentUser.callsign}</span>
                       </div>
                     </div>

@@ -99,10 +99,13 @@ export const DashboardView: React.FC = () => {
             <div className="flex items-center gap-4 pt-2">
               <PatchAvatar user={currentUser} size="lg" showStatus />
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-base font-semibold text-black">{currentUser.name}</span>
-                  <span className="meta-number text-[11px] px-2 py-0.5 rounded-full bg-[#F5F5F7] border border-[#E5E5E7] text-[#6E6E73]">
-                    /{currentUser.callsign}
+                  <span className="meta-number text-[11px] px-2 py-0.5 rounded-full bg-black text-white font-mono font-semibold">
+                    {currentUser.callsign}
+                  </span>
+                  <span className="text-xs font-medium text-[#6E6E73]">
+                    • {currentUser.role}
                   </span>
                 </div>
                 {currentUser.statusMessage ? (

@@ -541,8 +541,11 @@ export const CheckinsView: React.FC = () => {
                         <h4 className="font-semibold text-sm text-black leading-tight">
                           {u.name}
                         </h4>
-                        <span className="text-[11px] text-[#6E6E73]">
-                          {u.callsign}
+                        <span className="text-[11px] text-black font-medium block">
+                          {u.role}
+                        </span>
+                        <span className="text-[10px] text-[#6E6E73] font-mono">
+                          /{u.callsign}
                         </span>
                       </div>
                     </div>

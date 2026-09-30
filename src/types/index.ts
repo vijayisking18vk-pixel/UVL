@@ -1,4 +1,12 @@
-export type Role = 'admin' | 'member';
+export type Role =
+  | 'Chief Operating Officer'
+  | 'Chief Marketing Officer'
+  | 'Chief Product Officer'
+  | 'Chief Executive Officer'
+  | 'Chief Financial Officer'
+  | 'admin'
+  | 'member'
+  | string;
 
 export type UserStatus = 'active' | 'focus' | 'reviewing' | 'away' | 'leave';
 

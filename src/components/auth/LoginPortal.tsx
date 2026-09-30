@@ -152,12 +152,15 @@ export const LoginPortal: React.FC = () => {
                             <h3 className="text-sm sm:text-base font-semibold text-black">
                               {user.name}
                             </h3>
-                            <span className="text-[11px] px-2 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-[#6E6E73] font-mono">
-                              /{user.callsign}
+                            <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border border-black/10 bg-black text-white font-mono">
+                              {user.callsign}
                             </span>
                           </div>
-                          <span className="text-xs text-[#6E6E73] block mt-0.5">
-                            {user.handle} · PIN Required
+                          <span className="text-xs font-medium text-black block mt-0.5">
+                            {user.role}
+                          </span>
+                          <span className="text-[11px] text-[#6E6E73] block font-mono">
+                            {user.handle}
                           </span>
                         </div>
                       </div>
@@ -181,7 +184,7 @@ export const LoginPortal: React.FC = () => {
                   Direct Credential Sign In.
                 </h3>
                 <p className="text-xs text-[#6E6E73] mt-1">
-                  Type your handle (e.g. <span className="font-mono text-black">@vijayrajkumar</span>) or callsign (<span className="font-mono text-black">VIJAY-01</span>) and security PIN.
+                  Type your handle (e.g. <span className="font-mono text-black">@vijayrajkumar</span>) or callsign (<span className="font-mono text-black">COO</span>) and security PIN.
                 </p>
               </div>
 
@@ -197,7 +200,7 @@ export const LoginPortal: React.FC = () => {
                       clearLoginError();
                       setCustomIdentifier(e.target.value);
                     }}
-                    placeholder="e.g. @vijayrajkumar or VIJAY-01"
+                    placeholder="e.g. @subanesh or CEO"
                     className="w-full bg-[#F5F5F7] border border-[#E5E5E7] focus:border-black rounded-2xl text-black px-4 py-3 pl-10 text-sm focus:outline-none focus:bg-white transition-all shadow-2xs"
                   />
                   <UserIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6E6E73]" />
@@ -217,9 +220,14 @@ export const LoginPortal: React.FC = () => {
                   {loginMode === 'roster' ? (selectedUser?.name || 'Select Member') : (customIdentifier || 'Operator')}
                 </h2>
                 {loginMode === 'roster' && selectedUser && (
-                  <span className="text-xs text-[#6E6E73] font-mono">
-                    {selectedUser.handle} · /{selectedUser.callsign}
-                  </span>
+                  <div className="flex flex-col gap-0.5 mt-1">
+                    <span className="text-xs font-medium text-black">
+                      {selectedUser.role}
+                    </span>
+                    <span className="text-xs text-[#6E6E73] font-mono">
+                      {selectedUser.handle} · /{selectedUser.callsign}
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -253,11 +261,9 @@ export const LoginPortal: React.FC = () => {
                   <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
                     Enter Security PIN
                   </label>
-                  {loginMode === 'roster' && selectedUser?.pin && (
-                    <span className="text-[11px] text-[#6E6E73] font-mono bg-white px-2 py-0.5 rounded-full border border-[#E5E5E7]">
-                      PIN: {selectedUser.pin}
-                    </span>
-                  )}
+                  <span className="text-[11px] text-[#6E6E73] font-mono bg-white px-2.5 py-0.5 rounded-full border border-[#E5E5E7]">
+                    Confidential Entry
+                  </span>
                 </div>
 
                 <div className="relative">
@@ -324,20 +330,20 @@ export const LoginPortal: React.FC = () => {
           </div>
         </div>
 
-        {/* Dedicated Credentials Reference Drawer / Card */}
+        {/* Executive Operator Directory Card */}
         <div className="mt-12 border border-[#E5E5E7] bg-[#F5F5F7] rounded-3xl p-6 sm:p-8 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
             <div className="flex items-center gap-2">
               <ShieldCheck size={16} className="text-black" />
               <h3 className="text-xs font-semibold text-black uppercase tracking-wider">
-                Dedicated Operator Credentials Reference
+                Executive Operator Directory & Roster
               </h3>
             </div>
             <button
               onClick={() => setShowCredentialsReference(!showCredentialsReference)}
               className="text-xs text-[#6E6E73] hover:text-black font-medium cursor-pointer"
             >
-              {showCredentialsReference ? 'Hide Table' : 'Show Table'}
+              {showCredentialsReference ? 'Hide Directory' : 'Show Directory'}
             </button>
           </div>
 
@@ -347,10 +353,10 @@ export const LoginPortal: React.FC = () => {
                 <thead>
                   <tr className="border-b border-[#E5E5E7] text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider">
                     <th className="py-2 pr-4">Operator</th>
-                    <th className="py-2 px-4">Handle</th>
+                    <th className="py-2 px-4">Role & Title</th>
                     <th className="py-2 px-4">Callsign</th>
-                    <th className="py-2 px-4">Email</th>
-                    <th className="py-2 pl-4 text-right">Dedicated PIN</th>
+                    <th className="py-2 px-4">Handle</th>
+                    <th className="py-2 pl-4 text-right">Access Verification</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E5E5E7]">
@@ -367,12 +373,12 @@ export const LoginPortal: React.FC = () => {
                         <PatchAvatar user={u} size="sm" />
                         <span>{u.name}</span>
                       </td>
-                      <td className="py-2.5 px-4 text-[#6E6E73] font-mono">{u.handle}</td>
+                      <td className="py-2.5 px-4 font-medium text-black">{u.role}</td>
                       <td className="py-2.5 px-4 text-[#6E6E73] font-mono">/{u.callsign}</td>
-                      <td className="py-2.5 px-4 text-[#6E6E73]">{u.name.toLowerCase()}@unfounded.ventures</td>
-                      <td className="py-2.5 pl-4 text-right font-mono font-bold text-black">
-                        <span className="bg-white border border-[#E5E5E7] px-2.5 py-1 rounded-full shadow-2xs">
-                          {u.pin || '1001'}
+                      <td className="py-2.5 px-4 text-[#6E6E73] font-mono">{u.handle}</td>
+                      <td className="py-2.5 pl-4 text-right font-medium text-emerald-700">
+                        <span className="bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full text-[11px]">
+                          Authorized
                         </span>
                       </td>
                     </tr>

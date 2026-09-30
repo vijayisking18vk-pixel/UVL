@@ -188,10 +188,20 @@ export const DEFAULT_OPERATOR_PINS: Record<string, string> = {
   'u-5': '1005',
   'vijayrajkumar': '1001',
   'vijay': '1001',
+  'coo': '1001',
+  'vijay-01': '1001',
   'saai': '1002',
+  'cmo': '1002',
+  'saai-02': '1002',
   'harish': '1003',
+  'cpo': '1003',
+  'harish-03': '1003',
   'subanesh': '1004',
-  'vinayak': '1005'
+  'ceo': '1004',
+  'suba-04': '1004',
+  'vinayak': '1005',
+  'cfo': '1005',
+  'vina-05': '1005'
 };
 
 export const resolveUserPin = (user?: Partial<User> | null): string => {
@@ -202,12 +212,14 @@ export const resolveUserPin = (user?: Partial<User> | null): string => {
   if (DEFAULT_OPERATOR_PINS[name]) return DEFAULT_OPERATOR_PINS[name];
   const handle = (user.handle || '').toLowerCase().replace(/^@/, '').trim();
   if (DEFAULT_OPERATOR_PINS[handle]) return DEFAULT_OPERATOR_PINS[handle];
+  const callsign = (user.callsign || '').toLowerCase().trim();
+  if (DEFAULT_OPERATOR_PINS[callsign]) return DEFAULT_OPERATOR_PINS[callsign];
   const foundInit = initialUsers.find(iu => iu.id === user.id || iu.name.toLowerCase() === name || iu.handle.toLowerCase().replace(/^@/, '') === handle);
   if (foundInit?.pin) return foundInit.pin;
   return '1001';
 };
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_CLEAN_V3';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_ROLES_V4';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
