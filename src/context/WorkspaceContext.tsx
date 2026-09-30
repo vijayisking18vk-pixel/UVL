@@ -104,6 +104,7 @@ interface WorkspaceContextType {
   // Checkins & Pulse
   checkins: Checkin[];
   submitCheckin: (data: Omit<Checkin, 'id' | 'userId' | 'timestamp'>) => void;
+  deleteCheckin: (id: string) => void;
 
   // Expenses & Money Tracker Module
   expenses: import('../types').Expense[];
@@ -353,16 +354,38 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         const { data: dbCheckins, error: cErr } = await supabase.from('checkins').select('*');
         if (!cErr && dbCheckins && isMounted) {
-          setCheckins(dbCheckins.map(c => ({
-            id: c.id,
-            userId: c.user_id,
-            date: c.date || new Date().toISOString().split('T')[0],
-            completedToday: c.completed_today || c.worked_on || '',
-            workingOnNext: c.working_on_next || c.next_up || '',
-            blockers: c.blockers || 'None',
-            mood: (c.mood || '🟢 Good') as any,
-            timestamp: c.timestamp || 'Today'
-          })));
+          setCheckins(dbCheckins.map(c => {
+            let rawWorkedOn = c.completed_today || c.worked_on || '';
+            let hoursWorked: number | undefined;
+            let minutesWorked: number | undefined;
+
+            let startTime: string | undefined;
+            let endTime: string | undefined;
+
+            const timeMatch = rawWorkedOn.match(/^\[(?:(\d+)h\s*)?(?:(\d+)m)?(?:\s*\|\s*(\d{2}:\d{2})-(\d{2}:\d{2}))?\]\s*/i);
+            if (timeMatch) {
+              if (timeMatch[1]) hoursWorked = parseInt(timeMatch[1], 10);
+              if (timeMatch[2]) minutesWorked = parseInt(timeMatch[2], 10);
+              if (timeMatch[3]) startTime = timeMatch[3];
+              if (timeMatch[4]) endTime = timeMatch[4];
+              rawWorkedOn = rawWorkedOn.replace(timeMatch[0], '');
+            }
+
+            return {
+              id: c.id,
+              userId: c.user_id,
+              date: c.date || (c.created_at ? c.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+              completedToday: rawWorkedOn,
+              workingOnNext: c.working_on_next || c.next_up || '',
+              blockers: c.blockers || 'None',
+              mood: (c.velocity ? (c.velocity === 'good' ? '🟢 Good' : c.velocity) : (c.mood || '🟢 Good')) as any,
+              timestamp: c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
+              hoursWorked,
+              minutesWorked,
+              startTime,
+              endTime
+            };
+          }));
         }
 
         const { data: dbMessages, error: msgErr } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
@@ -1278,10 +1301,24 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setCheckins(prev => [newCheckin, ...prev.filter(c => !(c.userId === currentUserId && c.date === data.date))]);
 
+    let timePrefix = '';
+    const h = data.hoursWorked || 0;
+    const m = data.minutesWorked || 0;
+    if (h > 0 || m > 0) {
+      const parts: string[] = [];
+      if (h > 0) parts.push(`${h}h`);
+      if (m > 0) parts.push(`${m}m`);
+      const dur = parts.join(' ');
+      const range = (data.startTime && data.endTime) ? ` | ${data.startTime}-${data.endTime}` : '';
+      timePrefix = `[${dur}${range}] `;
+    }
+
+    const payloadWorkedOn = `${timePrefix}${data.completedToday || 'Progress logged'}`;
+
     supabase.from('checkins').insert({
       id: newCheckin.id,
       user_id: currentUserId,
-      worked_on: data.completedToday || 'Progress logged',
+      worked_on: payloadWorkedOn,
       next_up: data.workingOnNext || 'Next phase planned',
       blockers: data.blockers || '',
       velocity: String(data.mood || 'good').toLowerCase().includes('good') ? 'good' : String(data.mood || 'good')
@@ -1292,6 +1329,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Update user status
     let newStatus: User['status'] = 'active';
     updateUserStatus(newStatus, data.workingOnNext || data.completedToday);
+  };
+
+  const deleteCheckin = (id: string) => {
+    sound.click();
+    setCheckins(prev => prev.filter(c => c.id !== id));
+    supabase.from('checkins').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase deleteCheckin error:', error);
+    });
   };
 
   const updateWorkspaceConfig = (config: Partial<WorkspaceConfig>) => {
@@ -3071,6 +3116,7 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         convertMessageToTask,
         checkins,
         submitCheckin,
+        deleteCheckin,
         expenses,
         addExpense,
         addEarning,

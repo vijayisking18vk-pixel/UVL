@@ -166,6 +166,10 @@ export interface Checkin {
   blockers: string;
   mood: '⚡ Hyper' | '🟢 Good' | '🟡 Grinding' | '🔴 Blocked';
   timestamp: string;
+  hoursWorked?: number;
+  minutesWorked?: number;
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface WorkspaceConfig {

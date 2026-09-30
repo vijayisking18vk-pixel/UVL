@@ -344,9 +344,16 @@ export const DashboardView: React.FC = () => {
                         {u.status}
                       </span>
                       {latestCheckin && (
-                        <span className="block meta-number text-[9px] text-[#6E6E73] mt-1">
-                          {latestCheckin.timestamp}
-                        </span>
+                        <div className="flex items-center justify-end gap-1.5 mt-1">
+                          {(latestCheckin.hoursWorked !== undefined || latestCheckin.minutesWorked !== undefined) && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-black text-white font-mono text-[9px] font-medium">
+                              {latestCheckin.hoursWorked || 0}h{latestCheckin.minutesWorked ? ` ${latestCheckin.minutesWorked}m` : ''}
+                            </span>
+                          )}
+                          <span className="meta-number text-[9px] text-[#6E6E73]">
+                            {latestCheckin.timestamp}
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
