@@ -417,6 +417,8 @@ export interface EventAttachment {
   uploadedBy: string;
 }
 
+export type HackathonAttachment = EventAttachment;
+
 export interface HackathonEvent {
   id: string;
   title: string;

@@ -473,10 +473,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const dbHackathons = dbRecords.filter(r => r.kind === 'hackathon').map(r => r.data as HackathonEvent);
           const dbReports = dbRecords.filter(r => r.kind === 'agent_report').map(r => r.data as AgentReport);
 
-          if (dbExpenses.length > 0) setExpenses(dbExpenses);
-          if (dbInvestors.length > 0) setInvestors(dbInvestors);
-          if (dbHackathons.length > 0) setHackathons(dbHackathons);
-          if (dbReports.length > 0) setAgentReports(dbReports);
+          setExpenses(dbExpenses);
+          setInvestors(dbInvestors);
+          setHackathons(dbHackathons);
+          setAgentReports(dbReports);
         }
       } catch (err) {
         console.warn('Supabase sync warning:', err);
@@ -1104,10 +1104,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteFile = (id: string) => {
     sound.click();
+    const fileToDelete = files.find(f => f.id === id);
     setFiles(prev => prev.filter(f => f.id !== id));
     supabase.from('files').delete().eq('id', id).then(({ error }) => {
       if (error) console.warn('Supabase deleteFile error:', error);
     });
+
+    if (fileToDelete?.downloadUrl && fileToDelete.downloadUrl.includes('/storage/v1/object/public/files/')) {
+      const storagePath = fileToDelete.downloadUrl.split('/storage/v1/object/public/files/')[1];
+      if (storagePath) {
+        supabase.storage.from('files').remove([decodeURIComponent(storagePath)]).catch(err => {
+          console.warn('Supabase storage file deletion error:', err);
+        });
+      }
+    }
   };
 
   const addChannel = (c: Omit<ChatChannel, 'id'>) => {
@@ -1437,10 +1447,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteExpense = (expenseId: string) => {
     sound.alert();
+    const expToDelete = expenses.find(e => e.id === expenseId);
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
     supabase.from('workspace_records').delete().eq('id', expenseId).then(({ error }) => {
       if (error) console.warn('Supabase deleteExpense error:', error);
     });
+
+    if (expToDelete?.receiptUrl && expToDelete.receiptUrl.includes('/storage/v1/object/public/files/')) {
+      const storagePath = expToDelete.receiptUrl.split('/storage/v1/object/public/files/')[1];
+      if (storagePath) {
+        supabase.storage.from('files').remove([decodeURIComponent(storagePath)]).catch(err => {
+          console.warn('Supabase storage receipt deletion error:', err);
+        });
+      }
+    }
   };
 
   // ==========================================
@@ -1675,8 +1695,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteInvestorDocument = (investorId: string, docId: string) => {
     sound.click();
     let updatedRecord: Investor | null = null;
+    let docToDelete: import('../types').InvestorDocument | undefined;
     setInvestors(prev => prev.map(inv => {
       if (inv.id === investorId) {
+        docToDelete = (inv.documents || []).find(d => d.id === docId);
         updatedRecord = {
           ...inv,
           documents: (inv.documents || []).filter(d => d.id !== docId)
@@ -1695,6 +1717,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }).then(({ error }) => {
         if (error) console.warn('Supabase deleteInvestorDocument error:', error);
       });
+    }
+
+    if (docToDelete?.url && docToDelete.url.includes('/storage/v1/object/public/files/')) {
+      const storagePath = docToDelete.url.split('/storage/v1/object/public/files/')[1];
+      if (storagePath) {
+        supabase.storage.from('files').remove([decodeURIComponent(storagePath)]).catch(err => {
+          console.warn('Supabase storage doc deletion error:', err);
+        });
+      }
     }
   };
 
@@ -1849,8 +1880,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteHackathonAttachment = (eventId: string, attachmentId: string) => {
     sound.click();
     let updatedRecord: HackathonEvent | null = null;
+    let attToDelete: import('../types').HackathonAttachment | undefined;
     setHackathons(prev => prev.map(h => {
       if (h.id === eventId) {
+        attToDelete = (h.attachments || []).find(a => a.id === attachmentId);
         updatedRecord = {
           ...h,
           attachments: (h.attachments || []).filter(a => a.id !== attachmentId),
@@ -1870,6 +1903,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }).then(({ error }) => {
         if (error) console.warn('Supabase deleteHackathonAttachment error:', error);
       });
+    }
+
+    if (attToDelete?.url && attToDelete.url.includes('/storage/v1/object/public/files/')) {
+      const storagePath = attToDelete.url.split('/storage/v1/object/public/files/')[1];
+      if (storagePath) {
+        supabase.storage.from('files').remove([decodeURIComponent(storagePath)]).catch(err => {
+          console.warn('Supabase storage attachment deletion error:', err);
+        });
+      }
     }
   };
 
