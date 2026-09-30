@@ -172,6 +172,23 @@ export interface Checkin {
   endTime?: string;
 }
 
+export interface HorizonTelemetry {
+  totalMinutes: number;
+  hours: number;
+  minutes: number;
+  seconds?: number;
+  formatted: string;
+}
+
+export interface TimeTelemetry {
+  today: HorizonTelemetry;
+  week: HorizonTelemetry;
+  month: HorizonTelemetry;
+  year: HorizonTelemetry;
+  activeSessionDuration: string;
+  isCheckedIn: boolean;
+}
+
 export interface WorkspaceConfig {
   workspaceName: string;
   inviteCode: string;

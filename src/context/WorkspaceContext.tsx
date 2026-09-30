@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   User, Project, Task, CalendarEvent, Meeting, Note, FileItem,
   ChatChannel, ChatMessage, Checkin, WorkspaceConfig, TaskStatus,
   Expense, ExpenseStatus, Investor, InvestorStage, InvestorInteraction,
   InvestorDocument, AgentTask, AgentActivityLog, AgentReport, AgentConfig, AgentActionStep,
-  AgentChatMessage, AgentExecutedAction, HackathonEvent, EventAttachment
+  AgentChatMessage, AgentExecutedAction, HackathonEvent, EventAttachment,
+  TimeTelemetry
 } from '../types';
 import {
   initialUsers, initialProjects, initialTasks, initialCalendarEvents,
@@ -105,6 +106,25 @@ interface WorkspaceContextType {
   checkins: Checkin[];
   submitCheckin: (data: Omit<Checkin, 'id' | 'userId' | 'timestamp'>) => void;
   deleteCheckin: (id: string) => void;
+
+  // Live Availability & Work Session Timer & Multi-Horizon Telemetry
+  isCheckedIn: boolean;
+  checkInTimestamp: number | null;
+  activeSessionSeconds: number;
+  formattedSessionTime: string;
+  isTimerRunning: boolean;
+  checkIn: (initialMessage?: string) => void;
+  checkOut: (summary?: string) => Promise<void>;
+  startTimer: () => void;
+  pauseTimer: () => void;
+  resetTimer: () => void;
+  timerSeconds: number;
+  formattedTimerTime: string;
+  timerHours: number;
+  timerMinutes: number;
+  timerSecondsPart: number;
+  userTimeTelemetry: TimeTelemetry;
+  teamTimeTelemetry: TimeTelemetry;
 
   // Expenses & Money Tracker Module
   expenses: import('../types').Expense[];
@@ -288,6 +308,112 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       localStorage.removeItem(AUTH_SESSION_KEY);
     } catch {}
   };
+
+  // ==========================================
+  // LIVE AVAILABILITY & WORK SESSION TIMER
+  // ==========================================
+  const [isCheckedIn, setIsCheckedIn] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`);
+      if (saved !== null) return saved === 'true';
+    } catch {}
+    return false;
+  });
+
+  const [checkInTimestamp, setCheckInTimestamp] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+      if (saved) {
+        const parsed = Number(saved);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
+      }
+    } catch {}
+    return null;
+  });
+
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`);
+      return saved === 'true';
+    } catch {}
+    return false;
+  });
+
+  const [activeSessionSeconds, setActiveSessionSeconds] = useState<number>(() => {
+    try {
+      const savedTime = localStorage.getItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+      const isChecked = localStorage.getItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`) === 'true';
+      if (isChecked && savedTime) {
+        const startTime = Number(savedTime);
+        if (!isNaN(startTime) && startTime > 0) {
+          return Math.max(0, Math.floor((Date.now() - startTime) / 1000));
+        }
+      }
+    } catch {}
+    return 0;
+  });
+
+  // Switch user sync
+  useEffect(() => {
+    try {
+      const savedChecked = localStorage.getItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`) === 'true';
+      const savedTime = localStorage.getItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+      setIsCheckedIn(savedChecked);
+      setIsTimerRunning(savedChecked);
+      if (savedChecked && savedTime) {
+        const ts = Number(savedTime);
+        if (!isNaN(ts) && ts > 0) {
+          setCheckInTimestamp(ts);
+          setActiveSessionSeconds(Math.max(0, Math.floor((Date.now() - ts) / 1000)));
+          return;
+        }
+      }
+      setCheckInTimestamp(null);
+      setActiveSessionSeconds(0);
+    } catch {}
+  }, [currentUserId]);
+
+  // Live 1-second ticking interval while checked in & running
+  useEffect(() => {
+    let interval: any = null;
+    if (isCheckedIn && isTimerRunning && checkInTimestamp) {
+      // Immediate tick sync
+      setActiveSessionSeconds(Math.max(0, Math.floor((Date.now() - checkInTimestamp) / 1000)));
+
+      interval = setInterval(() => {
+        setActiveSessionSeconds(Math.max(0, Math.floor((Date.now() - checkInTimestamp) / 1000)));
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isCheckedIn, isTimerRunning, checkInTimestamp]);
+
+  const startTimer = () => {
+    sound.click();
+    setIsTimerRunning(true);
+  };
+
+  const pauseTimer = () => {
+    sound.click();
+    setIsTimerRunning(false);
+  };
+
+  const resetTimer = () => {
+    sound.alert();
+    setIsTimerRunning(false);
+    setActiveSessionSeconds(0);
+    setCheckInTimestamp(null);
+    try {
+      localStorage.removeItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+    } catch {}
+  };
+
+  const timerHours = Math.floor(activeSessionSeconds / 3600);
+  const timerMinutes = Math.floor((activeSessionSeconds % 3600) / 60);
+  const timerSecondsPart = activeSessionSeconds % 60;
+  const formattedTimerTime = `${String(timerHours).padStart(2, '0')}:${String(timerMinutes).padStart(2, '0')}:${String(timerSecondsPart).padStart(2, '0')}`;
+  const formattedSessionTime = formattedTimerTime;
 
   const [projects, setProjects] = useState<Project[]>(savedData?.projects || initialProjects);
   const [tasks, setTasks] = useState<Task[]>(savedData?.tasks || initialTasks);
@@ -1375,6 +1501,172 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (error) console.warn('Supabase deleteCheckin error:', error);
     });
   };
+
+  const checkIn = (initialMessage?: string) => {
+    const now = Date.now();
+    setIsCheckedIn(true);
+    setIsTimerRunning(true);
+    setCheckInTimestamp(now);
+    setActiveSessionSeconds(0);
+    try {
+      localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'true');
+      localStorage.setItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`, String(now));
+    } catch {}
+    updateUserStatus('active', initialMessage || 'Available / On Shift');
+    sound.patchStamp();
+  };
+
+  const checkOut = async (summary?: string) => {
+    const now = Date.now();
+    const elapsedSec = checkInTimestamp ? Math.max(0, Math.floor((now - checkInTimestamp) / 1000)) : activeSessionSeconds;
+    const hours = Math.floor(elapsedSec / 3600);
+    const minutes = Math.floor((elapsedSec % 3600) / 60);
+
+    const nowDate = new Date(now);
+    const startDate = checkInTimestamp ? new Date(checkInTimestamp) : new Date(now - elapsedSec * 1000);
+    const startTime = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const endTime = nowDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const todayDate = nowDate.toISOString().split('T')[0];
+
+    // Submit checkin record to database & state
+    submitCheckin({
+      date: todayDate,
+      completedToday: summary || (hours > 0 || minutes > 0 ? `Completed shift session (${hours}h ${minutes}m)` : 'Shift session checked out'),
+      workingOnNext: 'Off-duty / Standby',
+      blockers: 'None',
+      mood: '🟢 Good',
+      hoursWorked: hours,
+      minutesWorked: (hours === 0 && minutes === 0 && elapsedSec >= 15) ? 1 : minutes,
+      startTime,
+      endTime
+    });
+
+    setIsCheckedIn(false);
+    setIsTimerRunning(false);
+    setCheckInTimestamp(null);
+    setActiveSessionSeconds(0);
+    try {
+      localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'false');
+      localStorage.removeItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+    } catch {}
+    updateUserStatus('away', 'Checked out / Off-duty');
+    sound.click();
+  };
+
+  // Multi-Horizon Telemetry Engine (Today, This Week, This Month, This Year)
+  const calculateTelemetry = (
+    checkinList: Checkin[],
+    liveSeconds: number,
+    checkedIn: boolean
+  ): TimeTelemetry => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDate = now.getDate();
+    const todayStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
+
+    const startOfToday = new Date(currentYear, currentMonth, currentDate, 0, 0, 0, 0).getTime();
+    const endOfToday = new Date(currentYear, currentMonth, currentDate, 23, 59, 59, 999).getTime();
+
+    // Start of Week (Monday)
+    const dayOfWeek = now.getDay();
+    const diffToMonday = (dayOfWeek + 6) % 7;
+    const startOfWeek = new Date(currentYear, currentMonth, currentDate - diffToMonday, 0, 0, 0, 0).getTime();
+
+    // Start of Month (1st)
+    const startOfMonth = new Date(currentYear, currentMonth, 1, 0, 0, 0, 0).getTime();
+
+    // Start of Year (Jan 1)
+    const startOfYear = new Date(currentYear, 0, 1, 0, 0, 0, 0).getTime();
+
+    let histToday = 0;
+    let histWeek = 0;
+    let histMonth = 0;
+    let histYear = 0;
+
+    for (const c of checkinList) {
+      const mins = (c.hoursWorked || 0) * 60 + (c.minutesWorked || 0);
+      let checkinTimeMs: number;
+      if (c.date && /^\d{4}-\d{2}-\d{2}$/.test(c.date)) {
+        const [y, m, d] = c.date.split('-').map(Number);
+        checkinTimeMs = new Date(y, m - 1, d, 12, 0, 0).getTime();
+      } else {
+        const parsed = new Date(c.date || c.timestamp).getTime();
+        checkinTimeMs = isNaN(parsed) ? Date.now() : parsed;
+      }
+
+      if (c.date === todayStr || (checkinTimeMs >= startOfToday && checkinTimeMs <= endOfToday)) {
+        histToday += mins;
+      }
+      if (checkinTimeMs >= startOfWeek && checkinTimeMs <= endOfToday) {
+        histWeek += mins;
+      }
+      if (checkinTimeMs >= startOfMonth && checkinTimeMs <= endOfToday) {
+        histMonth += mins;
+      }
+      if (checkinTimeMs >= startOfYear && checkinTimeMs <= endOfToday) {
+        histYear += mins;
+      }
+    }
+
+    const liveMinutes = checkedIn ? Math.floor(liveSeconds / 60) : 0;
+    const liveSecsRemainder = checkedIn ? (liveSeconds % 60) : 0;
+
+    const totalToday = histToday + liveMinutes;
+    const totalWeek = histWeek + liveMinutes;
+    const totalMonth = histMonth + liveMinutes;
+    const totalYear = histYear + liveMinutes;
+
+    const fmt = (totalMins: number) => {
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      return `${h}h ${m}m`;
+    };
+
+    const sHours = Math.floor(liveSeconds / 3600);
+    const sMins = Math.floor((liveSeconds % 3600) / 60);
+    const sSecs = liveSeconds % 60;
+    const activeDurationStr = `${String(sHours).padStart(2, '0')}:${String(sMins).padStart(2, '0')}:${String(sSecs).padStart(2, '0')}`;
+
+    return {
+      today: {
+        totalMinutes: totalToday,
+        hours: Math.floor(totalToday / 60),
+        minutes: totalToday % 60,
+        seconds: liveSecsRemainder,
+        formatted: fmt(totalToday)
+      },
+      week: {
+        totalMinutes: totalWeek,
+        hours: Math.floor(totalWeek / 60),
+        minutes: totalWeek % 60,
+        formatted: fmt(totalWeek)
+      },
+      month: {
+        totalMinutes: totalMonth,
+        hours: Math.floor(totalMonth / 60),
+        minutes: totalMonth % 60,
+        formatted: fmt(totalMonth)
+      },
+      year: {
+        totalMinutes: totalYear,
+        hours: Math.floor(totalYear / 60),
+        minutes: totalYear % 60,
+        formatted: fmt(totalYear)
+      },
+      activeSessionDuration: activeDurationStr,
+      isCheckedIn: checkedIn
+    };
+  };
+
+  const userTimeTelemetry = useMemo(() => {
+    const userCheckins = checkins.filter(c => c.userId === currentUserId);
+    return calculateTelemetry(userCheckins, activeSessionSeconds, isCheckedIn);
+  }, [checkins, currentUserId, activeSessionSeconds, isCheckedIn]);
+
+  const teamTimeTelemetry = useMemo(() => {
+    return calculateTelemetry(checkins, activeSessionSeconds, isCheckedIn);
+  }, [checkins, activeSessionSeconds, isCheckedIn]);
 
   const updateWorkspaceConfig = (config: Partial<WorkspaceConfig>) => {
     sound.click();
@@ -3154,6 +3446,23 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         checkins,
         submitCheckin,
         deleteCheckin,
+        isCheckedIn,
+        checkInTimestamp,
+        activeSessionSeconds,
+        formattedSessionTime,
+        isTimerRunning,
+        checkIn,
+        checkOut,
+        startTimer,
+        pauseTimer,
+        resetTimer,
+        timerSeconds: activeSessionSeconds,
+        formattedTimerTime,
+        timerHours,
+        timerMinutes,
+        timerSecondsPart,
+        userTimeTelemetry,
+        teamTimeTelemetry,
         expenses,
         addExpense,
         addEarning,

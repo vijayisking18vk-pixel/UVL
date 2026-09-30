@@ -40,7 +40,12 @@ export const Header: React.FC = () => {
     toggleSound,
     setQuickCaptureOpen,
     setCommandPaletteOpen,
-    setAccessModalOpen
+    setAccessModalOpen,
+    isCheckedIn,
+    formattedSessionTime,
+    checkIn,
+    checkOut,
+    userTimeTelemetry
   } = useWorkspace();
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -84,6 +89,54 @@ export const Header: React.FC = () => {
               <span className="text-[#D1D1D6]">•</span>
               <span className="meta-number text-[11px] text-[#6E6E73]">Index 001</span>
             </div>
+          </div>
+
+          {/* Live Availability & Work Shift Timer Pill */}
+          <div className="flex items-center gap-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-full p-1 pl-2.5 sm:pl-3 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-[#A1A1AA]'}`} />
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-xs font-semibold text-black leading-none">
+                    {isCheckedIn ? formattedSessionTime : 'Available'}
+                  </span>
+                  {isCheckedIn && (
+                    <span className="text-[9px] text-emerald-700 font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 hidden sm:inline leading-none">
+                      ON SHIFT
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] text-[#6E6E73] leading-none mt-0.5 hidden md:inline">
+                  Today: <span className="font-mono font-medium text-black">{userTimeTelemetry.today.formatted}</span>
+                </span>
+              </div>
+            </div>
+
+            {isCheckedIn ? (
+              <button
+                onClick={() => {
+                  sound.click();
+                  checkOut();
+                }}
+                className="px-2.5 py-1 rounded-full bg-red-600 hover:bg-red-700 text-white text-[11px] font-medium transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                title="Stop shift timer & log check-in"
+              >
+                <span className="w-1.5 h-1.5 rounded-xs bg-white" />
+                <span>Check Out</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  sound.patchStamp();
+                  checkIn();
+                }}
+                className="px-2.5 py-1 rounded-full bg-black hover:bg-neutral-800 text-white text-[11px] font-medium transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                title="Start shift timer (Available)"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Check In</span>
+              </button>
+            )}
           </div>
 
           {/* Global Search & Quick Actions */}

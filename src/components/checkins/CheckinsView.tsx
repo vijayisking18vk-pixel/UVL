@@ -13,8 +13,14 @@ import {
   Trash2,
   Zap,
   BarChart3,
-  Users
+  Users,
+  Play,
+  Square,
+  TrendingUp,
+  Calendar,
+  X
 } from 'lucide-react';
+import { sound } from '../../utils/sound';
 
 export const CheckinsView: React.FC = () => {
   const {
@@ -24,8 +30,45 @@ export const CheckinsView: React.FC = () => {
     users,
     currentUser,
     updateUserStatus,
-    setActiveTab
+    setActiveTab,
+    isCheckedIn,
+    checkIn,
+    checkOut,
+    formattedSessionTime,
+    timerHours,
+    timerMinutes,
+    timerSecondsPart,
+    userTimeTelemetry,
+    teamTimeTelemetry
   } = useWorkspace();
+
+  const [telemetryScope, setTelemetryScope] = useState<'user' | 'team'>('user');
+  const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
+  const [checkoutSummary, setCheckoutSummary] = useState('');
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+
+  const activeTelemetry = telemetryScope === 'user' ? userTimeTelemetry : teamTimeTelemetry;
+
+  const handleSyncActiveTime = () => {
+    sound.click();
+    setTimeCalcMode('manual');
+    const h = userTimeTelemetry.today.hours;
+    const m = userTimeTelemetry.today.minutes;
+    setHoursWorked(h);
+    setMinutesWorked(m);
+  };
+
+  const handleConfirmCheckout = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setIsCheckingOut(true);
+    try {
+      await checkOut(checkoutSummary.trim() || undefined);
+      setCheckoutModalOpen(false);
+      setCheckoutSummary('');
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   // Active status form for current user
   const [selectedStatus, setSelectedStatus] = useState<UserStatus>(currentUser.status);
@@ -141,6 +184,187 @@ export const CheckinsView: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* ============================================================== */}
+      {/* HERO: ACTIVE AVAILABILITY & WORK SHIFT TELEMETRY COMMAND CENTER */}
+      {/* ============================================================== */}
+      <section className="bg-black text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-xl border border-neutral-800">
+        {/* Subtle grid pattern background */}
+        <div className="absolute inset-0 bg-[radial-gradient(#333_1px,transparent_1px)] [background-size:16px_16px] opacity-25 pointer-events-none" />
+
+        <div className="relative z-10 space-y-6">
+          {/* Top Row: Live Availability Status Pill & Scope Switcher */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3 w-3">
+                {isCheckedIn ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                  </>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-neutral-500" />
+                )}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase font-semibold tracking-wider font-mono">
+                  {isCheckedIn ? 'Available · Live Shift Active' : 'Standby · Checked Out'}
+                </span>
+                <span className="text-white/40">•</span>
+                <span className="text-xs text-white/70 font-mono">
+                  Operator: {currentUser.name} (/{currentUser.callsign})
+                </span>
+              </div>
+            </div>
+
+            {/* Scope Toggle: My Telemetry vs Team Total */}
+            <div className="flex items-center bg-white/10 p-1 rounded-full border border-white/15 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.click();
+                  setTelemetryScope('user');
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  telemetryScope === 'user' ? 'bg-white text-black shadow-xs' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                My Active Time
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.click();
+                  setTelemetryScope('team');
+                }}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  telemetryScope === 'team' ? 'bg-white text-black shadow-xs' : 'text-white/70 hover:text-white'
+                }`}
+              >
+                All Team Total
+              </button>
+            </div>
+          </div>
+
+          {/* Middle Row: Big Digital Timer Clock & Primary Action Button */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div>
+              <span className="text-xs font-medium text-white/60 uppercase tracking-widest block font-mono">
+                {isCheckedIn ? 'CURRENT ACTIVE SESSION DURATION' : 'SESSION CLOCK (PAUSED)'}
+              </span>
+              <div className="text-5xl sm:text-6xl lg:text-7xl font-mono font-bold tracking-tight text-white mt-1 flex items-baseline gap-2">
+                <span>{formattedSessionTime}</span>
+                {isCheckedIn && (
+                  <span className="text-xs sm:text-sm font-sans font-medium text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                    LIVE TICKING
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-white/60 mt-1 max-w-lg">
+                {isCheckedIn
+                  ? 'Active shift hours and minutes are actively accumulating into Today, Week, Month, and Year telemetry below in real time.'
+                  : 'Click "Check In" to broadcast availability and actively calculate your shift hours and minutes.'}
+              </p>
+            </div>
+
+            {/* Check In / Check Out Controls */}
+            <div className="flex items-center gap-3">
+              {isCheckedIn ? (
+                <button
+                  type="button"
+                  onClick={() => setCheckoutModalOpen(true)}
+                  className="px-6 py-3.5 rounded-full bg-red-600 hover:bg-red-500 text-white font-semibold text-sm flex items-center gap-2.5 transition-all shadow-lg shadow-red-600/30 cursor-pointer active:scale-95"
+                >
+                  <Square size={16} fill="currentColor" />
+                  <span>Check Out & Stop Shift</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => checkIn()}
+                  className="px-6 py-3.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-sm flex items-center gap-2.5 transition-all shadow-lg shadow-emerald-500/30 cursor-pointer active:scale-95"
+                >
+                  <Play size={16} fill="currentColor" />
+                  <span>Check In (Start Shift)</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Row: 4 ACTIVE TELEMETRY HORIZON CARDS */}
+          {/* TODAY, THIS WEEK, THIS MONTH, THIS YEAR */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-2">
+            {/* TODAY */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between text-white/60 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider font-mono">📅 Today</span>
+                {isCheckedIn && (
+                  <span className="text-[10px] text-emerald-400 font-mono animate-pulse">● Live</span>
+                )}
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tight">
+                  {activeTelemetry.today.formatted}
+                </div>
+                <div className="text-[11px] text-white/60 mt-0.5 flex items-center justify-between">
+                  <span>{activeTelemetry.today.totalMinutes} total mins</span>
+                  {isCheckedIn && (
+                    <span className="text-[10px] text-emerald-300 font-mono">+{activeTelemetry.today.seconds}s</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* THIS WEEK */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between text-white/60 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider font-mono">📊 This Week</span>
+                <span className="text-[10px] text-white/40">Mon-Today</span>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tight">
+                  {activeTelemetry.week.formatted}
+                </div>
+                <div className="text-[11px] text-white/60 mt-0.5">
+                  <span>{activeTelemetry.week.totalMinutes} total mins</span>
+                </div>
+              </div>
+            </div>
+
+            {/* THIS MONTH */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between text-white/60 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider font-mono">🗓️ This Month</span>
+                <span className="text-[10px] text-white/40">Month to Date</span>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tight">
+                  {activeTelemetry.month.formatted}
+                </div>
+                <div className="text-[11px] text-white/60 mt-0.5">
+                  <span>{activeTelemetry.month.totalMinutes} total mins</span>
+                </div>
+              </div>
+            </div>
+
+            {/* THIS YEAR */}
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between text-white/60 mb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider font-mono">🌐 This Year</span>
+                <span className="text-[10px] text-white/40">2026 YTD</span>
+              </div>
+              <div>
+                <div className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tight">
+                  {activeTelemetry.year.formatted}
+                </div>
+                <div className="text-[11px] text-white/60 mt-0.5">
+                  <span>{activeTelemetry.year.totalMinutes} total mins</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* TOP: TEAM HOURS & STANDUP METRICS BAR */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -454,8 +678,8 @@ export const CheckinsView: React.FC = () => {
                 </span>
               </div>
 
-              {/* Mode Switcher */}
-              <div className="flex items-center gap-1 bg-[#F5F5F7] p-1 rounded-xl border border-[#E5E5E7]">
+              {/* Mode Switcher & Sync */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-[#F5F5F7] p-1 rounded-xl border border-[#E5E5E7]">
                 <button
                   type="button"
                   onClick={() => setTimeCalcMode('range')}
@@ -477,6 +701,15 @@ export const CheckinsView: React.FC = () => {
                   }`}
                 >
                   Direct Duration
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSyncActiveTime}
+                  className="px-3 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer bg-emerald-100 hover:bg-emerald-200 text-emerald-800 flex items-center gap-1"
+                  title="Auto-fill with live active shift duration"
+                >
+                  <Zap size={11} className="text-emerald-700 fill-emerald-700" />
+                  <span>Sync Active Time ({userTimeTelemetry.today.formatted})</span>
                 </button>
               </div>
             </div>
@@ -774,6 +1007,88 @@ export const CheckinsView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ============================================================== */}
+      {/* CHECKOUT CONFIRMATION & SHIFT DURATION MODAL */}
+      {/* ============================================================== */}
+      {checkoutModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                  <Square size={14} fill="currentColor" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-black">End Work Session</h3>
+                  <span className="text-xs text-[#6E6E73]">Log duration & stop live shift timer</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCheckoutModalOpen(false)}
+                className="w-7 h-7 rounded-full bg-[#F5F5F7] hover:bg-[#EBEBED] text-[#6E6E73] flex items-center justify-center transition-all cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] space-y-1">
+              <span className="text-[11px] uppercase font-semibold text-[#6E6E73] tracking-wider block">
+                Session Duration to Log
+              </span>
+              <div className="text-3xl font-mono font-bold text-black flex items-baseline gap-2">
+                <span>{formattedSessionTime}</span>
+                <span className="text-xs font-sans font-normal text-[#6E6E73]">
+                  ({timerHours}h {timerMinutes}m {timerSecondsPart}s)
+                </span>
+              </div>
+              <p className="text-[11px] text-[#6E6E73] pt-1">
+                This time will be permanently saved to your attendance history and today's telemetry.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-black uppercase tracking-wider mb-1.5">
+                Shift Summary / Accomplishments (Optional)
+              </label>
+              <textarea
+                value={checkoutSummary}
+                onChange={(e) => setCheckoutSummary(e.target.value)}
+                placeholder="e.g. Worked on Loop Pay payments, ran unit tests, updated architecture specs..."
+                rows={3}
+                className="w-full bg-white border border-[#E5E5E7] rounded-xl p-3 text-xs text-black placeholder-[#8E8E93] focus:outline-none focus:border-black resize-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setCheckoutModalOpen(false)}
+                disabled={isCheckingOut}
+                className="px-4 py-2 rounded-full border border-[#E5E5E7] text-xs font-medium text-[#6E6E73] hover:text-black hover:bg-[#F5F5F7] transition-all cursor-pointer"
+              >
+                Keep Working
+              </button>
+              <button
+                type="button"
+                onClick={() => handleConfirmCheckout()}
+                disabled={isCheckingOut}
+                className="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                {isCheckingOut ? (
+                  <span>Logging Session...</span>
+                ) : (
+                  <>
+                    <Square size={13} fill="currentColor" />
+                    <span>Confirm & Check Out</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

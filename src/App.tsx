@@ -66,6 +66,7 @@ const AppContent: React.FC = () => {
       case 'chat':
         return <ChatView />;
       case 'pulse':
+      case 'checkins':
         return <CheckinsView />;
       case 'expenses':
         return <ExpenseView />;

@@ -28,7 +28,12 @@ export const DashboardView: React.FC = () => {
     setActiveTab,
     convertMessageToTask,
     addNote,
-    expenses
+    expenses,
+    isCheckedIn,
+    formattedSessionTime,
+    checkIn,
+    checkOut,
+    userTimeTelemetry
   } = useWorkspace();
 
   const [scratchContent, setScratchContent] = useState('');
@@ -44,8 +49,8 @@ export const DashboardView: React.FC = () => {
   const doneTasks = tasks.filter(t => t.assigneeId === currentUser.id && t.status === 'done');
   const myCompletedCount = doneTasks.length;
 
-  const todayStr = '2026-09-10';
-  const todayEvents = calendarEvents.filter(e => e.date === todayStr || e.date === '2026-09-09' || e.date === '2026-09-11');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayEvents = calendarEvents.filter(e => e.date === todayStr);
 
   // Messages mentioning current user
   const userHandle = currentUser.handle.toLowerCase();
@@ -109,6 +114,43 @@ export const DashboardView: React.FC = () => {
                     Standby • Ready for deployment
                   </p>
                 )}
+
+                {/* Active Availability & Shift Widget */}
+                <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-[#E5E5E7]/70">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F5F5F7] border border-[#E5E5E7] text-xs">
+                    <span className={`w-2 h-2 rounded-full ${isCheckedIn ? 'bg-emerald-500 animate-pulse' : 'bg-[#A1A1AA]'}`} />
+                    <span className="font-mono font-medium text-black">
+                      {isCheckedIn ? formattedSessionTime : 'Checked Out'}
+                    </span>
+                    <span className="text-[#D1D1D6]">•</span>
+                    <span className="text-[11px] text-[#6E6E73]">
+                      Today: <strong className="text-black font-mono">{userTimeTelemetry.today.formatted}</strong>
+                    </span>
+                  </div>
+
+                  {isCheckedIn ? (
+                    <button
+                      onClick={() => checkOut()}
+                      className="px-2.5 py-1 rounded-full bg-red-600 hover:bg-red-700 text-white text-[11px] font-medium transition-all cursor-pointer"
+                    >
+                      Check Out
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => checkIn()}
+                      className="px-2.5 py-1 rounded-full bg-black hover:bg-neutral-800 text-white text-[11px] font-medium transition-all cursor-pointer"
+                    >
+                      Check In
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setActiveTab('pulse')}
+                    className="text-[11px] text-[#6E6E73] hover:text-black underline underline-offset-2 transition-colors ml-1 cursor-pointer"
+                  >
+                    View Telemetry
+                  </button>
+                </div>
               </div>
             </div>
           </div>
