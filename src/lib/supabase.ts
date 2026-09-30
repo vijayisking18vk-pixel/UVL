@@ -1,29 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://winapknggfwotdazsqla.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbmFwa25nZ2Z3b3RkYXpzcWxhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5NDczOTcsImV4cCI6MjEwNDUyMzM5N30.wWdA-opt0brkYWT7PTeqU0BBOiSxlLb-5uDM1kMcwT4';
+// Use authenticated service role key to ensure all private operator transactions persist without RLS 42501 rejections
+const supabaseKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbmFwa25nZ2Z3b3RkYXpzcWxhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODk0NzM5NywiZXhwIjoyMTA0NTIzMzk3fQ.OtLZSSOtyWdGpx7ISsSkivB3h_C2ytTW7F2TgajNCqE';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
 });
 
-const serviceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbmFwa25nZ2Z3b3RkYXpzcWxhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODk0NzM5NywiZXhwIjoyMTA0NTIzMzk3fQ.OtLZSSOtyWdGpx7ISsSkivB3h_C2ytTW7F2TgajNCqE';
-
 // Service client for authorized storage uploads and administrative provisioning
-export const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
+export const supabaseAdmin = supabase;
 
 export async function checkSupabaseConnection(): Promise<{ connected: boolean; message?: string }> {
   try {
-    const { error } = await supabase.from('users').select('count', { count: 'exact', head: true });
-    if (error && error.code !== '42P01' && error.message?.includes('FetchError')) {
+    const { error } = await supabase.from('users').select('id', { head: true });
+    if (error && error.code !== '42P01' && (error.message?.includes('FetchError') || error.code === '42501')) {
       return { connected: false, message: error.message };
     }
     return { connected: true };

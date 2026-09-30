@@ -315,8 +315,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             dueDate: t.due_date,
             projectId: t.project_id || 'p-1',
             subtasks: t.subtasks || [],
-            dependencies: t.blocked_by ? [t.blocked_by] : [],
-            tags: [],
+            dependencies: t.dependencies || (t.blocked_by ? [t.blocked_by] : []),
+            tags: t.tags || [],
             createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
           })));
         }
@@ -464,6 +464,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             memberIds: c.member_ids || []
           })));
         }
+
+        // Sync Dynamic Workspace Records (Expenses, Investors, Hackathons, AI Reports)
+        const { data: dbRecords, error: recErr } = await supabase.from('workspace_records').select('*');
+        if (!recErr && dbRecords && isMounted) {
+          const dbExpenses = dbRecords.filter(r => r.kind === 'expense').map(r => r.data as Expense);
+          const dbInvestors = dbRecords.filter(r => r.kind === 'investor').map(r => r.data as Investor);
+          const dbHackathons = dbRecords.filter(r => r.kind === 'hackathon').map(r => r.data as HackathonEvent);
+          const dbReports = dbRecords.filter(r => r.kind === 'agent_report').map(r => r.data as AgentReport);
+
+          if (dbExpenses.length > 0) setExpenses(dbExpenses);
+          if (dbInvestors.length > 0) setInvestors(dbInvestors);
+          if (dbHackathons.length > 0) setHackathons(dbHackathons);
+          if (dbReports.length > 0) setAgentReports(dbReports);
+        }
       } catch (err) {
         console.warn('Supabase sync warning:', err);
       }
@@ -483,6 +497,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .on('postgres_changes', { event: '*', schema: 'public', table: 'files' }, () => syncSupabase())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_channels' }, () => syncSupabase())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => syncSupabase())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workspace_records' }, () => syncSupabase())
       .subscribe();
 
     return () => {
@@ -668,7 +683,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       due_date: newTask.dueDate,
       project_id: newTask.projectId,
       subtasks: newTask.subtasks,
-      blocked_by: (newTask as any).blockedBy || newTask.dependencies?.[0] || null
+      blocked_by: (newTask as any).blockedBy || newTask.dependencies?.[0] || null,
+      tags: newTask.tags || [],
+      dependencies: newTask.dependencies || []
     }).then(({ error }) => {
       if (error) console.warn('Supabase addTask error:', error);
     });
@@ -719,7 +736,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       due_date: updated.dueDate,
       project_id: updated.projectId,
       subtasks: updated.subtasks,
-      blocked_by: (updated as any).blockedBy || updated.dependencies?.[0] || null
+      blocked_by: (updated as any).blockedBy || updated.dependencies?.[0] || null,
+      tags: updated.tags || [],
+      dependencies: updated.dependencies || []
     }).eq('id', updated.id).then(({ error }) => {
       if (error) console.warn('Supabase updateTask error:', error);
     });
@@ -1355,6 +1374,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setExpenses(prev => [newExpense, ...prev]);
 
+    // Persist to Supabase workspace_records
+    supabase.from('workspace_records').upsert({
+      id: newExpense.id,
+      kind: 'expense',
+      data: newExpense,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addExpense error:', error);
+    });
+
     // If receipt or invoice URL is provided, index it automatically into Central File Repo (FilesView)
     if (newExpense.receiptUrl) {
       const folderName = transactionType === 'earning' ? 'Earnings' : 'Expenses';
@@ -1379,23 +1408,39 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const updateExpenseStatus = (expenseId: string, status: ExpenseStatus, comment?: string) => {
     sound.click();
+    let updatedRecord: Expense | null = null;
     setExpenses(prev => prev.map(exp => {
       if (exp.id === expenseId) {
-        return {
+        updatedRecord = {
           ...exp,
           status,
           approverComment: comment || exp.approverComment,
           approvedBy: status === 'approved' || status === 'reimbursed' ? currentUser.id : exp.approvedBy,
           approvedAt: status === 'approved' || status === 'reimbursed' ? new Date().toISOString().replace('T', ' ').slice(0, 16) : exp.approvedAt
         };
+        return updatedRecord;
       }
       return exp;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Expense).id,
+        kind: 'expense',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase updateExpenseStatus error:', error);
+      });
+    }
   };
 
   const deleteExpense = (expenseId: string) => {
     sound.alert();
     setExpenses(prev => prev.filter(e => e.id !== expenseId));
+    supabase.from('workspace_records').delete().eq('id', expenseId).then(({ error }) => {
+      if (error) console.warn('Supabase deleteExpense error:', error);
+    });
   };
 
   // ==========================================
@@ -1420,6 +1465,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       createdAt: new Date().toISOString().split('T')[0]
     };
     setInvestors(prev => [newInv, ...prev]);
+
+    // Persist to Supabase workspace_records
+    supabase.from('workspace_records').upsert({
+      id: newInv.id,
+      kind: 'investor',
+      data: newInv,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addInvestor error:', error);
+    });
 
     // If follow up date set, create a linked task
     if (data.nextFollowUpDate) {
@@ -1446,14 +1501,24 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateInvestor = (data: Investor) => {
     sound.click();
     setInvestors(prev => prev.map(inv => inv.id === data.id ? data : inv));
+
+    supabase.from('workspace_records').upsert({
+      id: data.id,
+      kind: 'investor',
+      data,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase updateInvestor error:', error);
+    });
   };
 
   const updateInvestorStage = (investorId: string, stage: InvestorStage) => {
     sound.click();
+    let updatedRecord: Investor | null = null;
     setInvestors(prev => prev.map(inv => {
       if (inv.id === investorId) {
-        const updated = { ...inv, stage };
-        updated.interactions = [
+        updatedRecord = { ...inv, stage };
+        updatedRecord.interactions = [
           {
             id: `int-${Date.now()}`,
             date: new Date().toISOString().split('T')[0],
@@ -1464,10 +1529,21 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           },
           ...inv.interactions
         ];
-        return updated;
+        return updatedRecord;
       }
       return inv;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Investor).id,
+        kind: 'investor',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase updateInvestorStage error:', error);
+      });
+    }
 
     if (stage === 'term_sheet' || stage === 'committed' || stage === 'closed') {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
@@ -1476,6 +1552,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addInvestorInteraction = (investorId: string, interaction: Omit<InvestorInteraction, 'id' | 'timestamp'>) => {
     sound.click();
+    let updatedRecord: Investor | null = null;
     setInvestors(prev => prev.map(inv => {
       if (inv.id === investorId) {
         const newInt: InvestorInteraction = {
@@ -1483,14 +1560,26 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           id: `int-${Date.now()}`,
           timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16)
         };
-        return {
+        updatedRecord = {
           ...inv,
           lastInteractionDate: interaction.date,
           interactions: [newInt, ...inv.interactions]
         };
+        return updatedRecord;
       }
       return inv;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Investor).id,
+        kind: 'investor',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase addInvestorInteraction error:', error);
+      });
+    }
   };
 
   const addInvestorDocument = async (investorId: string, doc: { name: string; url: string; type: string }): Promise<void> => {
@@ -1505,15 +1594,28 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       uploadedBy: currentUser.id
     };
 
+    let updatedRecord: Investor | null = null;
     setInvestors(prev => prev.map(inv => {
       if (inv.id === investorId) {
-        return {
+        updatedRecord = {
           ...inv,
           documents: [newDoc, ...inv.documents]
         };
+        return updatedRecord;
       }
       return inv;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Investor).id,
+        kind: 'investor',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase addInvestorDocument error:', error);
+      });
+    }
 
     // Mirror to Central File Enclave
     const targetInv = investors.find(i => i.id === investorId);
@@ -1533,7 +1635,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const targetInv = investors.find(i => i.id === investorId);
     if (!targetInv) return;
 
-    setInvestors(prev => prev.map(inv => inv.id === investorId ? { ...inv, nextFollowUpDate: date } : inv));
+    const updated = { ...targetInv, nextFollowUpDate: date };
+    setInvestors(prev => prev.map(inv => inv.id === investorId ? updated : inv));
+
+    supabase.from('workspace_records').upsert({
+      id: updated.id,
+      kind: 'investor',
+      data: updated,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase scheduleInvestorFollowUp error:', error);
+    });
 
     addTask({
       title: `[Investor Follow-Up] ${targetInv.name} (${targetInv.firm})`,
@@ -1555,24 +1667,58 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteInvestor = (investorId: string) => {
     sound.click();
     setInvestors(prev => prev.filter(inv => inv.id !== investorId));
+    supabase.from('workspace_records').delete().eq('id', investorId).then(({ error }) => {
+      if (error) console.warn('Supabase deleteInvestor error:', error);
+    });
   };
 
   const deleteInvestorDocument = (investorId: string, docId: string) => {
     sound.click();
+    let updatedRecord: Investor | null = null;
     setInvestors(prev => prev.map(inv => {
       if (inv.id === investorId) {
-        return {
+        updatedRecord = {
           ...inv,
           documents: (inv.documents || []).filter(d => d.id !== docId)
         };
+        return updatedRecord;
       }
       return inv;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Investor).id,
+        kind: 'investor',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase deleteInvestorDocument error:', error);
+      });
+    }
   };
 
   const updateInvestorRemarks = (investorId: string, remarks: string) => {
     sound.click();
-    setInvestors(prev => prev.map(inv => inv.id === investorId ? { ...inv, notes: remarks, remarks } : inv));
+    let updatedRecord: Investor | null = null;
+    setInvestors(prev => prev.map(inv => {
+      if (inv.id === investorId) {
+        updatedRecord = { ...inv, notes: remarks, remarks };
+        return updatedRecord;
+      }
+      return inv;
+    }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as Investor).id,
+        kind: 'investor',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase updateInvestorRemarks error:', error);
+      });
+    }
   };
 
   // ==========================================
@@ -1590,6 +1736,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setHackathons(prev => [newEvent, ...prev]);
 
+    // Persist to Supabase workspace_records
+    supabase.from('workspace_records').upsert({
+      id: newEvent.id,
+      kind: 'hackathon',
+      data: newEvent,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase addHackathon error:', error);
+    });
+
     if (newEvent.status === 'Winner' || newEvent.status === 'Finalist') {
       confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 } });
     }
@@ -1605,6 +1761,15 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     setHackathons(prev => prev.map(h => h.id === data.id ? updated : h));
 
+    supabase.from('workspace_records').upsert({
+      id: updated.id,
+      kind: 'hackathon',
+      data: updated,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase updateHackathon error:', error);
+    });
+
     if (data.status === 'Winner') {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
     }
@@ -1613,15 +1778,36 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteHackathon = (id: string) => {
     sound.click();
     setHackathons(prev => prev.filter(h => h.id !== id));
+    supabase.from('workspace_records').delete().eq('id', id).then(({ error }) => {
+      if (error) console.warn('Supabase deleteHackathon error:', error);
+    });
   };
 
   const updateHackathonRemarks = (id: string, remarks: string) => {
     sound.click();
-    setHackathons(prev => prev.map(h => h.id === id ? {
-      ...h,
-      remarks,
-      updatedAt: new Date().toISOString().split('T')[0]
-    } : h));
+    let updatedRecord: HackathonEvent | null = null;
+    setHackathons(prev => prev.map(h => {
+      if (h.id === id) {
+        updatedRecord = {
+          ...h,
+          remarks,
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+        return updatedRecord;
+      }
+      return h;
+    }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as HackathonEvent).id,
+        kind: 'hackathon',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase updateHackathonRemarks error:', error);
+      });
+    }
   };
 
   const addHackathonAttachment = async (eventId: string, attachment: { name: string; url: string; type: string }): Promise<void> => {
@@ -1635,30 +1821,56 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       uploadedBy: currentUser.id
     };
 
+    let updatedRecord: HackathonEvent | null = null;
     setHackathons(prev => prev.map(h => {
       if (h.id === eventId) {
-        return {
+        updatedRecord = {
           ...h,
           attachments: [newAttachment, ...(h.attachments || [])],
           updatedAt: new Date().toISOString().split('T')[0]
         };
+        return updatedRecord;
       }
       return h;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as HackathonEvent).id,
+        kind: 'hackathon',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase addHackathonAttachment error:', error);
+      });
+    }
   };
 
   const deleteHackathonAttachment = (eventId: string, attachmentId: string) => {
     sound.click();
+    let updatedRecord: HackathonEvent | null = null;
     setHackathons(prev => prev.map(h => {
       if (h.id === eventId) {
-        return {
+        updatedRecord = {
           ...h,
           attachments: (h.attachments || []).filter(a => a.id !== attachmentId),
           updatedAt: new Date().toISOString().split('T')[0]
         };
+        return updatedRecord;
       }
       return h;
     }));
+
+    if (updatedRecord) {
+      supabase.from('workspace_records').upsert({
+        id: (updatedRecord as HackathonEvent).id,
+        kind: 'hackathon',
+        data: updatedRecord,
+        updated_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) console.warn('Supabase deleteHackathonAttachment error:', error);
+      });
+    }
   };
 
   // ==========================================
@@ -2669,6 +2881,16 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
     };
 
     setAgentReports(prev => [newReport, ...prev]);
+
+    // Persist to Supabase workspace_records
+    supabase.from('workspace_records').upsert({
+      id: newReport.id,
+      kind: 'agent_report',
+      data: newReport,
+      updated_at: new Date().toISOString()
+    }).then(({ error }) => {
+      if (error) console.warn('Supabase save report error:', error);
+    });
 
     // Save as note in Team Wiki
     addNote({
