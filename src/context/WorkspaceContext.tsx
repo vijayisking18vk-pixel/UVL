@@ -159,7 +159,7 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_CLEAN_V1_INR';
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_CLEAN_V2';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
