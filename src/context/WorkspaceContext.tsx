@@ -160,7 +160,34 @@ interface WorkspaceContextType {
   resetWorkspaceData: () => void;
 }
 
-const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_CLEAN_V2';
+export const DEFAULT_OPERATOR_PINS: Record<string, string> = {
+  'u-1': '1001',
+  'u-2': '1002',
+  'u-3': '1003',
+  'u-4': '1004',
+  'u-5': '1005',
+  'vijayrajkumar': '1001',
+  'vijay': '1001',
+  'saai': '1002',
+  'harish': '1003',
+  'subanesh': '1004',
+  'vinayak': '1005'
+};
+
+export const resolveUserPin = (user?: Partial<User> | null): string => {
+  if (!user) return '1001';
+  if (user.pin && typeof user.pin === 'string' && user.pin.trim().length > 0) return user.pin.trim();
+  if (user.id && DEFAULT_OPERATOR_PINS[user.id]) return DEFAULT_OPERATOR_PINS[user.id];
+  const name = (user.name || '').toLowerCase().trim();
+  if (DEFAULT_OPERATOR_PINS[name]) return DEFAULT_OPERATOR_PINS[name];
+  const handle = (user.handle || '').toLowerCase().replace(/^@/, '').trim();
+  if (DEFAULT_OPERATOR_PINS[handle]) return DEFAULT_OPERATOR_PINS[handle];
+  const foundInit = initialUsers.find(iu => iu.id === user.id || iu.name.toLowerCase() === name || iu.handle.toLowerCase().replace(/^@/, '') === handle);
+  if (foundInit?.pin) return foundInit.pin;
+  return '1001';
+};
+
+const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_CLEAN_V3';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -172,8 +199,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Ensure all 5 real team members are always preserved and sanitized
-        parsed.users = initialUsers;
+        // Ensure all 5 real team members are always preserved and sanitized with verified PINs
+        parsed.users = initialUsers.map(u => ({ ...u, pin: resolveUserPin(u) }));
         return parsed;
       }
     } catch {
@@ -189,7 +216,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
   const [accessModalOpen, setAccessModalOpen] = useState<boolean>(false);
 
-  const [users, setUsers] = useState<User[]>(savedData?.users || initialUsers);
+  const [users, setUsers] = useState<User[]>(() => {
+    const rawUsers: User[] = savedData?.users && savedData.users.length > 0 ? savedData.users : initialUsers;
+    return rawUsers.map((u: User) => ({ ...u, pin: resolveUserPin(u) }));
+  });
 
   // Authentication & Dedicated PIN Verification Session Management
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -220,6 +250,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       u.handle.toLowerCase().replace(/^@/, '') === search ||
       u.callsign.toLowerCase() === search ||
       u.name.toLowerCase() === search
+    ) || initialUsers.find(u =>
+      u.id === identifier ||
+      u.handle.toLowerCase().replace(/^@/, '') === search ||
+      u.callsign.toLowerCase() === search ||
+      u.name.toLowerCase() === search
     );
 
     if (!targetUser) {
@@ -228,7 +263,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return false;
     }
 
-    if (!pin || pin.trim() !== targetUser.pin) {
+    const expectedPin = resolveUserPin(targetUser);
+
+    if (!pin || pin.trim() !== expectedPin) {
       setLoginError('Authentication failed: Invalid security PIN code.');
       sound.alert();
       return false;
@@ -295,7 +332,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             avatarBg: u.avatar_bg || '#000000',
             avatarStitch: u.avatar_stitch || '#FFFFFF',
             callsign: u.callsign || 'OPERATOR',
-            pin: u.pin,
+            pin: resolveUserPin(u),
             status: u.status || 'active',
             statusMessage: u.status_message || '',
             lastActive: u.last_active || 'Just now'
