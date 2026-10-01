@@ -11,6 +11,8 @@ import {
   AlertOctagon,
   CheckCircle2,
   Check,
+  Pencil,
+  Calendar,
   Trash2,
   X,
   Bot
@@ -62,6 +64,84 @@ export const TasksView: React.FC = () => {
         return [...prev, userId];
       }
     });
+  };
+
+  // Edit Task State
+  const [isEditingTask, setIsEditingTask] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStatus, setEditStatus] = useState<TaskStatus>('todo');
+  const [editPriority, setEditPriority] = useState<TaskPriority>('medium');
+  const [editAssigneeIds, setEditAssigneeIds] = useState<string[]>([]);
+  const [editProjectId, setEditProjectId] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editTagsStr, setEditTagsStr] = useState('');
+  const [editSubtasks, setEditSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
+  const [editSubtaskInput, setEditSubtaskInput] = useState('');
+
+  const startEditingTask = (task: Task) => {
+    setSelectedTask(task);
+    setIsEditingTask(true);
+    setEditTitle(task.title);
+    setEditDescription(task.description || '');
+    setEditStatus(task.status);
+    setEditPriority(task.priority);
+    setEditAssigneeIds(task.assigneeIds && task.assigneeIds.length > 0 ? [...task.assigneeIds] : [task.assigneeId]);
+    setEditProjectId(task.projectId || '');
+    setEditDueDate(task.dueDate || '');
+    setEditTagsStr((task.tags || []).join(', '));
+    setEditSubtasks(task.subtasks ? [...task.subtasks] : []);
+    setEditSubtaskInput('');
+  };
+
+  const toggleEditAssignee = (userId: string) => {
+    setEditAssigneeIds(prev => {
+      if (prev.includes(userId)) {
+        if (prev.length === 1) return prev; // Keep at least one
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
+  const addSubtaskToEdit = () => {
+    if (!editSubtaskInput.trim()) return;
+    setEditSubtasks(prev => [...prev, { id: `st-${Date.now()}`, title: editSubtaskInput.trim(), completed: false }]);
+    setEditSubtaskInput('');
+  };
+
+  const removeSubtaskFromEdit = (subtaskId: string) => {
+    setEditSubtasks(prev => prev.filter(st => st.id !== subtaskId));
+  };
+
+  const handleSaveTaskEdit = () => {
+    if (!selectedTask || !editTitle.trim()) return;
+
+    const tags = editTagsStr
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    const primaryAssigneeId = editAssigneeIds[0] || selectedTask.assigneeId || currentUser.id;
+
+    const updated: Task = {
+      ...selectedTask,
+      title: editTitle.trim(),
+      description: editDescription.trim(),
+      status: editStatus,
+      priority: editPriority,
+      dueDate: editDueDate,
+      projectId: editProjectId,
+      assigneeId: primaryAssigneeId,
+      assigneeIds: editAssigneeIds.length > 0 ? editAssigneeIds : [primaryAssigneeId],
+      subtasks: editSubtasks,
+      tags
+    };
+
+    updateTask(updated);
+    setSelectedTask(updated);
+    setIsEditingTask(false);
   };
 
   // Filter tasks
@@ -327,24 +407,39 @@ export const TasksView: React.FC = () => {
                               onClick={() => setSelectedTask(task)}
                               className="bg-white border border-[#E5E5E7] hover:border-black/30 rounded-2xl p-4.5 transition-all cursor-pointer group shadow-xs hover:shadow-sm"
                             >
-                              {/* Project Code & Priority */}
+                              {/* Project Code & Priority + Quick Edit */}
                               <div className="flex items-center justify-between gap-2 mb-2">
-                                {project ? (
-                                  <span className="text-[11px] text-black font-semibold">
-                                    /{project.code}
+                                <div className="flex items-center gap-1.5">
+                                  {project ? (
+                                    <span className="text-[11px] text-black font-semibold">
+                                      /{project.code}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[11px] text-[#6E6E73]">/GENERAL</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      startEditingTask(task);
+                                    }}
+                                    className="p-1 hover:bg-[#F5F5F7] rounded-md text-[#6E6E73] hover:text-black transition-all cursor-pointer opacity-70 group-hover:opacity-100"
+                                    title="Edit Task"
+                                  >
+                                    <Pencil size={11} />
+                                  </button>
+                                  <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border ${
+                                    task.priority === 'urgent'
+                                      ? 'border-red-200 bg-red-50 text-red-700'
+                                      : task.priority === 'high'
+                                      ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                      : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73]'
+                                  }`}>
+                                    {task.priority}
                                   </span>
-                                ) : (
-                                  <span className="text-[11px] text-[#6E6E73]">/GENERAL</span>
-                                )}
-                                <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border ${
-                                  task.priority === 'urgent'
-                                    ? 'border-red-200 bg-red-50 text-red-700'
-                                    : task.priority === 'high'
-                                    ? 'border-amber-200 bg-amber-50 text-amber-800'
-                                    : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73]'
-                                }`}>
-                                  {task.priority}
-                                </span>
+                                </div>
                               </div>
 
                               {/* Title */}
@@ -541,8 +636,19 @@ export const TasksView: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="col-span-2 text-right font-mono text-xs text-[#6E6E73]">
-                    {task.dueDate}
+                  <div className="col-span-2 text-right font-mono text-xs text-[#6E6E73] flex items-center justify-end gap-2">
+                    <span>{task.dueDate}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditingTask(task);
+                      }}
+                      className="p-1 hover:bg-[#E5E5E7] rounded-md text-[#6E6E73] hover:text-black transition-all cursor-pointer opacity-70 hover:opacity-100"
+                      title="Edit Task"
+                    >
+                      <Pencil size={12} />
+                    </button>
                   </div>
                 </div>
               );
@@ -551,201 +657,507 @@ export const TasksView: React.FC = () => {
         </div>
       )}
 
-      {/* TASK DETAILS MODAL */}
+      {/* TASK DETAILS & EDIT MODAL */}
       {selectedTask && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white text-black border border-[#E5E5E7] rounded-3xl max-w-xl w-full p-6 sm:p-8 relative max-h-[90vh] overflow-y-auto shadow-2xl space-y-6">
+            
+            {/* Modal Header */}
             <div className="flex items-start justify-between pb-4 border-b border-[#E5E5E7]">
               <div>
-                <span className="text-xs font-semibold text-[#6E6E73] uppercase tracking-wider">
-                  /{selectedTask.priority} Priority
-                </span>
-                <h3 className="font-serif text-xl sm:text-2xl font-normal text-black mt-1">
-                  {selectedTask.title}
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border ${
+                    (isEditingTask ? editPriority : selectedTask.priority) === 'urgent'
+                      ? 'border-red-200 bg-red-50 text-red-700'
+                      : (isEditingTask ? editPriority : selectedTask.priority) === 'high'
+                      ? 'border-amber-200 bg-amber-50 text-amber-800'
+                      : 'border-[#E5E5E7] bg-[#F5F5F7] text-[#6E6E73]'
+                  }`}>
+                    {isEditingTask ? editPriority : selectedTask.priority} Priority
+                  </span>
+                  <span className="text-xs font-mono text-[#6E6E73]">
+                    {projects.find(p => p.id === (isEditingTask ? editProjectId : selectedTask.projectId))
+                      ? `/${projects.find(p => p.id === (isEditingTask ? editProjectId : selectedTask.projectId))?.code}`
+                      : '/GENERAL'}
+                  </span>
+                </div>
+                <h3 className="font-serif text-xl sm:text-2xl font-normal text-black mt-1.5">
+                  {isEditingTask ? 'Edit Task Details' : selectedTask.title}
                 </h3>
               </div>
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
-              >
-                <X size={18} />
-              </button>
+
+              <div className="flex items-center gap-2">
+                {!isEditingTask ? (
+                  <button
+                    type="button"
+                    onClick={() => startEditingTask(selectedTask)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-black hover:text-white hover:border-black text-xs font-medium text-black transition-all cursor-pointer shadow-xs"
+                    title="Edit Task Details"
+                  >
+                    <Pencil size={12} />
+                    <span>Edit Task</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingTask(false)}
+                    className="px-3 py-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-white text-xs font-medium text-black transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTask(null);
+                    setIsEditingTask(false);
+                  }}
+                  className="text-[#6E6E73] hover:text-black transition-colors p-1.5 rounded-full hover:bg-[#F5F5F7] cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-4 text-xs">
-              {/* Description */}
-              <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] text-black leading-relaxed whitespace-pre-wrap">
-                {selectedTask.description || 'No additional description provided.'}
-              </div>
+            {/* VIEW MODE */}
+            {!isEditingTask ? (
+              <div className="space-y-4 text-xs">
+                {/* Description */}
+                <div className="p-4 rounded-2xl bg-[#F5F5F7] border border-[#E5E5E7] text-black leading-relaxed whitespace-pre-wrap">
+                  {selectedTask.description || 'No additional description provided.'}
+                </div>
 
-              {/* Status Selector */}
-              <div>
-                <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Status</label>
-                <select
-                  value={selectedTask.status}
-                  onChange={(e) => {
-                    updateTaskStatus(selectedTask.id, e.target.value as TaskStatus);
-                    setSelectedTask({ ...selectedTask, status: e.target.value as TaskStatus });
-                  }}
-                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
-                >
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="blocked">Blocked</option>
-                  <option value="done">Done</option>
-                </select>
-              </div>
+                {/* Status & Due Date Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Status</label>
+                    <select
+                      value={selectedTask.status}
+                      onChange={(e) => {
+                        updateTaskStatus(selectedTask.id, e.target.value as TaskStatus);
+                        setSelectedTask({ ...selectedTask, status: e.target.value as TaskStatus });
+                      }}
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                    >
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="blocked">Blocked</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
 
-              {/* Assignees (Multi-select) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
-                    Assigned Operators ({((selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0) ? selectedTask.assigneeIds : [selectedTask.assigneeId]).length})
-                  </label>
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Due Date</label>
+                    <div className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black flex items-center gap-2 font-mono">
+                      <Clock size={13} className="text-[#6E6E73]" />
+                      <span>{selectedTask.dueDate || 'No due date set'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assigned Operators */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
+                      Assigned Operators ({((selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0) ? selectedTask.assigneeIds : [selectedTask.assigneeId]).length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => startEditingTask(selectedTask)}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      Manage in Full Editor
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl">
+                    {users.map(u => {
+                      const currentAssignees = selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0 
+                        ? selectedTask.assigneeIds 
+                        : [selectedTask.assigneeId];
+                      const isAssigned = currentAssignees.includes(u.id);
+
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            let nextIds: string[];
+                            if (isAssigned) {
+                              if (currentAssignees.length === 1) return; // Keep at least 1 assignee
+                              nextIds = currentAssignees.filter(id => id !== u.id);
+                            } else {
+                              nextIds = [...currentAssignees, u.id];
+                            }
+                            const updated = {
+                              ...selectedTask,
+                              assigneeIds: nextIds,
+                              assigneeId: nextIds[0] || u.id
+                            };
+                            updateTask(updated);
+                            setSelectedTask(updated);
+                          }}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left border transition-all cursor-pointer ${
+                            isAssigned
+                              ? 'bg-black text-white border-black shadow-xs'
+                              : 'bg-white text-[#6E6E73] border-[#E5E5E7] hover:border-gray-400 hover:text-black'
+                          }`}
+                        >
+                          <PatchAvatar user={u} size="xs" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium leading-tight truncate">{u.name}</p>
+                            <p className={`text-[10px] uppercase font-mono tracking-wider truncate ${isAssigned ? 'text-white/70' : 'text-[#6E6E73]'}`}>
+                              {u.callsign} • {u.role}
+                            </p>
+                          </div>
+                          {isAssigned && <Check size={13} className="shrink-0 text-white" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Subtasks Checklist */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
+                      Checklist ({selectedTask.subtasks.filter(s => s.completed).length}/{selectedTask.subtasks.length})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => startEditingTask(selectedTask)}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      + Add / Edit items
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 border border-[#E5E5E7] rounded-2xl p-3.5 bg-[#F5F5F7]">
+                    {selectedTask.subtasks.length === 0 ? (
+                      <p className="text-xs text-[#6E6E73] italic">No subtasks defined.</p>
+                    ) : (
+                      selectedTask.subtasks.map(st => (
+                        <div
+                          key={st.id}
+                          onClick={() => {
+                            toggleSubtask(selectedTask.id, st.id);
+                            setSelectedTask({
+                              ...selectedTask,
+                              subtasks: selectedTask.subtasks.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s)
+                            });
+                          }}
+                          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white cursor-pointer transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={st.completed}
+                            readOnly
+                            className="accent-black w-4 h-4 rounded"
+                          />
+                          <span className={`text-xs ${st.completed ? 'line-through text-[#6E6E73]' : 'text-black font-medium'}`}>
+                            {st.title}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Tags */}
+                {selectedTask.tags.length > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Tags</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {selectedTask.tags.map(t => (
+                        <span key={t} className="text-xs px-3 py-1 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-black">
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer in View Mode */}
+                <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteTask(selectedTask.id);
+                      setSelectedTask(null);
+                      setIsEditingTask(false);
+                    }}
+                    className="text-xs text-[#6E6E73] hover:text-red-600 flex items-center gap-1.5 cursor-pointer font-medium transition-colors"
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete Task</span>
+                  </button>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        const allIds = users.map(u => u.id);
-                        const updated = { ...selectedTask, assigneeIds: allIds, assigneeId: allIds[0] };
-                        updateTask(updated);
-                        setSelectedTask(updated);
-                      }}
-                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                      onClick={() => startEditingTask(selectedTask)}
+                      className="px-4 py-2 rounded-full border border-[#E5E5E7] bg-white hover:bg-[#F5F5F7] text-xs font-medium text-black cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
                     >
-                      Assign All
+                      <Pencil size={12} />
+                      <span>Edit Task</span>
                     </button>
-                    <span className="text-gray-300">•</span>
                     <button
                       type="button"
                       onClick={() => {
-                        const updated = { ...selectedTask, assigneeIds: [currentUser.id], assigneeId: currentUser.id };
-                        updateTask(updated);
-                        setSelectedTask(updated);
+                        setSelectedTask(null);
+                        setIsEditingTask(false);
                       }}
-                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                      className="px-5 py-2 rounded-full bg-black text-white hover:opacity-90 text-xs font-medium cursor-pointer shadow-xs transition-all"
                     >
-                      Only Me
+                      Close
                     </button>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl">
-                  {users.map(u => {
-                    const currentAssignees = selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0 
-                      ? selectedTask.assigneeIds 
-                      : [selectedTask.assigneeId];
-                    const isAssigned = currentAssignees.includes(u.id);
-
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => {
-                          let nextIds: string[];
-                          if (isAssigned) {
-                            if (currentAssignees.length === 1) return; // Keep at least 1 assignee
-                            nextIds = currentAssignees.filter(id => id !== u.id);
-                          } else {
-                            nextIds = [...currentAssignees, u.id];
-                          }
-                          const updated = {
-                            ...selectedTask,
-                            assigneeIds: nextIds,
-                            assigneeId: nextIds[0] || u.id
-                          };
-                          updateTask(updated);
-                          setSelectedTask(updated);
-                        }}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left border transition-all cursor-pointer ${
-                          isAssigned
-                            ? 'bg-black text-white border-black shadow-xs'
-                            : 'bg-white text-[#6E6E73] border-[#E5E5E7] hover:border-gray-400 hover:text-black'
-                        }`}
-                      >
-                        <PatchAvatar user={u} size="xs" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium leading-tight truncate">{u.name}</p>
-                          <p className={`text-[10px] uppercase font-mono tracking-wider truncate ${isAssigned ? 'text-white/70' : 'text-[#6E6E73]'}`}>
-                            {u.callsign} • {u.role}
-                          </p>
-                        </div>
-                        {isAssigned && <Check size={13} className="shrink-0 text-white" />}
-                      </button>
-                    );
-                  })}
-                </div>
               </div>
-
-              {/* Subtasks Checklist */}
-              <div>
-                <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">
-                  Checklist ({selectedTask.subtasks.filter(s => s.completed).length}/{selectedTask.subtasks.length})
-                </label>
-                <div className="space-y-1.5 border border-[#E5E5E7] rounded-2xl p-3.5 bg-[#F5F5F7]">
-                  {selectedTask.subtasks.length === 0 ? (
-                    <p className="text-xs text-[#6E6E73] italic">No subtasks defined.</p>
-                  ) : (
-                    selectedTask.subtasks.map(st => (
-                      <div
-                        key={st.id}
-                        onClick={() => {
-                          toggleSubtask(selectedTask.id, st.id);
-                          setSelectedTask({
-                            ...selectedTask,
-                            subtasks: selectedTask.subtasks.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s)
-                          });
-                        }}
-                        className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-white cursor-pointer transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={st.completed}
-                          readOnly
-                          className="accent-black w-4 h-4 rounded"
-                        />
-                        <span className={`text-xs ${st.completed ? 'line-through text-[#6E6E73]' : 'text-black font-medium'}`}>
-                          {st.title}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Tags */}
-              {selectedTask.tags.length > 0 && (
+            ) : (
+              /* EDIT MODE */
+              <div className="space-y-4 text-xs">
+                {/* Title */}
                 <div>
-                  <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Tags</label>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {selectedTask.tags.map(t => (
-                      <span key={t} className="text-xs px-3 py-1 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] text-black">
-                        #{t}
-                      </span>
-                    ))}
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Task Title *</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2.5 text-xs text-black font-semibold focus:outline-none focus:border-black focus:bg-white transition-all"
+                    placeholder="Task title..."
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Description</label>
+                  <textarea
+                    rows={3}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Task details and instructions..."
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
+                  />
+                </div>
+
+                {/* Status & Priority */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Status</label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value as TaskStatus)}
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                    >
+                      <option value="todo">To Do</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="blocked">Blocked</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Priority</label>
+                    <select
+                      value={editPriority}
+                      onChange={(e) => setEditPriority(e.target.value as TaskPriority)}
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
                   </div>
                 </div>
-              )}
-            </div>
 
-            <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
-              <button
-                onClick={() => {
-                  deleteTask(selectedTask.id);
-                  setSelectedTask(null);
-                }}
-                className="text-xs text-[#6E6E73] hover:text-red-600 flex items-center gap-1.5 cursor-pointer font-medium transition-colors"
-              >
-                <Trash2 size={13} />
-                <span>Delete Task</span>
-              </button>
-              <button
-                onClick={() => setSelectedTask(null)}
-                className="px-5 py-2 rounded-full bg-black text-white hover:opacity-90 text-xs font-medium cursor-pointer shadow-xs transition-all"
-              >
-                Close
-              </button>
-            </div>
+                {/* Linked Project & Due Date */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Linked Project</label>
+                    <select
+                      value={editProjectId}
+                      onChange={(e) => setEditProjectId(e.target.value)}
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                    >
+                      <option value="">No Project / Unassigned</option>
+                      {projects.map(p => (
+                        <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Due Date</label>
+                    <input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Assigned Operators (Multi-select) */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
+                      Assign Operators ({editAssigneeIds.length}) *
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditAssigneeIds(users.map(u => u.id))}
+                        className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                      >
+                        Assign All
+                      </button>
+                      <span className="text-gray-300">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditAssigneeIds([currentUser.id])}
+                        className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                      >
+                        Only Me
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl">
+                    {users.map(u => {
+                      const isAssigned = editAssigneeIds.includes(u.id);
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => toggleEditAssignee(u.id)}
+                          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left border transition-all cursor-pointer ${
+                            isAssigned
+                              ? 'bg-black text-white border-black shadow-xs'
+                              : 'bg-white text-[#6E6E73] border-[#E5E5E7] hover:border-gray-400 hover:text-black'
+                          }`}
+                        >
+                          <PatchAvatar user={u} size="xs" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium leading-tight truncate">{u.name}</p>
+                            <p className={`text-[10px] uppercase font-mono tracking-wider truncate ${isAssigned ? 'text-white/70' : 'text-[#6E6E73]'}`}>
+                              {u.callsign} • {u.role}
+                            </p>
+                          </div>
+                          {isAssigned && <Check size={13} className="shrink-0 text-white" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Subtasks / Checklist Editor */}
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">
+                    Sub-tasks / Checklist ({editSubtasks.length})
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={editSubtaskInput}
+                      onChange={(e) => setEditSubtaskInput(e.target.value)}
+                      placeholder="Add new subtask item..."
+                      className="flex-1 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addSubtaskToEdit();
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={addSubtaskToEdit}
+                      className="px-4 py-2 rounded-xl border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-white text-black text-xs font-medium transition-all cursor-pointer"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {editSubtasks.length > 0 && (
+                    <div className="space-y-1.5 border border-[#E5E5E7] rounded-2xl p-3 bg-[#F5F5F7]">
+                      {editSubtasks.map((st) => (
+                        <div
+                          key={st.id}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-white border border-[#E5E5E7]"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <input
+                              type="checkbox"
+                              checked={st.completed}
+                              onChange={() => {
+                                setEditSubtasks(prev => prev.map(s => s.id === st.id ? { ...s, completed: !s.completed } : s));
+                              }}
+                              className="accent-black w-4 h-4 rounded cursor-pointer"
+                            />
+                            <span className={`text-xs truncate ${st.completed ? 'line-through text-[#6E6E73]' : 'text-black font-medium'}`}>
+                              {st.title}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeSubtaskFromEdit(st.id)}
+                            className="text-[#6E6E73] hover:text-red-600 p-1 transition-colors cursor-pointer"
+                            title="Remove subtask"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Tags (Comma-separated)</label>
+                  <input
+                    type="text"
+                    value={editTagsStr}
+                    onChange={(e) => setEditTagsStr(e.target.value)}
+                    placeholder="e.g. backend, security, hardware"
+                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                  />
+                </div>
+
+                {/* Footer in Edit Mode */}
+                <div className="pt-4 border-t border-[#E5E5E7] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      deleteTask(selectedTask.id);
+                      setSelectedTask(null);
+                      setIsEditingTask(false);
+                    }}
+                    className="text-xs text-[#6E6E73] hover:text-red-600 flex items-center gap-1.5 cursor-pointer font-medium transition-colors"
+                  >
+                    <Trash2 size={13} />
+                    <span>Delete Task</span>
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTask(false)}
+                      className="px-4 py-2 rounded-full border border-[#E5E5E7] bg-white hover:bg-[#F5F5F7] text-xs font-medium text-black cursor-pointer shadow-xs transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveTaskEdit}
+                      className="px-5 py-2 rounded-full bg-black text-white hover:opacity-90 text-xs font-medium cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
+                    >
+                      <Check size={13} />
+                      <span>Save Changes</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -12,7 +12,8 @@ import {
   Radio,
   Zap,
   CheckCircle2,
-  ListTodo
+  ListTodo,
+  Pencil
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -270,10 +271,18 @@ export const DashboardView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2.5 self-end sm:self-center">
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('tasks')}
+                    className="p-1.5 rounded-full border border-[#E5E5E7] hover:border-black bg-[#F5F5F7] hover:bg-white text-[#6E6E73] hover:text-black transition-all cursor-pointer shadow-2xs"
+                    title="Edit Task"
+                  >
+                    <Pencil size={12} />
+                  </button>
                   <button
                     onClick={() => updateTaskStatus(t.id, 'done')}
-                    className="px-3.5 py-1.5 rounded-full border border-[#E5E5E7] hover:border-black bg-[#F5F5F7] hover:bg-white text-xs font-medium text-black transition-all cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full border border-[#E5E5E7] hover:border-black bg-[#F5F5F7] hover:bg-white text-xs font-medium text-black transition-all cursor-pointer shadow-2xs"
                   >
                     Resolve
                   </button>
