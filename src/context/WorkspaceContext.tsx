@@ -541,20 +541,34 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         const { data: dbTasks, error: tErr } = await supabase.from('tasks').select('*');
         if (!tErr && dbTasks && isMounted) {
-          setTasks(dbTasks.map(t => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || '',
-            assigneeId: t.assignee_id,
-            status: t.status as TaskStatus,
-            priority: t.priority as any,
-            dueDate: t.due_date,
-            projectId: t.project_id || 'p-1',
-            subtasks: t.subtasks || [],
-            dependencies: t.dependencies || (t.blocked_by ? [t.blocked_by] : []),
-            tags: t.tags || [],
-            createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
-          })));
+          setTasks(dbTasks.map(t => {
+            const rawTags: string[] = t.tags || [];
+            const assigneesTag = rawTags.find((tg: string) => tg.startsWith('__assignees__:'));
+            let assigneeIds: string[] = t.assignee_id ? [t.assignee_id] : [];
+            if (assigneesTag) {
+              const parsed = assigneesTag.replace('__assignees__:', '').split(',').map((id: string) => id.trim()).filter(Boolean);
+              if (parsed.length > 0) {
+                assigneeIds = parsed;
+              }
+            }
+            const cleanTags = rawTags.filter((tg: string) => !tg.startsWith('__assignees__:'));
+
+            return {
+              id: t.id,
+              title: t.title,
+              description: t.description || '',
+              assigneeId: t.assignee_id || assigneeIds[0] || 'u-1',
+              assigneeIds: assigneeIds.length > 0 ? assigneeIds : [t.assignee_id || 'u-1'],
+              status: t.status as TaskStatus,
+              priority: t.priority as any,
+              dueDate: t.due_date,
+              projectId: t.project_id || 'p-1',
+              subtasks: t.subtasks || [],
+              dependencies: t.dependencies || (t.blocked_by ? [t.blocked_by] : []),
+              tags: cleanTags,
+              createdAt: t.created_at ? t.created_at.split('T')[0] : new Date().toISOString().split('T')[0]
+            };
+          }));
         }
 
         const { data: dbMeetings, error: mErr } = await supabase.from('meetings').select('*');
@@ -959,9 +973,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addTask = (t: Omit<Task, 'id' | 'createdAt'>): Task => {
     sound.patchStamp();
+    const assigneeIds = t.assigneeIds && t.assigneeIds.length > 0 ? t.assigneeIds : [t.assigneeId || currentUserId];
+    const primaryAssigneeId = assigneeIds[0] || t.assigneeId || currentUserId;
+    const cleanTags = (t.tags || []).filter((tg: string) => !tg.startsWith('__assignees__:'));
+    const dbTags = [...cleanTags, `__assignees__:${assigneeIds.join(',')}`];
+
     const newTask: Task = {
       ...t,
       id: `t-${Date.now().toString().slice(-4)}`,
+      assigneeId: primaryAssigneeId,
+      assigneeIds,
+      tags: cleanTags,
       createdAt: new Date().toISOString().split('T')[0]
     };
     setTasks(prev => [newTask, ...prev]);
@@ -971,14 +993,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       id: newTask.id,
       title: newTask.title,
       description: newTask.description,
-      assignee_id: newTask.assigneeId,
+      assignee_id: primaryAssigneeId,
       status: newTask.status,
       priority: newTask.priority,
       due_date: newTask.dueDate,
       project_id: newTask.projectId,
       subtasks: newTask.subtasks,
       blocked_by: (newTask as any).blockedBy || newTask.dependencies?.[0] || null,
-      tags: newTask.tags || [],
+      tags: dbTags,
       dependencies: newTask.dependencies || []
     }).then(({ error }) => {
       if (error) console.warn('Supabase addTask error:', error);
@@ -995,7 +1017,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         endTime: '18:00',
         category: 'task_deadline',
         projectId: newTask.projectId,
-        memberId: newTask.assigneeId,
+        memberId: primaryAssigneeId,
+        attendeeIds: assigneeIds,
         sourceTaskId: newTask.id
       };
       setCalendarEvents(prev => [...prev, deadlineEvent]);
@@ -1019,20 +1042,32 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const updateTask = (updated: Task) => {
     sound.click();
-    setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+    const assigneeIds = updated.assigneeIds && updated.assigneeIds.length > 0 ? updated.assigneeIds : [updated.assigneeId || currentUserId];
+    const primaryAssigneeId = assigneeIds[0] || updated.assigneeId || currentUserId;
+    const cleanTags = (updated.tags || []).filter((tg: string) => !tg.startsWith('__assignees__:'));
+    const dbTags = [...cleanTags, `__assignees__:${assigneeIds.join(',')}`];
+
+    const normalizedTask: Task = {
+      ...updated,
+      assigneeId: primaryAssigneeId,
+      assigneeIds,
+      tags: cleanTags
+    };
+
+    setTasks(prev => prev.map(t => t.id === updated.id ? normalizedTask : t));
 
     supabase.from('tasks').update({
-      title: updated.title,
-      description: updated.description,
-      assignee_id: updated.assigneeId,
-      status: updated.status,
-      priority: updated.priority,
-      due_date: updated.dueDate,
-      project_id: updated.projectId,
-      subtasks: updated.subtasks,
-      blocked_by: (updated as any).blockedBy || updated.dependencies?.[0] || null,
-      tags: updated.tags || [],
-      dependencies: updated.dependencies || []
+      title: normalizedTask.title,
+      description: normalizedTask.description,
+      assignee_id: primaryAssigneeId,
+      status: normalizedTask.status,
+      priority: normalizedTask.priority,
+      due_date: normalizedTask.dueDate,
+      project_id: normalizedTask.projectId,
+      subtasks: normalizedTask.subtasks,
+      blocked_by: (normalizedTask as any).blockedBy || normalizedTask.dependencies?.[0] || null,
+      tags: dbTags,
+      dependencies: normalizedTask.dependencies || []
     }).eq('id', updated.id).then(({ error }) => {
       if (error) console.warn('Supabase updateTask error:', error);
     });
@@ -1044,7 +1079,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ...ev,
           title: `Deadline: ${updated.title}`,
           date: updated.dueDate,
-          memberId: updated.assigneeId,
+          memberId: primaryAssigneeId,
+          attendeeIds: assigneeIds,
           projectId: updated.projectId
         };
       }

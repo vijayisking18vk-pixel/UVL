@@ -10,6 +10,7 @@ import {
   Clock,
   AlertOctagon,
   CheckCircle2,
+  Check,
   Trash2,
   X,
   Bot
@@ -45,16 +46,27 @@ export const TasksView: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [newStatus, setNewStatus] = useState<TaskStatus>('todo');
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
-  const [newAssigneeId, setNewAssigneeId] = useState(currentUser.id);
+  const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([currentUser.id]);
   const [newProjectId, setNewProjectId] = useState(projects[0]?.id || '');
   const [newDueDate, setNewDueDate] = useState('2026-09-18');
   const [newTagsStr, setNewTagsStr] = useState('operations, core');
   const [newSubtasks, setNewSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');
 
+  const toggleAssignee = (userId: string) => {
+    setNewAssigneeIds(prev => {
+      if (prev.includes(userId)) {
+        if (prev.length === 1) return prev; // Keep at least one assignee
+        return prev.filter(id => id !== userId);
+      } else {
+        return [...prev, userId];
+      }
+    });
+  };
+
   // Filter tasks
   const filteredTasks = tasks.filter(t => {
-    if (scopeFilter === 'my' && t.assigneeId !== currentUser.id) return false;
+    if (scopeFilter === 'my' && !(t.assigneeIds || [t.assigneeId]).includes(currentUser.id)) return false;
     if (projectFilter !== 'all' && t.projectId !== projectFilter) return false;
     if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
     if (searchQuery.trim()) {
@@ -85,7 +97,8 @@ export const TasksView: React.FC = () => {
       description: newDescription,
       status: newStatus,
       priority: newPriority,
-      assigneeId: newAssigneeId,
+      assigneeId: newAssigneeIds[0] || currentUser.id,
+      assigneeIds: newAssigneeIds.length > 0 ? newAssigneeIds : [currentUser.id],
       projectId: newProjectId,
       dueDate: newDueDate,
       subtasks: newSubtasks,
@@ -96,6 +109,7 @@ export const TasksView: React.FC = () => {
     setNewTitle('');
     setNewDescription('');
     setNewSubtasks([]);
+    setNewAssigneeIds([currentUser.id]);
     setIsCreateOpen(false);
   };
 
@@ -159,7 +173,7 @@ export const TasksView: React.FC = () => {
                   : 'text-[#6E6E73] hover:text-black'
               }`}
             >
-              My Assignments ({tasks.filter(t => t.assigneeId === currentUser.id).length})
+              My Assignments ({tasks.filter(t => (t.assigneeIds || [t.assigneeId]).includes(currentUser.id)).length})
             </button>
           </div>
 
@@ -300,7 +314,9 @@ export const TasksView: React.FC = () => {
                         </div>
                       ) : (
                         colTasks.map(task => {
-                          const assignee = users.find(u => u.id === task.assigneeId);
+                          const taskAssignees = (task.assigneeIds || [task.assigneeId])
+                            .map(aid => users.find(u => u.id === aid))
+                            .filter(Boolean) as typeof users;
                           const project = projects.find(p => p.id === task.projectId);
                           const subtaskCompleted = task.subtasks.filter(s => s.completed).length;
                           const hasDependencies = task.dependencies.length > 0;
@@ -367,10 +383,18 @@ export const TasksView: React.FC = () => {
                                   {task.dueDate}
                                 </span>
 
-                                {assignee && (
-                                  <div className="flex items-center gap-1.5">
-                                    <PatchAvatar user={assignee} size="sm" />
-                                    <span className="text-xs text-black font-medium">{assignee.name}</span>
+                                {taskAssignees.length > 0 && (
+                                  <div className="flex items-center gap-1.5" title={taskAssignees.map(u => `${u.name} (${u.callsign})`).join(', ')}>
+                                    <div className="flex items-center -space-x-1.5 overflow-hidden">
+                                      {taskAssignees.map(u => (
+                                        <div key={u.id} className="ring-1.5 ring-white rounded-full">
+                                          <PatchAvatar user={u} size="xs" />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <span className="text-[11px] text-[#6E6E73] font-medium font-mono truncate max-w-[110px]">
+                                      {taskAssignees.map(u => u.callsign).join(', ')}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -456,7 +480,9 @@ export const TasksView: React.FC = () => {
             </div>
 
             {filteredTasks.map(task => {
-              const assignee = users.find(u => u.id === task.assigneeId);
+              const taskAssignees = (task.assigneeIds || [task.assigneeId])
+                .map(aid => users.find(u => u.id === aid))
+                .filter(Boolean) as typeof users;
               const project = projects.find(p => p.id === task.projectId);
               return (
                 <div
@@ -498,11 +524,19 @@ export const TasksView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="col-span-2 flex items-center gap-2">
-                    {assignee && (
+                  <div className="col-span-2 flex items-center gap-2" title={taskAssignees.map(u => `${u.name} (${u.callsign})`).join(', ')}>
+                    {taskAssignees.length > 0 && (
                       <>
-                        <PatchAvatar user={assignee} size="sm" />
-                        <span className="text-xs truncate text-black font-medium">{assignee.name}</span>
+                        <div className="flex items-center -space-x-1.5 overflow-hidden">
+                          {taskAssignees.map(u => (
+                            <div key={u.id} className="ring-1.5 ring-white rounded-full">
+                              <PatchAvatar user={u} size="xs" />
+                            </div>
+                          ))}
+                        </div>
+                        <span className="text-xs truncate text-black font-medium">
+                          {taskAssignees.map(u => u.name).join(', ')}
+                        </span>
                       </>
                     )}
                   </div>
@@ -544,40 +578,102 @@ export const TasksView: React.FC = () => {
                 {selectedTask.description || 'No additional description provided.'}
               </div>
 
-              {/* Status & Assignee Selector */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Status</label>
-                  <select
-                    value={selectedTask.status}
-                    onChange={(e) => {
-                      updateTaskStatus(selectedTask.id, e.target.value as TaskStatus);
-                      setSelectedTask({ ...selectedTask, status: e.target.value as TaskStatus });
-                    }}
-                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
-                  >
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="done">Done</option>
-                  </select>
+              {/* Status Selector */}
+              <div>
+                <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Status</label>
+                <select
+                  value={selectedTask.status}
+                  onChange={(e) => {
+                    updateTaskStatus(selectedTask.id, e.target.value as TaskStatus);
+                    setSelectedTask({ ...selectedTask, status: e.target.value as TaskStatus });
+                  }}
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                >
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+
+              {/* Assignees (Multi-select) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
+                    Assigned Operators ({((selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0) ? selectedTask.assigneeIds : [selectedTask.assigneeId]).length})
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allIds = users.map(u => u.id);
+                        const updated = { ...selectedTask, assigneeIds: allIds, assigneeId: allIds[0] };
+                        updateTask(updated);
+                        setSelectedTask(updated);
+                      }}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      Assign All
+                    </button>
+                    <span className="text-gray-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = { ...selectedTask, assigneeIds: [currentUser.id], assigneeId: currentUser.id };
+                        updateTask(updated);
+                        setSelectedTask(updated);
+                      }}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      Only Me
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[#6E6E73] mb-1.5 uppercase tracking-wider">Assignee</label>
-                  <select
-                    value={selectedTask.assigneeId}
-                    onChange={(e) => {
-                      const updated = { ...selectedTask, assigneeId: e.target.value };
-                      updateTask(updated);
-                      setSelectedTask(updated);
-                    }}
-                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
-                  >
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl">
+                  {users.map(u => {
+                    const currentAssignees = selectedTask.assigneeIds && selectedTask.assigneeIds.length > 0 
+                      ? selectedTask.assigneeIds 
+                      : [selectedTask.assigneeId];
+                    const isAssigned = currentAssignees.includes(u.id);
+
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => {
+                          let nextIds: string[];
+                          if (isAssigned) {
+                            if (currentAssignees.length === 1) return; // Keep at least 1 assignee
+                            nextIds = currentAssignees.filter(id => id !== u.id);
+                          } else {
+                            nextIds = [...currentAssignees, u.id];
+                          }
+                          const updated = {
+                            ...selectedTask,
+                            assigneeIds: nextIds,
+                            assigneeId: nextIds[0] || u.id
+                          };
+                          updateTask(updated);
+                          setSelectedTask(updated);
+                        }}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left border transition-all cursor-pointer ${
+                          isAssigned
+                            ? 'bg-black text-white border-black shadow-xs'
+                            : 'bg-white text-[#6E6E73] border-[#E5E5E7] hover:border-gray-400 hover:text-black'
+                        }`}
+                      >
+                        <PatchAvatar user={u} size="xs" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium leading-tight truncate">{u.name}</p>
+                          <p className={`text-[10px] uppercase font-mono tracking-wider truncate ${isAssigned ? 'text-white/70' : 'text-[#6E6E73]'}`}>
+                            {u.callsign} • {u.role}
+                          </p>
+                        </div>
+                        {isAssigned && <Check size={13} className="shrink-0 text-white" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -701,33 +797,71 @@ export const TasksView: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Assignee *</label>
-                  <select
-                    value={newAssigneeId}
-                    onChange={(e) => setNewAssigneeId(e.target.value)}
-                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
-                  >
-                    {users.map(u => (
-                      <option key={u.id} value={u.id}>{u.name} ({u.callsign})</option>
-                    ))}
-                  </select>
+              {/* Assignees (Multi-select) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-medium text-[#6E6E73] uppercase tracking-wider">
+                    Assign Operators ({newAssigneeIds.length}) *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewAssigneeIds(users.map(u => u.id))}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      Assign All
+                    </button>
+                    <span className="text-gray-300">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setNewAssigneeIds([currentUser.id])}
+                      className="text-[11px] text-[#6E6E73] hover:text-black font-medium underline cursor-pointer"
+                    >
+                      Only Me
+                    </button>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Linked Project</label>
-                  <select
-                    value={newProjectId}
-                    onChange={(e) => setNewProjectId(e.target.value)}
-                    className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
-                  >
-                    <option value="">No Project / Unassigned</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-2xl">
+                  {users.map(u => {
+                    const isAssigned = newAssigneeIds.includes(u.id);
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => toggleAssignee(u.id)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left border transition-all cursor-pointer ${
+                          isAssigned
+                            ? 'bg-black text-white border-black shadow-xs'
+                            : 'bg-white text-[#6E6E73] border-[#E5E5E7] hover:border-gray-400 hover:text-black'
+                        }`}
+                      >
+                        <PatchAvatar user={u} size="xs" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium leading-tight truncate">{u.name}</p>
+                          <p className={`text-[10px] uppercase font-mono tracking-wider truncate ${isAssigned ? 'text-white/70' : 'text-[#6E6E73]'}`}>
+                            {u.callsign} • {u.role}
+                          </p>
+                        </div>
+                        {isAssigned && <Check size={13} className="shrink-0 text-white" />}
+                      </button>
+                    );
+                  })}
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#6E6E73] uppercase tracking-wider mb-1.5">Linked Project</label>
+                <select
+                  value={newProjectId}
+                  onChange={(e) => setNewProjectId(e.target.value)}
+                  className="w-full bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl px-3.5 py-2 text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all"
+                >
+                  <option value="">No Project / Unassigned</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.code}: {p.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

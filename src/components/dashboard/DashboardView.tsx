@@ -44,9 +44,9 @@ export const DashboardView: React.FC = () => {
   const totalSpend = expenses.filter(e => e.type !== 'earning').reduce((acc, e) => acc + e.amount, 0);
   const netCash = totalEarnings - totalSpend;
 
-  // Filter items for current user
-  const myTasks = tasks.filter(t => t.assigneeId === currentUser.id && t.status !== 'done');
-  const doneTasks = tasks.filter(t => t.assigneeId === currentUser.id && t.status === 'done');
+  // Filter items for current user (including multi-assigned tasks)
+  const myTasks = tasks.filter(t => (t.assigneeIds || [t.assigneeId]).includes(currentUser.id) && t.status !== 'done');
+  const doneTasks = tasks.filter(t => (t.assigneeIds || [t.assigneeId]).includes(currentUser.id) && t.status === 'done');
   const myCompletedCount = doneTasks.length;
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -248,6 +248,22 @@ export const DashboardView: React.FC = () => {
                           <span className="text-[11px] text-[#6E6E73]">
                             {t.subtasks.filter(s => s.completed).length}/{t.subtasks.length} subtasks
                           </span>
+                        </>
+                      )}
+                      {(t.assigneeIds || [t.assigneeId]).length > 1 && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center -space-x-1.5" title="Assigned operators">
+                            {(t.assigneeIds || [t.assigneeId]).map(aid => {
+                              const u = users.find(user => user.id === aid);
+                              if (!u) return null;
+                              return (
+                                <div key={aid} title={`${u.name} (${u.callsign})`} className="ring-1.5 ring-white rounded-full">
+                                  <PatchAvatar user={u} size="xs" />
+                                </div>
+                              );
+                            })}
+                          </div>
                         </>
                       )}
                     </div>

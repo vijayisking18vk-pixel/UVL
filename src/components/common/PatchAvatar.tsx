@@ -6,7 +6,7 @@ import {
 
 interface PatchAvatarProps {
   user: User;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showStatus?: boolean;
   showCallsign?: boolean;
   onClick?: () => void;
@@ -43,6 +43,7 @@ export const PatchAvatar: React.FC<PatchAvatarProps> = ({
   };
 
   const dimensions = {
+    xs: { box: 'w-5 h-5', icon: 10, text: 'text-[8px]' },
     sm: { box: 'w-7 h-7', icon: 13, text: 'text-[9px]' },
     md: { box: 'w-9 h-9', icon: 16, text: 'text-[10px]' },
     lg: { box: 'w-12 h-12', icon: 20, text: 'text-xs' },

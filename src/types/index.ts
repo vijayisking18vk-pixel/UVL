@@ -50,6 +50,7 @@ export interface Task {
   status: TaskStatus;
   priority: TaskPriority;
   assigneeId: string;
+  assigneeIds?: string[]; // Multiple assignees support
   projectId: string;
   dueDate: string;
   createdAt: string;
