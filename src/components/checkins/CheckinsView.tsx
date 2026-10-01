@@ -924,7 +924,7 @@ export const CheckinsView: React.FC = () => {
               Daily Check-in Transmissions.
             </h3>
             <p className="text-xs text-[#6E6E73] mt-0.5">
-              {checkins.length} recorded today · {totalTeamHours}h {remainingTeamMinutes}m total engineering logged.
+              {todaysCheckins.length} shifts today ({checkins.length} total shifts logged) · {totalTeamHours}h {remainingTeamMinutes}m total engineering logged.
             </p>
           </div>
         </div>
@@ -944,19 +944,30 @@ export const CheckinsView: React.FC = () => {
                   key={ci.id}
                   className="p-5 rounded-2xl border border-[#E5E5E7] bg-[#F5F5F7]/50 hover:bg-[#F5F5F7] hover:border-[#D1D1D6] transition-all space-y-3 text-xs"
                 >
-                  <div className="flex items-center justify-between border-b border-[#E5E5E7] pb-2.5">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex flex-wrap items-center justify-between border-b border-[#E5E5E7] pb-2.5 gap-2">
+                    <div className="flex items-center gap-2.5 flex-wrap">
                       {author && <PatchAvatar user={author} size="sm" />}
                       <span className="font-semibold text-black text-sm">{author?.name}</span>
-                      <span className="text-[11px] text-[#6E6E73]">[{author?.callsign}]</span>
+                      <span className="text-[11px] text-[#6E6E73] font-mono">[{author?.callsign}]</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-white border border-[#E5E5E7] text-[#6E6E73] font-mono">
+                        {ci.date}
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Time Range Badge */}
+                      {ci.startTime && ci.endTime && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#E5E5E7] text-[#6E6E73] text-[10px] font-mono flex items-center gap-1">
+                          <Clock size={10} className="text-[#6E6E73]" />
+                          <span>{ci.startTime} - {ci.endTime}</span>
+                        </span>
+                      )}
+
                       {/* Logged Hours Badge */}
                       {hasHours && (
                         <span className="px-2.5 py-0.5 rounded-full bg-black text-white text-[10px] font-mono font-medium flex items-center gap-1 shadow-2xs">
                           <Timer size={11} className="text-emerald-400" />
-                          <span>{ci.hoursWorked || 0}h {ci.minutesWorked ? `${ci.minutesWorked}m` : '0m'}</span>
+                          <span>{ci.hoursWorked || 0}h {ci.minutesWorked !== undefined ? `${ci.minutesWorked}m` : '0m'}</span>
                         </span>
                       )}
 

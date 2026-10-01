@@ -221,6 +221,7 @@ export const resolveUserPin = (user?: Partial<User> | null): string => {
 
 const STORAGE_KEY = 'UVL_WORKSPACE_STATE_PRODUCTION_ROLES_V4';
 const AUTH_SESSION_KEY = 'UVL_AUTH_SESSION_USER_ID';
+const PERSISTENT_AUTH_KEY = 'UVL_PERSISTENT_AUTH_STATUS';
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
@@ -253,11 +254,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return rawUsers.map((u: User) => ({ ...u, pin: resolveUserPin(u) }));
   });
 
-  // Authentication & Dedicated PIN Verification Session Management
+  // Authentication & Dedicated PIN Verification Session Management (Persistent Login)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
       const sessionUser = localStorage.getItem(AUTH_SESSION_KEY);
-      return !!sessionUser;
+      const isPersistent = localStorage.getItem(PERSISTENT_AUTH_KEY) === 'authenticated';
+      return !!(sessionUser || isPersistent);
     } catch {
       return false;
     }
@@ -308,6 +310,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsAuthenticated(true);
     try {
       localStorage.setItem(AUTH_SESSION_KEY, targetUser.id);
+      localStorage.setItem(PERSISTENT_AUTH_KEY, 'authenticated');
     } catch {}
     sound.patchStamp();
     return true;
@@ -318,6 +321,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsAuthenticated(false);
     try {
       localStorage.removeItem(AUTH_SESSION_KEY);
+      localStorage.removeItem(PERSISTENT_AUTH_KEY);
     } catch {}
   };
 
@@ -401,6 +405,21 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [isCheckedIn, isTimerRunning, checkInTimestamp]);
 
+  // Warn operator when attempting to close tab while active shift is running
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isCheckedIn) {
+        e.preventDefault();
+        e.returnValue = 'You have an active shift session running. Do you want to check out before leaving? Your timer will continue running in the background until you check out.';
+        return e.returnValue;
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isCheckedIn]);
+
   const startTimer = () => {
     sound.click();
     setIsTimerRunning(true);
@@ -460,21 +479,62 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const { data: dbUsers, error: uErr } = await supabase.from('users').select('*');
         if (!uErr && dbUsers && dbUsers.length > 0 && isMounted) {
           setSupabaseConnected(true);
-          setUsers(dbUsers.map(u => ({
-            id: u.id,
-            name: u.name,
-            handle: u.handle || `@${u.name.toLowerCase()}`,
-            role: (u.role as any) || 'member',
-            avatarUrl: u.avatar_url || `/avatars/${u.name.toLowerCase()}.png`,
-            avatarEmblem: u.avatar_emblem || 'crosshair',
-            avatarBg: u.avatar_bg || '#000000',
-            avatarStitch: u.avatar_stitch || '#FFFFFF',
-            callsign: u.callsign || 'OPERATOR',
-            pin: resolveUserPin(u),
-            status: u.status || 'active',
-            statusMessage: u.status_message || '',
-            lastActive: u.last_active || 'Just now'
-          })));
+
+          // Evaluate active shift from Supabase for cross-device continuation (laptop <-> mobile)
+          const targetDbUser = dbUsers.find(u => u.id === currentUserId);
+          if (targetDbUser) {
+            const rawStatusMsg = targetDbUser.status_message || '';
+            if (targetDbUser.status === 'active' && rawStatusMsg.startsWith('__ACTIVE_SHIFT__:')) {
+              const parts = rawStatusMsg.split(':');
+              const epoch = Number(parts[1]);
+              if (!isNaN(epoch) && epoch > 0) {
+                setIsCheckedIn(true);
+                setIsTimerRunning(true);
+                setCheckInTimestamp(epoch);
+                setActiveSessionSeconds(Math.max(0, Math.floor((Date.now() - epoch) / 1000)));
+                try {
+                  localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'true');
+                  localStorage.setItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`, String(epoch));
+                } catch {}
+              }
+            } else if (targetDbUser.status === 'away' || !rawStatusMsg.startsWith('__ACTIVE_SHIFT__:')) {
+              setIsCheckedIn(prev => {
+                if (prev) {
+                  setIsTimerRunning(false);
+                  setCheckInTimestamp(null);
+                  setActiveSessionSeconds(0);
+                  try {
+                    localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'false');
+                    localStorage.removeItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+                  } catch {}
+                }
+                return false;
+              });
+            }
+          }
+
+          setUsers(dbUsers.map(u => {
+            let cleanMsg = u.status_message || '';
+            if (cleanMsg.startsWith('__ACTIVE_SHIFT__:')) {
+              const parts = cleanMsg.split(':');
+              cleanMsg = parts.slice(2).join(':') || 'Available / On Shift';
+            }
+            return {
+              id: u.id,
+              name: u.name,
+              handle: u.handle || `@${u.name.toLowerCase()}`,
+              role: (u.role as any) || 'member',
+              avatarUrl: u.avatar_url || `/avatars/${u.name.toLowerCase()}.png`,
+              avatarEmblem: u.avatar_emblem || 'crosshair',
+              avatarBg: u.avatar_bg || '#000000',
+              avatarStitch: u.avatar_stitch || '#FFFFFF',
+              callsign: u.callsign || 'OPERATOR',
+              pin: resolveUserPin(u),
+              status: u.status || 'active',
+              statusMessage: cleanMsg,
+              lastActive: u.last_active || 'Just now'
+            };
+          }));
         } else if (!uErr) {
           setSupabaseConnected(true);
         }
@@ -527,36 +587,52 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           })));
         }
 
-        const { data: dbCheckins, error: cErr } = await supabase.from('checkins').select('*');
+        const { data: dbCheckins, error: cErr } = await supabase.from('checkins').select('*').order('created_at', { ascending: false });
         if (!cErr && dbCheckins && isMounted) {
           setCheckins(dbCheckins.map(c => {
-            let rawWorkedOn = c.completed_today || c.worked_on || '';
-            let hoursWorked: number | undefined;
-            let minutesWorked: number | undefined;
-
+            let rawWorkedOn = c.worked_on || c.completed_today || '';
+            let hoursWorked: number = 0;
+            let minutesWorked: number = 0;
             let startTime: string | undefined;
             let endTime: string | undefined;
 
-            const timeMatch = rawWorkedOn.match(/^\[(?:(\d+)h\s*)?(?:(\d+)m)?(?:\s*\|\s*(\d{2}:\d{2})-(\d{2}:\d{2}))?\]\s*/i);
+            const timeMatch = rawWorkedOn.match(/^\[(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?(?:\s*\|\s*([^\]]+))?\]\s*/i);
             if (timeMatch) {
               if (timeMatch[1]) hoursWorked = parseInt(timeMatch[1], 10);
               if (timeMatch[2]) minutesWorked = parseInt(timeMatch[2], 10);
-              if (timeMatch[3]) startTime = timeMatch[3];
-              if (timeMatch[4]) endTime = timeMatch[4];
+              if (timeMatch[3]) {
+                const rangeParts = timeMatch[3].split('-').map((s: string) => s.trim());
+                startTime = rangeParts[0];
+                endTime = rangeParts[1];
+              }
               rawWorkedOn = rawWorkedOn.replace(timeMatch[0], '');
+            } else {
+              const altMatch = rawWorkedOn.match(/\((\d+)\s*h(?:\s*(\d+)\s*m)?\)/i) || rawWorkedOn.match(/\((\d+)\s*m\)/i);
+              if (altMatch) {
+                if (altMatch[0].includes('h')) {
+                  hoursWorked = parseInt(altMatch[1], 10);
+                  if (altMatch[2]) minutesWorked = parseInt(altMatch[2], 10);
+                } else {
+                  minutesWorked = parseInt(altMatch[1], 10);
+                }
+              }
             }
+
+            const checkinDateObj = new Date(c.created_at || c.timestamp || Date.now());
+            const localDateStr = `${checkinDateObj.getFullYear()}-${String(checkinDateObj.getMonth() + 1).padStart(2, '0')}-${String(checkinDateObj.getDate()).padStart(2, '0')}`;
+            const localTimeStr = checkinDateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             return {
               id: c.id,
               userId: c.user_id,
-              date: c.date || (c.created_at ? c.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-              completedToday: rawWorkedOn,
+              date: localDateStr,
+              completedToday: rawWorkedOn || 'Shift session logged',
               workingOnNext: c.working_on_next || c.next_up || '',
               blockers: c.blockers || 'None',
               mood: (c.velocity ? (c.velocity === 'good' ? '🟢 Good' : c.velocity) : (c.mood || '🟢 Good')) as any,
-              timestamp: c.timestamp ? new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today',
-              hoursWorked,
-              minutesWorked,
+              timestamp: localTimeStr,
+              hoursWorked: hoursWorked > 0 || minutesWorked > 0 ? hoursWorked : undefined,
+              minutesWorked: hoursWorked > 0 || minutesWorked > 0 ? minutesWorked : undefined,
               startTime,
               endTime
             };
@@ -698,8 +774,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       .on('postgres_changes', { event: '*', schema: 'public', table: 'workspace_records' }, () => syncSupabase())
       .subscribe();
 
+    const handleVisibilityOrFocus = () => {
+      if (!document.hidden) {
+        syncSupabase();
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    const syncInterval = setInterval(syncSupabase, 12000);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      clearInterval(syncInterval);
       supabase.removeChannel(channel);
     };
   }, [currentUserId]);
@@ -766,11 +854,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const setCurrentUser = (user: User) => {
     setCurrentUserId(user.id);
+    try {
+      localStorage.setItem(AUTH_SESSION_KEY, user.id);
+      localStorage.setItem(PERSISTENT_AUTH_KEY, 'authenticated');
+    } catch {}
   };
 
   const switchUserById = (userId: string) => {
     sound.patchStamp();
     setCurrentUserId(userId);
+    try {
+      localStorage.setItem(AUTH_SESSION_KEY, userId);
+      localStorage.setItem(PERSISTENT_AUTH_KEY, 'authenticated');
+    } catch {}
   };
 
   const addMember = async (memberData: Omit<User, 'id'>): Promise<User> => {
@@ -1466,37 +1562,41 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       colors: ['#000000', '#FFFFFF', '#A1A1AA']
     });
 
-    const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const nowObj = new Date();
+    const nowTime = nowObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const localDateStr = data.date || `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')}`;
+
     const newCheckin: Checkin = {
       ...data,
-      id: `chk-${Date.now()}`,
+      id: `chk-${Date.now()}-${currentUserId}`,
       userId: currentUserId,
+      date: localDateStr,
       timestamp: nowTime
     };
 
-    setCheckins(prev => [newCheckin, ...prev.filter(c => !(c.userId === currentUserId && c.date === data.date))]);
+    // CRITICAL: NEVER overwrite or discard other checkins for today! Keep all checkin sessions so hours accumulate!
+    setCheckins(prev => [newCheckin, ...prev.filter(c => c.id !== newCheckin.id)]);
 
-    let timePrefix = '';
     const h = data.hoursWorked || 0;
     const m = data.minutesWorked || 0;
-    if (h > 0 || m > 0) {
-      const parts: string[] = [];
-      if (h > 0) parts.push(`${h}h`);
-      if (m > 0) parts.push(`${m}m`);
-      const dur = parts.join(' ');
-      const range = (data.startTime && data.endTime) ? ` | ${data.startTime}-${data.endTime}` : '';
-      timePrefix = `[${dur}${range}] `;
-    }
+    const durParts: string[] = [];
+    if (h > 0) durParts.push(`${h}h`);
+    durParts.push(`${m}m`);
+    const dur = durParts.join(' ');
+    const range = (data.startTime && data.endTime) ? ` | ${data.startTime}-${data.endTime}` : '';
+    const timePrefix = `[${dur}${range}] `;
 
-    const payloadWorkedOn = `${timePrefix}${data.completedToday || 'Progress logged'}`;
+    const cleanCompleted = (data.completedToday || 'Shift session completed').trim();
+    const payloadWorkedOn = cleanCompleted.startsWith('[') ? cleanCompleted : `${timePrefix}${cleanCompleted}`;
 
     supabase.from('checkins').insert({
       id: newCheckin.id,
       user_id: currentUserId,
       worked_on: payloadWorkedOn,
-      next_up: data.workingOnNext || 'Next phase planned',
-      blockers: data.blockers || '',
-      velocity: String(data.mood || 'good').toLowerCase().includes('good') ? 'good' : String(data.mood || 'good')
+      next_up: data.workingOnNext || 'Off-duty / Standby',
+      blockers: data.blockers || 'None',
+      velocity: String(data.mood || 'good').toLowerCase().includes('good') ? 'good' : String(data.mood || 'good'),
+      timestamp: new Date().toISOString()
     }).then(({ error }) => {
       if (error) console.warn('Supabase submitCheckin error:', error);
     });
@@ -1516,39 +1616,72 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const checkIn = (initialMessage?: string) => {
     const now = Date.now();
+    const msg = initialMessage || 'Available / On Shift';
+    const shiftPayload = `__ACTIVE_SHIFT__:${now}:${msg}`;
+
     setIsCheckedIn(true);
     setIsTimerRunning(true);
     setCheckInTimestamp(now);
     setActiveSessionSeconds(0);
+
     try {
       localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'true');
       localStorage.setItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`, String(now));
+      localStorage.setItem(`UVL_OPERATOR_SHIFT_MSG_${currentUserId}`, msg);
     } catch {}
-    updateUserStatus('active', initialMessage || 'Available / On Shift');
+
     sound.patchStamp();
+
+    // Optimistically update local user state
+    setUsers(prev => prev.map(u => u.id === currentUserId ? {
+      ...u,
+      status: 'active',
+      statusMessage: msg,
+      lastActive: 'Just now'
+    } : u));
+
+    // Update Supabase for cross-device sync (laptop <-> mobile)
+    supabase.from('users').update({
+      status: 'active',
+      status_message: shiftPayload,
+      last_active: 'Just now'
+    }).eq('id', currentUserId).then(({ error }) => {
+      if (error) console.warn('Supabase checkIn update error:', error);
+    });
   };
 
   const checkOut = async (summary?: string) => {
     const now = Date.now();
-    const elapsedSec = checkInTimestamp ? Math.max(0, Math.floor((now - checkInTimestamp) / 1000)) : activeSessionSeconds;
+    let startEpoch = checkInTimestamp;
+    if (!startEpoch) {
+      try {
+        const saved = localStorage.getItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+        if (saved) startEpoch = Number(saved);
+      } catch {}
+    }
+
+    const elapsedSec = startEpoch ? Math.max(0, Math.floor((now - startEpoch) / 1000)) : activeSessionSeconds;
     const hours = Math.floor(elapsedSec / 3600);
     const minutes = Math.floor((elapsedSec % 3600) / 60);
 
+    // If shift was at least 10 seconds, record at least 1 minute so it registers in today's telemetry
+    const recordedMins = (hours === 0 && minutes === 0 && elapsedSec >= 10) ? 1 : minutes;
+
     const nowDate = new Date(now);
-    const startDate = checkInTimestamp ? new Date(checkInTimestamp) : new Date(now - elapsedSec * 1000);
+    const startDate = startEpoch ? new Date(startEpoch) : new Date(now - elapsedSec * 1000);
     const startTime = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const endTime = nowDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const todayDate = nowDate.toISOString().split('T')[0];
+    const todayDate = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
 
-    // Submit checkin record to database & state
+    // Submit individual checkin record to database & state
     submitCheckin({
       date: todayDate,
-      completedToday: summary || (hours > 0 || minutes > 0 ? `Completed shift session (${hours}h ${minutes}m)` : 'Shift session checked out'),
+      completedToday: summary || (hours > 0 || recordedMins > 0 ? `Completed shift session (${hours}h ${recordedMins}m)` : 'Shift session checked out'),
       workingOnNext: 'Off-duty / Standby',
       blockers: 'None',
       mood: '🟢 Good',
       hoursWorked: hours,
-      minutesWorked: (hours === 0 && minutes === 0 && elapsedSec >= 15) ? 1 : minutes,
+      minutesWorked: recordedMins,
       startTime,
       endTime
     });
@@ -1557,12 +1690,34 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsTimerRunning(false);
     setCheckInTimestamp(null);
     setActiveSessionSeconds(0);
+
     try {
       localStorage.setItem(`UVL_OPERATOR_CHECKED_IN_${currentUserId}`, 'false');
       localStorage.removeItem(`UVL_OPERATOR_CHECKIN_TIME_${currentUserId}`);
+      localStorage.removeItem(`UVL_OPERATOR_SHIFT_MSG_${currentUserId}`);
     } catch {}
-    updateUserStatus('away', 'Checked out / Off-duty');
+
     sound.click();
+
+    // Optimistically update local user state
+    setUsers(prev => prev.map(u => u.id === currentUserId ? {
+      ...u,
+      status: 'away',
+      statusMessage: 'Checked out / Off-duty',
+      lastActive: 'Just now'
+    } : u));
+
+    // Update Supabase for cross-device sync
+    try {
+      const { error } = await supabase.from('users').update({
+        status: 'away',
+        status_message: 'Checked out / Off-duty',
+        last_active: 'Just now'
+      }).eq('id', currentUserId);
+      if (error) console.warn('Supabase checkOut update error:', error);
+    } catch (e) {
+      console.warn('Supabase checkOut network error:', e);
+    }
   };
 
   // Multi-Horizon Telemetry Engine (Today, This Week, This Month, This Year)
