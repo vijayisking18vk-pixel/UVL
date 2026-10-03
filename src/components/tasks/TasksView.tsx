@@ -50,7 +50,7 @@ export const TasksView: React.FC = () => {
   const [newPriority, setNewPriority] = useState<TaskPriority>('medium');
   const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([currentUser.id]);
   const [newProjectId, setNewProjectId] = useState(projects[0]?.id || '');
-  const [newDueDate, setNewDueDate] = useState('2026-09-18');
+  const [newDueDate, setNewDueDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newTagsStr, setNewTagsStr] = useState('operations, core');
   const [newSubtasks, setNewSubtasks] = useState<{ id: string; title: string; completed: boolean }[]>([]);
   const [subtaskInput, setSubtaskInput] = useState('');

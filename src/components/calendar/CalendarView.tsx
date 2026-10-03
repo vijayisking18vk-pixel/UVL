@@ -40,9 +40,17 @@ export const CalendarView: React.FC = () => {
   const [selectedMemberId, setSelectedMemberId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'month' | 'agenda'>('month');
 
-  // Month navigation: using September 2026 as base
-  const [currentMonth, setCurrentMonth] = useState<number>(8); // 0-indexed (8 = September)
-  const currentYear = 2026;
+  // Dynamic date helpers
+  const today = new Date();
+  const getTodayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const todayStr = getTodayStr();
+
+  // Dynamic Month & Year Navigation
+  const [currentYear, setCurrentYear] = useState<number>(() => today.getFullYear());
+  const [currentMonth, setCurrentMonth] = useState<number>(() => today.getMonth()); // 0-indexed (0: Jan ... 9: Oct ... 11: Dec)
 
   // Modals
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -50,7 +58,7 @@ export const CalendarView: React.FC = () => {
 
   // New Event Form State
   const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState('2026-09-15');
+  const [newDate, setNewDate] = useState<string>(() => todayStr);
   const [newStartTime, setNewStartTime] = useState('11:00');
   const [newEndTime, setNewEndTime] = useState('12:00');
   const [newCategory, setNewCategory] = useState<CalendarLayer>('team');
@@ -61,6 +69,38 @@ export const CalendarView: React.FC = () => {
   const toggleLayer = (layer: CalendarLayer) => {
     setLayers(prev => ({ ...prev, [layer]: !prev[layer] }));
   };
+
+  // Month navigation handlers
+  const handlePrevMonth = () => {
+    setCurrentMonth(prev => {
+      if (prev === 0) {
+        setCurrentYear(y => y - 1);
+        return 11;
+      }
+      return prev - 1;
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonth(prev => {
+      if (prev === 11) {
+        setCurrentYear(y => y + 1);
+        return 0;
+      }
+      return prev + 1;
+    });
+  };
+
+  const handleGoToToday = () => {
+    const now = new Date();
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth());
+  };
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   // Filter events based on active layers, project, and member
   const filteredEvents = calendarEvents.filter(ev => {
@@ -73,16 +113,68 @@ export const CalendarView: React.FC = () => {
     return true;
   });
 
-  // Days in month calculation for September 2026
-  const daysInMonth = 30;
-  const firstDayIndex = 2; // Sept 1, 2026 is Tuesday (0: Sun, 1: Mon, 2: Tue)
-  const calendarDays = Array.from({ length: 35 }, (_, i) => {
-    const dayNum = i - firstDayIndex + 1;
-    if (dayNum > 0 && dayNum <= daysInMonth) {
-      return dayNum;
-    }
-    return null;
-  });
+  // Accurate days in month calculation for the active month & year
+  const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+  const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+
+  const totalSlots = (firstDayOfWeek + daysInCurrentMonth > 35) ? 42 : 35;
+
+  interface CalendarCell {
+    dayNum: number;
+    month: number;
+    year: number;
+    isCurrentMonth: boolean;
+    dateStr: string;
+    isToday: boolean;
+  }
+
+  const calendarCells: CalendarCell[] = [];
+
+  // 1. Previous month trailing days
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    const day = daysInPrevMonth - firstDayOfWeek + i + 1;
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    calendarCells.push({
+      dayNum: day,
+      month: prevMonth,
+      year: prevYear,
+      isCurrentMonth: false,
+      dateStr,
+      isToday: dateStr === todayStr
+    });
+  }
+
+  // 2. Current month days
+  for (let day = 1; day <= daysInCurrentMonth; day++) {
+    const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    calendarCells.push({
+      dayNum: day,
+      month: currentMonth,
+      year: currentYear,
+      isCurrentMonth: true,
+      dateStr,
+      isToday: dateStr === todayStr
+    });
+  }
+
+  // 3. Next month leading days
+  const remaining = totalSlots - calendarCells.length;
+  for (let day = 1; day <= remaining; day++) {
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+    const dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    calendarCells.push({
+      dayNum: day,
+      month: nextMonth,
+      year: nextYear,
+      isCurrentMonth: false,
+      dateStr,
+      isToday: dateStr === todayStr
+    });
+  }
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,28 +321,41 @@ export const CalendarView: React.FC = () => {
       {viewMode === 'month' && (
         <div className="bg-[#F5F5F7] border border-[#E5E5E7] rounded-3xl p-6 sm:p-8 shadow-xs">
           {/* Month Navigator */}
-          <div className="flex items-center justify-between pb-4 border-b border-[#E5E5E7] mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#E5E5E7] mb-6 gap-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl font-serif font-medium text-black tracking-tight">
-                September 2026
+                {monthNames[currentMonth]} {currentYear}
               </span>
               <span className="text-[10px] px-2.5 py-0.5 rounded-full border border-[#E5E5E7] bg-white text-[#6E6E73] font-semibold uppercase tracking-wider">
-                Sprint Cycle 03
+                Q{Math.floor(currentMonth / 3) + 1} • Sprint Cycle 0{((currentMonth % 3) + 1)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setCurrentMonth(prev => Math.max(0, prev - 1))}
-                className="p-2 rounded-full bg-white border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black transition-colors"
+                type="button"
+                onClick={handleGoToToday}
+                className="px-3.5 py-1.5 rounded-full bg-white border border-[#E5E5E7] hover:bg-[#F5F5F7] text-xs font-medium text-black transition-all cursor-pointer shadow-2xs hover:border-black"
               >
-                <ChevronLeft size={16} />
+                Today
               </button>
-              <button
-                onClick={() => setCurrentMonth(prev => prev + 1)}
-                className="p-2 rounded-full bg-white border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black transition-colors"
-              >
-                <ChevronRight size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handlePrevMonth}
+                  className="p-2 rounded-full bg-white border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black transition-colors cursor-pointer"
+                  title="Previous month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNextMonth}
+                  className="p-2 rounded-full bg-white border border-[#E5E5E7] hover:bg-[#F5F5F7] text-black transition-colors cursor-pointer"
+                  title="Next month"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -265,42 +370,36 @@ export const CalendarView: React.FC = () => {
 
           {/* Calendar Grid Cells */}
           <div className="grid grid-cols-7 gap-2 sm:gap-3">
-            {calendarDays.map((dayNum, idx) => {
-              if (!dayNum) {
-                return (
-                  <div
-                    key={`empty-${idx}`}
-                    className="min-h-[110px] rounded-2xl bg-white/40 border border-dashed border-[#E5E5E7] opacity-40"
-                  />
-                );
-              }
-
-              const formattedDay = dayNum < 10 ? `0${dayNum}` : `${dayNum}`;
-              const dateStr = `2026-09-${formattedDay}`;
-              const dayEvents = filteredEvents.filter(e => e.date === dateStr);
-              const isToday = dateStr === '2026-09-10';
+            {calendarCells.map((cell) => {
+              const dayEvents = filteredEvents.filter(e => e.date === cell.dateStr);
 
               return (
                 <div
-                  key={dateStr}
+                  key={cell.dateStr}
                   onClick={() => {
-                    setNewDate(dateStr);
+                    setNewDate(cell.dateStr);
                     setIsAddOpen(true);
                   }}
                   className={`min-h-[110px] p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
-                    isToday
-                      ? 'bg-white border-black shadow-sm'
-                      : 'bg-white border-[#E5E5E7] hover:border-black/30'
+                    cell.isToday
+                      ? 'bg-white border-black ring-1 ring-black shadow-xs'
+                      : cell.isCurrentMonth
+                      ? 'bg-white border-[#E5E5E7] hover:border-black/30'
+                      : 'bg-white/40 border-[#E5E5E7]/60 opacity-60 hover:opacity-100 hover:border-black/30'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`text-xs font-semibold ${
-                      isToday ? 'w-6 h-6 rounded-full bg-black text-white flex items-center justify-center' : 'text-black'
+                      cell.isToday
+                        ? 'w-6 h-6 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs shadow-xs'
+                        : cell.isCurrentMonth
+                        ? 'text-black'
+                        : 'text-[#8E8E93]'
                     }`}>
-                      {dayNum}
+                      {cell.dayNum}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="text-[10px] text-[#6E6E73] font-medium">
+                      <span className="text-[10px] text-[#6E6E73] font-medium font-mono">
                         {dayEvents.length} ev
                       </span>
                     )}
@@ -347,7 +446,12 @@ export const CalendarView: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {filteredEvents.sort((a, b) => a.date.localeCompare(b.date)).map(ev => {
+            {filteredEvents.length === 0 ? (
+              <div className="py-12 text-center text-xs text-[#6E6E73] bg-white rounded-2xl border border-dashed border-[#E5E5E7]">
+                No events found matching the active layers and filters.
+              </div>
+            ) : (
+              filteredEvents.sort((a, b) => a.date.localeCompare(b.date)).map(ev => {
               const badge = categoryBadges[ev.category];
               const project = projects.find(p => p.id === ev.projectId);
               return (
@@ -396,7 +500,7 @@ export const CalendarView: React.FC = () => {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       )}

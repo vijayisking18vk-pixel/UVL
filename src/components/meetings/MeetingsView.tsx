@@ -32,7 +32,7 @@ export const MeetingsView: React.FC = () => {
 
   // New Meeting Form
   const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState('2026-09-17');
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [newTime, setNewTime] = useState('11:00 AM');
   const [newDuration, setNewDuration] = useState('60 min');
   const [newAttendees, setNewAttendees] = useState<string[]>([currentUser.id]);
@@ -42,7 +42,7 @@ export const MeetingsView: React.FC = () => {
   // Action Item Quick Add in active meeting
   const [actionText, setActionText] = useState('');
   const [actionAssignee, setActionAssignee] = useState(currentUser.id);
-  const [actionDue, setActionDue] = useState('2026-09-18');
+  const [actionDue, setActionDue] = useState(() => new Date().toISOString().split('T')[0]);
 
   const activeMeeting = meetings.find(m => m.id === activeMeetingId) || meetings[0];
 
