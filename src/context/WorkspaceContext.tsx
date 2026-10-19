@@ -241,6 +241,7 @@ interface WorkspaceContextType {
   deleteCampaign: (id: string) => Promise<void>;
   createTrackingLink: (linkData: Omit<UVLTrackingLink, 'id' | 'slug' | 'auditHistory' | 'createdAt'> & { customSlug?: string }) => Promise<UVLTrackingLink>;
   updateTrackingLink: (id: string, updates: Partial<UVLTrackingLink>) => Promise<void>;
+  deleteTrackingLink: (id: string) => Promise<void>;
   ingestClick: (slug: string, meta: { userAgent?: string; ip?: string; referrer?: string }) => Promise<{ redirectUrl: string; attributionToken: string; deepLinkUrl?: string }>;
   ingestAppEvent: (eventData: Omit<UVLAppEvent, 'id' | 'ingestedAt' | 'attributionConfidence' | 'attributionSource'>) => Promise<UVLAppEvent>;
   getCampaignMetrics: (reportingMode: 'cohort' | 'event_time', dateRange?: { start: string; end: string }) => CampaignMetricsRow[];

@@ -154,6 +154,58 @@ export function createUVLMCPServer() {
               limit: { type: 'number', description: 'Max events to return (default: 50)' }
             }
           }
+        },
+        {
+          name: 'delete_campaign',
+          description: 'Deletes a marketing campaign and cascades deletion to all associated tracking links and QR codes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignId: { type: 'string', description: 'The unique campaign identifier to delete' }
+            },
+            required: ['campaignId']
+          }
+        },
+        {
+          name: 'create_tracking_link',
+          description: 'Creates a tracked smart link that redirects visitors to any external website, app, or deep link route with analytics attribution.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignId: { type: 'string', description: 'Campaign ID to attach this link to' },
+              appId: { type: 'string', description: 'App ID (Flutter, Android, iOS, or Web)' },
+              title: { type: 'string', description: 'Friendly title for the tracking link' },
+              destinationUrl: { type: 'string', description: 'The custom website or app URL to reroute visitors to (e.g. https://mywebsite.com or custom domain)' },
+              customSlug: { type: 'string', description: 'Optional custom vanity slug (e.g. campus-pass)' },
+              destinationRoute: { type: 'string', description: 'Optional in-app deep link route (e.g. onboarding or pay)' },
+              deepLinkEnabled: { type: 'boolean', description: 'Whether to attempt mobile deep link before web redirect (default: true)' }
+            },
+            required: ['campaignId', 'appId', 'title']
+          }
+        },
+        {
+          name: 'delete_tracking_link',
+          description: 'Deletes a tracking link, immediately disabling all its redirects and QR codes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              trackingLinkId: { type: 'string', description: 'The unique tracking link ID to delete' }
+            },
+            required: ['trackingLinkId']
+          }
+        },
+        {
+          name: 'reroute_tracking_link',
+          description: 'Reroutes an existing tracking link so it redirects to a different website, external application, or custom route.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              trackingLinkId: { type: 'string', description: 'The unique tracking link ID to reroute' },
+              newDestinationUrl: { type: 'string', description: 'The new destination website or app URL to redirect visitors to' },
+              newDestinationRoute: { type: 'string', description: 'Optional new in-app destination route' }
+            },
+            required: ['trackingLinkId', 'newDestinationUrl']
+          }
         }
       ]
     };
@@ -381,6 +433,136 @@ export function createUVLMCPServer() {
               {
                 type: 'text',
                 text: JSON.stringify({ events: data || [] }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'delete_campaign': {
+          const { campaignId } = a;
+          if (!campaignId) throw new Error('Missing required argument: campaignId');
+
+          // Cascade delete links first
+          await supabase.from('campaign_tracking_links').delete().eq('campaign_id', campaignId);
+          const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
+          if (error) throw error;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  message: `Campaign ${campaignId} and its associated tracking links were successfully deleted.`
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'create_tracking_link': {
+          const { campaignId, appId, title, destinationUrl, customSlug, destinationRoute, deepLinkEnabled } = a;
+          if (!campaignId || !appId || !title) {
+            throw new Error('Missing required arguments: campaignId, appId, title');
+          }
+
+          let webFallbackUrl = destinationUrl ? String(destinationUrl).trim() : 'https://uvl.ventures';
+          if (webFallbackUrl && !/^[a-zA-Z]+:\/\//.test(webFallbackUrl)) {
+            webFallbackUrl = `https://${webFallbackUrl}`;
+          }
+
+          const linkId = 'trk_' + Date.now();
+          const rawSlug = customSlug || `${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substring(2, 6)}`;
+          const slug = rawSlug.replace(/^\/+|\/+$/g, '');
+          const now = new Date().toISOString();
+
+          const newLink = {
+            id: linkId,
+            campaign_id: campaignId,
+            app_id: appId,
+            title,
+            slug,
+            destination_route: destinationRoute || 'home',
+            web_fallback_url: webFallbackUrl,
+            deep_link_enabled: deepLinkEnabled !== false,
+            is_active: true,
+            created_at: now
+          };
+
+          const { error } = await supabase.from('campaign_tracking_links').insert([newLink]);
+          if (error) throw error;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  trackingLink: newLink,
+                  trackingUrl: `/c/${slug}`,
+                  reroutesTo: webFallbackUrl
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'delete_tracking_link': {
+          const { trackingLinkId } = a;
+          if (!trackingLinkId) throw new Error('Missing required argument: trackingLinkId');
+
+          const { error } = await supabase.from('campaign_tracking_links').delete().eq('id', trackingLinkId);
+          if (error) throw error;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  message: `Tracking link ${trackingLinkId} successfully deleted.`
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'reroute_tracking_link': {
+          const { trackingLinkId, newDestinationUrl, newDestinationRoute } = a;
+          if (!trackingLinkId || !newDestinationUrl) {
+            throw new Error('Missing required arguments: trackingLinkId, newDestinationUrl');
+          }
+
+          let normalizedUrl = String(newDestinationUrl).trim();
+          if (!/^[a-zA-Z]+:\/\//.test(normalizedUrl)) {
+            normalizedUrl = `https://${normalizedUrl}`;
+          }
+
+          const updates: Record<string, any> = {
+            web_fallback_url: normalizedUrl
+          };
+          if (newDestinationRoute !== undefined) {
+            updates.destination_route = newDestinationRoute;
+          }
+
+          const { data, error } = await supabase
+            .from('campaign_tracking_links')
+            .update(updates)
+            .eq('id', trackingLinkId)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  message: `Tracking link ${trackingLinkId} successfully rerouted to ${normalizedUrl}`,
+                  trackingLink: data
+                }, null, 2)
               }
             ]
           };

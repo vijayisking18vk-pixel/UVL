@@ -24,7 +24,10 @@ import {
   Eye,
   CheckCircle2,
   AlertCircle,
-  Maximize2
+  Maximize2,
+  Minimize2,
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -75,6 +78,14 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Full-Slide & Presentation Mode UX
+  const [isPresentationMode, setIsPresentationMode] = useState<boolean>(false);
+  const [isAutoFit, setIsAutoFit] = useState<boolean>(true);
+  const [showThumbnails, setShowThumbnails] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   // 4. Session & Engagement tracking
   const sessionRef = useRef<UVLDocumentSession | null>(null);
@@ -258,6 +269,50 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     };
   }, [isUnlocked, uvlDoc, activeVersion]);
 
+  // Switch Page / Slide
+  const goToPage = useCallback((page: number) => {
+    if (page >= 1 && page <= totalPages && page !== currentPage) {
+      sound.click();
+      setCurrentPage(page);
+      setActiveSecondsOnCurrentPage(0);
+      lastInteractionTimeRef.current = Date.now();
+      isActiveRef.current = true;
+    }
+  }, [totalPages, currentPage]);
+
+  // Auto-fit slide scale to viewport
+  const updateAutoFitScale = useCallback(async () => {
+    if (!isAutoFit || !pdfDoc || !containerRef.current) return;
+    try {
+      const page = await pdfDoc.getPage(currentPage);
+      const vp = page.getViewport({ scale: 1.0 });
+      const containerW = containerRef.current.clientWidth || window.innerWidth;
+      const containerH = containerRef.current.clientHeight || (window.innerHeight - 100);
+
+      // Deduct space for rails and padding
+      const padX = showThumbnails ? 140 : 50;
+      const padY = isPresentationMode ? 40 : 80;
+
+      const availW = Math.max(300, containerW - padX);
+      const availH = Math.max(200, containerH - padY);
+
+      const scaleX = availW / vp.width;
+      const scaleY = availH / vp.height;
+      const fitScale = Math.min(scaleX, scaleY);
+
+      setScale(Math.max(0.4, Math.min(fitScale, 2.5)));
+    } catch (e) {
+      console.warn('Auto fit calculation:', e);
+    }
+  }, [isAutoFit, pdfDoc, currentPage, showThumbnails, isPresentationMode]);
+
+  useEffect(() => {
+    updateAutoFitScale();
+    const handleResize = () => updateAutoFitScale();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [updateAutoFitScale]);
+
   // 7. Render Current Page onto Canvas
   useEffect(() => {
     if (!pdfDoc || !canvasRef.current) return;
@@ -278,6 +333,77 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
       isMounted = false;
     };
   }, [pdfDoc, currentPage, scale]);
+
+  // Fullscreen Presentation Mode Toggle
+  const toggleFullscreen = () => {
+    sound.click();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().then(() => {
+        setIsFullscreen(true);
+        setIsPresentationMode(true);
+      }).catch(() => {
+        setIsPresentationMode(prev => !prev);
+      });
+    } else {
+      document.exitFullscreen().then(() => {
+        setIsFullscreen(false);
+        setIsPresentationMode(false);
+      }).catch(() => {
+        setIsPresentationMode(false);
+      });
+    }
+  };
+
+  // Keyboard Slide Navigation
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const targetTag = (e.target as HTMLElement)?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(targetTag)) return;
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        goToPage(currentPage + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        goToPage(currentPage - 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToPage(1);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToPage(totalPages);
+      } else if (e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isUnlocked, currentPage, totalPages, goToPage]);
+
+  // Touch Swipe Navigation Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) {
+        goToPage(currentPage + 1);
+      } else {
+        goToPage(currentPage - 1);
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
 
   // 8. User Activity & Inactivity Detection
   useEffect(() => {
@@ -351,17 +477,6 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     window.document.body.appendChild(a);
     a.click();
     window.document.body.removeChild(a);
-  };
-
-  // Switch Page
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      sound.click();
-      setCurrentPage(page);
-      setActiveSecondsOnCurrentPage(0);
-      lastInteractionTimeRef.current = Date.now();
-      isActiveRef.current = true;
-    }
   };
 
   // Watermark text determination
@@ -561,83 +676,141 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
   // ----------------------------------------------------
   // MAIN INSTRUMENTED DOCUMENT VIEWER
   // ----------------------------------------------------
+  // ----------------------------------------------------
+  // MAIN INSTRUMENTED DOCUMENT VIEWER (DOCSEND FULL-SLIDE UX)
+  // ----------------------------------------------------
   return (
-    <div className="min-h-screen bg-[#1C1C1E] text-white flex flex-col select-none">
+    <div className={`min-h-screen bg-[#0C0C0E] text-white flex flex-col select-none ${isFullscreen ? 'fixed inset-0 z-50' : ''}`}>
       {/* Top Floating Control Bar */}
-      <header className="sticky top-0 z-30 bg-[#1C1C1E]/90 backdrop-blur-md border-b border-neutral-800 px-4 py-3 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-30 bg-[#141416]/95 backdrop-blur-md border-b border-neutral-800/80 px-4 py-2.5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
+          <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-white">
             <FileText size={16} />
           </div>
           <div>
-            <h1 className="text-xs font-semibold text-white truncate max-w-[200px] sm:max-w-md">
+            <h1 className="text-xs font-bold text-white truncate max-w-[180px] sm:max-w-xs md:max-w-md">
               {uvlDoc.name}
             </h1>
             <div className="flex items-center gap-2 text-[10px] text-neutral-400">
-              <span>Version {uvlDoc.currentVersionNumber}</span>
+              <span>v{uvlDoc.currentVersionNumber}</span>
               <span>•</span>
-              <span>{totalPages} Pages</span>
+              <span>{totalPages} Slides</span>
               {shareLink.label && (
                 <>
                   <span>•</span>
-                  <span className="text-neutral-300">{shareLink.label}</span>
+                  <span className="text-neutral-300 truncate max-w-[120px]">{shareLink.label}</span>
                 </>
               )}
             </div>
           </div>
+
+          {/* Toggle Thumbnails Drawer */}
+          <button
+            onClick={() => setShowThumbnails(prev => !prev)}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+              showThumbnails
+                ? 'bg-white text-black border-white'
+                : 'bg-neutral-900 text-neutral-300 border-neutral-800 hover:bg-neutral-800'
+            }`}
+            title="Toggle Slide Thumbnails Drawer"
+          >
+            <Layers size={13} />
+            <span>Slides</span>
+          </button>
         </div>
 
-        {/* Page Jump & Zoom Controls */}
+        {/* Center / Right Slide Controls */}
         <div className="flex items-center gap-2">
-          {/* Page Selector */}
-          <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-full px-3 py-1 text-xs">
+          {/* Quick Slide Selector & Arrows */}
+          <div className="flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-full px-2 py-1 text-xs">
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="p-1 hover:text-white disabled:text-neutral-600 transition-colors"
-              title="Previous Page"
+              className="p-1 hover:text-white disabled:text-neutral-600 transition-colors cursor-pointer"
+              title="Previous Slide (Left Arrow)"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="font-mono text-neutral-300 px-1">
-              {currentPage} / {totalPages}
-            </span>
+
+            <select
+              value={currentPage}
+              onChange={e => goToPage(Number(e.target.value))}
+              className="bg-transparent text-neutral-200 text-xs font-mono font-semibold outline-none cursor-pointer px-1 text-center"
+              title="Select slide"
+            >
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <option key={p} value={p} className="bg-neutral-900 text-white">
+                  {p} / {totalPages}
+                </option>
+              ))}
+            </select>
+
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage >= totalPages}
-              className="p-1 hover:text-white disabled:text-neutral-600 transition-colors"
-              title="Next Page"
+              className="p-1 hover:text-white disabled:text-neutral-600 transition-colors cursor-pointer"
+              title="Next Slide (Right Arrow, Space)"
             >
               <ChevronRight size={16} />
             </button>
           </div>
 
-          {/* Zoom In / Out */}
-          <div className="hidden sm:flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-full px-2 py-1 text-xs">
+          {/* Auto-Fit / Custom Zoom Toggle */}
+          <button
+            onClick={() => {
+              setIsAutoFit(prev => !prev);
+              if (!isAutoFit) updateAutoFitScale();
+            }}
+            className={`hidden sm:flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+              isAutoFit
+                ? 'bg-neutral-800 border-neutral-700 text-white'
+                : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+            title="Toggle Auto-Fit to Window"
+          >
+            <Sparkles size={12} className={isAutoFit ? 'text-amber-400' : ''} />
+            <span>{isAutoFit ? 'Fit Slide' : `${Math.round(scale * 100)}%`}</span>
+          </button>
+
+          {/* Manual Zoom Controls */}
+          <div className="hidden md:flex items-center gap-1 bg-neutral-900 border border-neutral-800 rounded-full px-1.5 py-1 text-xs">
             <button
-              onClick={() => setScale(prev => Math.max(0.6, prev - 0.15))}
-              className="p-1 hover:text-white text-neutral-400 transition-colors"
+              onClick={() => {
+                setIsAutoFit(false);
+                setScale(prev => Math.max(0.5, prev - 0.15));
+              }}
+              className="p-1 hover:text-white text-neutral-400 transition-colors cursor-pointer"
               title="Zoom Out"
             >
-              <ZoomOut size={14} />
+              <ZoomOut size={13} />
             </button>
-            <span className="font-mono text-[11px] text-neutral-400 px-1">
-              {Math.round(scale * 100)}%
-            </span>
             <button
-              onClick={() => setScale(prev => Math.min(2.0, prev + 0.15))}
-              className="p-1 hover:text-white text-neutral-400 transition-colors"
+              onClick={() => {
+                setIsAutoFit(false);
+                setScale(prev => Math.min(2.5, prev + 0.15));
+              }}
+              className="p-1 hover:text-white text-neutral-400 transition-colors cursor-pointer"
               title="Zoom In"
             >
-              <ZoomIn size={14} />
+              <ZoomIn size={13} />
             </button>
           </div>
+
+          {/* Fullscreen / Full Slide Presentation Mode (F) */}
+          <button
+            onClick={toggleFullscreen}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-neutral-200 hover:text-white text-xs font-medium transition-all cursor-pointer"
+            title="Presentation Mode (Press F)"
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Exit Full' : 'Full Slide'}</span>
+          </button>
 
           {/* Download Button (Only when explicitly permitted) */}
           {shareLink.allowDownload && (
             <button
               onClick={handleDownload}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-semibold transition-all shadow-md cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all shadow-md cursor-pointer"
               title="Download Document"
             >
               <Download size={13} strokeWidth={2.5} />
@@ -648,33 +821,65 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
       </header>
 
       {/* Main Reading Viewport */}
-      <div className="flex-1 flex overflow-hidden relative" ref={containerRef}>
-        {/* Left Thumbnails Rail (Desktop) */}
-        <aside className="hidden lg:flex flex-col w-24 bg-[#141416] border-r border-neutral-800 p-2 overflow-y-auto gap-2">
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-            <button
-              key={pageNum}
-              onClick={() => goToPage(pageNum)}
-              className={`p-1.5 rounded-lg border text-center transition-all ${
-                currentPage === pageNum
-                  ? 'border-white bg-white/10 text-white font-bold'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-white/5'
-              }`}
-            >
-              <div className="w-full aspect-[3/4] bg-neutral-800 rounded flex items-center justify-center text-[10px] font-mono mb-1">
-                P.{pageNum}
-              </div>
-              <span className="text-[10px]">{pageNum}</span>
-            </button>
-          ))}
-        </aside>
+      <div
+        className="flex-1 flex overflow-hidden relative"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Left Thumbnails Rail (Collapsible) */}
+        {showThumbnails && (
+          <aside className="w-28 sm:w-36 bg-[#141416] border-r border-neutral-800 p-2 overflow-y-auto flex flex-col gap-2 z-20 transition-all shadow-xl">
+            <div className="text-[10px] uppercase font-bold text-neutral-500 px-1 pt-1 pb-1">
+              Slides ({totalPages})
+            </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+              <button
+                key={pageNum}
+                onClick={() => goToPage(pageNum)}
+                className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                  currentPage === pageNum
+                    ? 'border-white bg-white/15 text-white font-bold ring-1 ring-white/50'
+                    : 'border-neutral-800/60 bg-neutral-900/40 text-neutral-400 hover:text-neutral-200 hover:bg-white/5'
+                }`}
+              >
+                <div className="w-full aspect-[16/10] bg-neutral-800/80 rounded-lg flex items-center justify-center text-[10px] font-mono mb-1">
+                  Slide {pageNum}
+                </div>
+                <span className="text-[10px]">#{pageNum}</span>
+              </button>
+            ))}
+          </aside>
+        )}
 
-        {/* Center Canvas Viewport with Watermark */}
-        <main className="flex-1 overflow-auto p-4 sm:p-8 flex items-center justify-center relative">
+        {/* Center Canvas Viewport with Watermark and Floating Chevrons */}
+        <main className="flex-1 overflow-auto p-2 sm:p-6 flex items-center justify-center relative group">
+          {/* Floating Left Arrow (Hover / Touch) */}
+          {currentPage > 1 && (
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md shadow-2xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center cursor-pointer border border-white/10"
+              title="Previous Slide (Left Arrow)"
+            >
+              <ChevronLeft size={26} />
+            </button>
+          )}
+
+          {/* Floating Right Arrow (Hover / Touch) */}
+          {currentPage < totalPages && (
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md shadow-2xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center cursor-pointer border border-white/10"
+              title="Next Slide (Right Arrow, Space)"
+            >
+              <ChevronRight size={26} />
+            </button>
+          )}
+
           {isLoading ? (
-            <div className="flex flex-col items-center gap-3 text-neutral-400">
+            <div className="flex flex-col items-center gap-3 text-neutral-400 py-20">
               <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              <span className="text-xs">Rendering document pages...</span>
+              <span className="text-xs">Rendering slide canvas...</span>
             </div>
           ) : loadError ? (
             <div className="max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-center">
@@ -683,14 +888,14 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
               <p className="text-xs text-neutral-400">{loadError}</p>
             </div>
           ) : (
-            <div className="relative shadow-2xl rounded-sm overflow-hidden bg-white">
+            <div className="relative shadow-2xl rounded-xl overflow-hidden bg-white border border-neutral-800/80 transition-all">
               {/* PDF Canvas */}
               <canvas ref={canvasRef} className="block max-w-full h-auto" />
 
               {/* Diagonal Watermark Overlay */}
               {watermarkText && (
                 <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center z-20">
-                  <div className="transform -rotate-45 select-none opacity-20 text-neutral-900 font-mono text-2xl sm:text-3xl font-extrabold tracking-widest whitespace-nowrap text-center">
+                  <div className="transform -rotate-45 select-none opacity-20 text-neutral-900 font-mono text-xl sm:text-3xl font-extrabold tracking-widest whitespace-nowrap text-center">
                     {watermarkText}
                   </div>
                 </div>
@@ -700,16 +905,38 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
         </main>
       </div>
 
-      {/* Bottom Quiet Reader Status */}
-      <footer className="border-t border-neutral-800 bg-[#141416] py-2 px-4 text-[11px] text-neutral-400 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span>Page {currentPage} of {totalPages}</span>
-          <span>•</span>
-          <span className="text-neutral-500">Active engagement estimated</span>
+      {/* Bottom Interactive DocSend Scrubber & Status Dock */}
+      <footer className="border-t border-neutral-800/80 bg-[#141416]/95 backdrop-blur-md py-2.5 px-4 text-[11px] text-neutral-400 flex flex-col gap-2">
+        {/* Interactive Multi-Segment Slide Scrubber */}
+        <div className="flex items-center gap-1 w-full max-w-3xl mx-auto py-0.5">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <button
+              key={p}
+              onClick={() => goToPage(p)}
+              title={`Jump to Slide ${p}`}
+              className={`flex-1 h-1.5 rounded-full transition-all cursor-pointer ${
+                p === currentPage
+                  ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)] scale-y-125'
+                  : p < currentPage
+                  ? 'bg-neutral-600 hover:bg-neutral-500'
+                  : 'bg-neutral-800 hover:bg-neutral-700'
+              }`}
+            />
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-          <span className="text-neutral-300">Protected by UVL Documents</span>
+
+        {/* Footer Info Row */}
+        <div className="flex items-center justify-between max-w-3xl mx-auto w-full">
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-white">Slide {currentPage} of {totalPages}</span>
+            <span>•</span>
+            <span className="text-neutral-400">{activeSecondsOnCurrentPage}s on current slide</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline text-neutral-500">Shortcuts: ← → / Space / F</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-neutral-300">Protected by UVL Documents</span>
+          </div>
         </div>
       </footer>
     </div>

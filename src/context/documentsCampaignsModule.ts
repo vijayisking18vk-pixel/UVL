@@ -1362,10 +1362,28 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
   const deleteCampaign = useCallback(
     async (id: string): Promise<void> => {
       setCampaigns(prev => prev.filter(c => c.id !== id));
+      setTrackingLinks(prev => prev.filter(l => l.campaignId !== id));
       try {
+        await supabase.from('campaign_tracking_links').delete().eq('campaign_id', id);
         await supabase.from('campaigns').delete().eq('id', id);
-      } catch {}
+      } catch (err) {
+        console.warn('Delete campaign error:', err);
+      }
       await logAudit('campaigns', 'campaign_deleted', 'campaign', id);
+      sound.alert();
+    },
+    [logAudit]
+  );
+
+  const deleteTrackingLink = useCallback(
+    async (id: string): Promise<void> => {
+      setTrackingLinks(prev => prev.filter(l => l.id !== id));
+      try {
+        await supabase.from('campaign_tracking_links').delete().eq('id', id);
+      } catch (err) {
+        console.warn('Delete tracking link error:', err);
+      }
+      await logAudit('campaigns', 'tracking_link_deleted', 'campaign_tracking_link', id);
       sound.alert();
     },
     [logAudit]
@@ -1521,19 +1539,38 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         ]);
       } catch {}
 
-      // Resolve redirect targets
+      // Resolve redirect targets: reroute to user-specified website, custom route, or app fallback
       let deepLinkUrl: string | undefined = undefined;
-      let redirectUrl = link.webFallbackUrl || (app ? app.webFallbackUrl : window.location.origin);
+
+      let destination = '';
+      if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
+        destination = link.webFallbackUrl.trim();
+      } else if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
+        destination = link.destinationRoute.trim();
+      } else if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
+        destination = app.webFallbackUrl.trim();
+      } else {
+        destination = 'https://uvl.ventures';
+      }
+
+      // Ensure protocol is present so the browser redirects to the target website externally
+      if (!/^[a-zA-Z]+:\/\//.test(destination)) {
+        destination = `https://${destination}`;
+      }
+
+      const redirectUrl = destination;
 
       if (link.deepLinkEnabled && app) {
-        // Compose deep link with attribution token and destination route
-        const route = link.destinationRoute ? link.destinationRoute.replace(/^\/+/, '') : '';
-        if (app.platform === 'android' && app.androidPackageName) {
-          deepLinkUrl = `${app.androidPackageName}://${route}?uvl_token=${token}`;
-        } else if (app.platform === 'ios' && app.iosBundleId) {
-          deepLinkUrl = `${app.iosBundleId}://${route}?uvl_token=${token}`;
-        } else {
-          deepLinkUrl = `uvl://${route}?uvl_token=${token}`;
+        // If destinationRoute is a custom in-app path (and not an external http/https URL)
+        if (!/^https?:\/\//i.test(link.destinationRoute.trim())) {
+          const route = link.destinationRoute ? link.destinationRoute.replace(/^\/+/, '') : '';
+          if (app.platform === 'android' && app.androidPackageName) {
+            deepLinkUrl = `${app.androidPackageName}://${route}?uvl_token=${token}`;
+          } else if (app.platform === 'ios' && app.iosBundleId) {
+            deepLinkUrl = `${app.iosBundleId}://${route}?uvl_token=${token}`;
+          } else {
+            deepLinkUrl = `uvl://${route}?uvl_token=${token}`;
+          }
         }
       }
 
@@ -1650,6 +1687,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
     deleteCampaign,
     createTrackingLink,
     updateTrackingLink,
+    deleteTrackingLink,
     ingestClick,
     ingestAppEvent,
     getCampaignMetrics,

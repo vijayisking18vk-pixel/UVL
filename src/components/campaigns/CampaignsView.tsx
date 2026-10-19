@@ -30,7 +30,8 @@ import {
   Layers,
   ArrowUpRight,
   TrendingUp,
-  Cpu
+  Cpu,
+  Trash2
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -46,6 +47,8 @@ export const CampaignsView: React.FC = () => {
     registerCampaignApp,
     createCampaign,
     createTrackingLink,
+    deleteCampaign,
+    deleteTrackingLink,
     getCampaignMetrics,
     ingestAppEvent
   } = useWorkspace();
@@ -170,6 +173,18 @@ export const CampaignsView: React.FC = () => {
     setCampName('');
   };
 
+  const handleDeleteCampaign = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete campaign "${name}"? This will also remove all associated tracking links.`)) {
+      await deleteCampaign(id);
+    }
+  };
+
+  const handleDeleteTrackingLink = async (id: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete tracking link "${title}"?`)) {
+      await deleteTrackingLink(id);
+    }
+  };
+
   const handleCreateLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetCamp = linkCampaignId || campaigns[0]?.id;
@@ -179,13 +194,19 @@ export const CampaignsView: React.FC = () => {
       return;
     }
 
+    let targetFallback = linkFallback.trim();
+    if (targetFallback && !/^[a-zA-Z]+:\/\//.test(targetFallback)) {
+      targetFallback = `https://${targetFallback}`;
+    }
+    const finalFallback = targetFallback || 'https://uvl.ventures';
+
     await createTrackingLink({
       campaignId: targetCamp,
       appId: targetApp,
       title: linkTitle,
       customSlug: linkCustomSlug.trim() || undefined,
       destinationRoute: linkDestRoute,
-      webFallbackUrl: linkFallback,
+      webFallbackUrl: finalFallback,
       deepLinkEnabled: linkDeepLink,
       isActive: true
     });
@@ -193,6 +214,7 @@ export const CampaignsView: React.FC = () => {
     setCreateLinkModalOpen(false);
     setLinkTitle('');
     setLinkCustomSlug('');
+    setLinkFallback('');
   };
 
   const handleSimulateEvent = async (e: React.FormEvent) => {
@@ -473,6 +495,7 @@ export const CampaignsView: React.FC = () => {
                       <th className="pb-3">Spend</th>
                       <th className="pb-3">Cost / Open</th>
                       <th className="pb-3">Conv %</th>
+                      <th className="pb-3 text-right pr-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E5E5E7]">
@@ -496,6 +519,15 @@ export const CampaignsView: React.FC = () => {
                         </td>
                         <td className="py-3 font-mono font-semibold text-black">
                           {row.conversionRate !== null ? `${row.conversionRate}%` : '—'}
+                        </td>
+                        <td className="py-3 text-right pr-2">
+                          <button
+                            onClick={() => handleDeleteCampaign(row.campaignId, row.campaignName)}
+                            className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete Campaign"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -539,7 +571,16 @@ export const CampaignsView: React.FC = () => {
                       <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-[10px] font-mono text-[#6E6E73] uppercase">
                         {camp.source}
                       </span>
-                      <span className="text-[10px] text-[#A1A1AA] font-mono">{camp.medium}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-[#A1A1AA] font-mono">{camp.medium}</span>
+                        <button
+                          onClick={() => handleDeleteCampaign(camp.id, camp.name)}
+                          className="p-1 rounded-full text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete Campaign"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
 
                     <div>
@@ -626,12 +667,14 @@ export const CampaignsView: React.FC = () => {
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 text-[11px] text-[#6E6E73] mt-1">
+                        <div className="flex items-center gap-3 text-[11px] text-[#6E6E73] mt-1 flex-wrap">
                           <span>App: <b className="text-black">{app?.name || 'Default'}</b></span>
                           <span>•</span>
                           <span>Campaign: <b className="text-black">{camp?.name || 'Direct'}</b></span>
                           <span>•</span>
-                          <span>Destination: <span className="font-mono text-black">{link.destinationRoute}</span></span>
+                          <span>
+                            Target URL: <b className="font-mono text-neutral-800 bg-neutral-100 px-1.5 py-0.5 rounded text-[10px]">{link.webFallbackUrl || link.destinationRoute || 'Default'}</b>
+                          </span>
                         </div>
 
                         <div className="flex items-center gap-3 text-[10px] text-[#A1A1AA] mt-1">
@@ -671,6 +714,14 @@ export const CampaignsView: React.FC = () => {
                       >
                         <ExternalLink size={12} />
                       </a>
+
+                      <button
+                        onClick={() => handleDeleteTrackingLink(link.id, link.title)}
+                        className="p-1.5 rounded-full border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-red-50 text-neutral-400 hover:text-red-600 transition-all"
+                        title="Delete tracking link"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </div>
                 );
@@ -1095,10 +1146,26 @@ export const CampaignsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-black block mb-1">In-App Destination Route</label>
+                <label className="text-xs font-medium text-black block mb-1">
+                  Destination Redirect Website or App URL
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. pay/qr or onboarding"
+                  placeholder="e.g. https://mywebsite.com, https://instagram.com/mybrand, or any URL"
+                  value={linkFallback}
+                  onChange={e => setLinkFallback(e.target.value)}
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E5E5E7] bg-[#F5F5F7] text-xs text-black outline-none font-mono"
+                />
+                <p className="text-[10px] text-[#6E6E73] mt-1">
+                  Visitors who click or scan this link will be tracked and automatically redirected to this custom URL.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-black block mb-1">In-App Destination Route (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. pay/qr or onboarding (dispatched if mobile app is installed)"
                   value={linkDestRoute}
                   onChange={e => setLinkDestRoute(e.target.value)}
                   className="w-full px-3.5 py-2 rounded-xl border border-[#E5E5E7] bg-[#F5F5F7] text-xs text-black outline-none font-mono"

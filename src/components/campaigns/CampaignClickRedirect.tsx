@@ -41,19 +41,19 @@ export const CampaignClickRedirect: React.FC<CampaignClickRedirectProps> = ({ sl
           // Attempt app deep link dispatch
           window.location.href = result.deepLinkUrl;
 
-          // Fallback to web or app store after 1.5 seconds if app doesn't intercept
+          // Fallback to external website or app store after 1.2s if app doesn't intercept
           setTimeout(() => {
             if (mounted && result.redirectUrl) {
-              window.location.href = result.redirectUrl;
+              window.location.replace(result.redirectUrl);
             }
-          }, 1500);
+          }, 1200);
         } else {
-          // Instant direct web redirect
+          // Snappy direct external web redirect
           setTimeout(() => {
             if (mounted && result.redirectUrl) {
-              window.location.href = result.redirectUrl;
+              window.location.replace(result.redirectUrl);
             }
-          }, 600);
+          }, 250);
         }
       } catch (err) {
         console.error('Click routing error:', err);

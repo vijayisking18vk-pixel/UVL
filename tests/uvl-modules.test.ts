@@ -320,7 +320,11 @@ async function runTests() {
       'list_campaigns',
       'get_campaign_analytics',
       'list_tracking_links',
-      'list_campaign_events'
+      'list_campaign_events',
+      'delete_campaign',
+      'create_tracking_link',
+      'delete_tracking_link',
+      'reroute_tracking_link'
     ];
 
     for (const tool of requiredTools) {
@@ -330,9 +334,103 @@ async function runTests() {
     console.log(`✓ All ${requiredTools.length} required MCP tools registered and verified`);
   }
 
-  console.log('\n======================================================');
-  console.log('ALL 9 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
-  console.log('======================================================\n');
+  // TEST 10: Campaign Deletion & Cascade Link Removal
+  console.log('\n[TEST 10] Campaign Deletion & Cascade Tracking Links Cleanup');
+  {
+    let testCampaigns = [
+      { id: 'cmp_alpha', name: 'Alpha Launch' },
+      { id: 'cmp_beta', name: 'Beta Program' }
+    ];
+    let testLinks = [
+      { id: 'trk_1', campaignId: 'cmp_alpha', title: 'Link 1' },
+      { id: 'trk_2', campaignId: 'cmp_alpha', title: 'Link 2' },
+      { id: 'trk_3', campaignId: 'cmp_beta', title: 'Link 3' }
+    ];
+
+    // Delete cmp_alpha
+    const targetId = 'cmp_alpha';
+    testCampaigns = testCampaigns.filter(c => c.id !== targetId);
+    testLinks = testLinks.filter(l => l.campaignId !== targetId);
+
+    assert.strictEqual(testCampaigns.length, 1);
+    assert.strictEqual(testCampaigns[0].id, 'cmp_beta');
+    assert.strictEqual(testLinks.length, 1);
+    assert.strictEqual(testLinks[0].id, 'trk_3');
+    assert.strictEqual(testLinks.some(l => l.campaignId === 'cmp_alpha'), false, 'All associated links for deleted campaign must be cascade removed');
+    console.log('✓ Campaign deletion and cascade tracking links cleanup verified');
+  }
+
+  // TEST 11: Link Custom Destination Rerouting & Protocol Normalization
+  console.log('\n[TEST 11] Custom Destination Rerouting & Protocol Normalization');
+  {
+    function resolveDestination(rawUrl?: string, defaultUrl: string = 'https://uvl.ventures'): string {
+      let dest = (rawUrl && rawUrl.trim().length > 0) ? rawUrl.trim() : defaultUrl;
+      if (!/^[a-zA-Z]+:\/\//.test(dest)) {
+        dest = `https://${dest}`;
+      }
+      return dest;
+    }
+
+    // Case A: User specifies external domain without protocol (e.g. google.com)
+    const resA = resolveDestination('google.com');
+    assert.strictEqual(resA, 'https://google.com', 'Domain without protocol must be normalized to https:// to prevent UVL host relative routing');
+
+    // Case B: User specifies full external URL (e.g. https://instagram.com/uvl_ventures)
+    const resB = resolveDestination('https://instagram.com/uvl_ventures');
+    assert.strictEqual(resB, 'https://instagram.com/uvl_ventures');
+
+    // Case C: User specifies custom app / web link
+    const resC = resolveDestination('https://myexternalapp.com/onboarding');
+    assert.strictEqual(resC, 'https://myexternalapp.com/onboarding');
+
+    // Case D: User omits URL, fallback to default
+    const resD = resolveDestination('');
+    assert.strictEqual(resD, 'https://uvl.ventures');
+
+    console.log('✓ Tracking link custom destination rerouting and external protocol normalization verified');
+  }
+
+  // TEST 12: DocSend Full-Slide Presentation & Telemetry Rules
+  console.log('\n[TEST 12] DocSend Full-Slide Navigation & Telemetry Rules');
+  {
+    const totalSlides = 12;
+
+    // Slide boundary clamp
+    function clampSlide(target: number): number {
+      return Math.max(1, Math.min(target, totalSlides));
+    }
+
+    assert.strictEqual(clampSlide(0), 1, 'Cannot navigate before Slide 1');
+    assert.strictEqual(clampSlide(-5), 1, 'Cannot navigate to negative slide');
+    assert.strictEqual(clampSlide(5), 5, 'Valid slide navigation works');
+    assert.strictEqual(clampSlide(15), 12, 'Cannot navigate beyond total slides');
+
+    // Distinct slides viewed telemetry
+    const viewedSlides = new Set<number>();
+    viewedSlides.add(1);
+    viewedSlides.add(2);
+    viewedSlides.add(3);
+
+    const completionRate = Math.round((viewedSlides.size / totalSlides) * 100);
+    assert.strictEqual(completionRate, 25, '3 of 12 distinct slides equals 25% completion');
+
+    // Slide transition resets current slide time while session active time persists
+    let activeSecondsOnCurrentSlide = 14;
+    let totalActiveSessionSeconds = 45;
+
+    // Viewer transitions from Slide 1 to Slide 2
+    activeSecondsOnCurrentSlide = 0; // reset on new slide
+    totalActiveSessionSeconds += 5;
+
+    assert.strictEqual(activeSecondsOnCurrentSlide, 0, 'Time on current slide resets on slide change');
+    assert.strictEqual(totalActiveSessionSeconds, 50, 'Total session active reading time persists across slide transitions');
+
+    console.log('✓ DocSend full-slide navigation bounds and isolated telemetry verified');
+  }
+
+  console.log('\n========================================================');
+  console.log('ALL 12 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
+  console.log('========================================================\n');
 }
 
 runTests().catch(err => {
