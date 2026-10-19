@@ -202,6 +202,21 @@ export const DocumentsView: React.FC = () => {
     setLinkAllowlistDomains('');
   };
 
+  // Delete Document Handler
+  const handleDeleteDocument = async (docId: string, docName: string) => {
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete "${docName}"?\nThis will remove all versions, share links, and analytics data.`
+      )
+    ) {
+      sound.click();
+      await deleteDocument(docId);
+      if (selectedDocId === docId) {
+        setSelectedDocId(null);
+      }
+    }
+  };
+
   // Export Analytics CSV
   const handleExportCSV = () => {
     if (!activeDoc || !analytics) return;
@@ -421,7 +436,20 @@ export const DocumentsView: React.FC = () => {
                           </div>
                         </div>
 
-                        <ChevronRight size={14} className={isSelected ? 'text-black' : 'text-[#D1D1D6]'} />
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteDocument(doc.id, doc.name);
+                            }}
+                            className="p-1 rounded-md text-[#A1A1AA] hover:text-red-600 hover:bg-red-50 transition-colors"
+                            title="Delete document"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                          <ChevronRight size={14} className={isSelected ? 'text-black' : 'text-[#D1D1D6]'} />
+                        </div>
                       </div>
                     </div>
                   );
@@ -448,7 +476,7 @@ export const DocumentsView: React.FC = () => {
                       <p className="text-xs text-[#6E6E73]">{activeDoc.description || 'No description provided.'}</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => {
                           sound.click();
@@ -470,6 +498,15 @@ export const DocumentsView: React.FC = () => {
                       >
                         <Share2 size={13} />
                         <span>Create Share Link</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteDocument(activeDoc.id, activeDoc.name)}
+                        className="px-3 py-1.5 rounded-full border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Delete document"
+                      >
+                        <Trash2 size={13} />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </div>

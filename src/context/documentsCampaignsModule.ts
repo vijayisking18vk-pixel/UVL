@@ -889,8 +889,14 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       setDocuments(prev => prev.filter(d => d.id !== documentId));
       setDocumentVersions(prev => prev.filter(v => v.documentId !== documentId));
       setShareLinks(prev => prev.filter(l => l.documentId !== documentId));
+      setDocumentSessions(prev => prev.filter(s => s.documentId !== documentId));
+      setDocumentPageEvents(prev => prev.filter(e => e.documentId !== documentId));
 
       try {
+        await supabase.from('document_page_events').delete().eq('document_id', documentId);
+        await supabase.from('document_sessions').delete().eq('document_id', documentId);
+        await supabase.from('document_share_links').delete().eq('document_id', documentId);
+        await supabase.from('document_versions').delete().eq('document_id', documentId);
         await supabase.from('documents').delete().eq('id', documentId);
       } catch (err) {
         console.warn('Delete document Supabase error:', err);

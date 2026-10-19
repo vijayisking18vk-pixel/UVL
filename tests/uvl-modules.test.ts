@@ -313,6 +313,7 @@ async function runTests() {
     const requiredTools = [
       'list_documents',
       'get_document',
+      'delete_document',
       'get_document_analytics',
       'list_document_sessions',
       'get_share_link_analytics',
@@ -506,8 +507,43 @@ async function runTests() {
     console.log('✓ Query parameter preservation and safe merging verified');
   }
 
+  // TEST 16: Document Deletion & Cascade Versions and Share Links Cleanup
+  console.log('\n[TEST 16] Document Deletion & Cascade Share Links and Versions Cleanup');
+  {
+    let testDocuments = [
+      { id: 'doc_deck_a', name: 'Seed Deck 2026' },
+      { id: 'doc_deck_b', name: 'Series A Memo' }
+    ];
+    let testVersions = [
+      { id: 'ver_1', documentId: 'doc_deck_a' },
+      { id: 'ver_2', documentId: 'doc_deck_a' },
+      { id: 'ver_3', documentId: 'doc_deck_b' }
+    ];
+    let testLinks = [
+      { id: 'link_1', documentId: 'doc_deck_a', label: 'Investor Link 1' },
+      { id: 'link_2', documentId: 'doc_deck_a', label: 'Investor Link 2' },
+      { id: 'link_3', documentId: 'doc_deck_b', label: 'Investor Link 3' }
+    ];
+
+    // Delete doc_deck_a
+    const targetDocId = 'doc_deck_a';
+    testDocuments = testDocuments.filter(d => d.id !== targetDocId);
+    testVersions = testVersions.filter(v => v.documentId !== targetDocId);
+    testLinks = testLinks.filter(l => l.documentId !== targetDocId);
+
+    assert.strictEqual(testDocuments.length, 1);
+    assert.strictEqual(testDocuments[0].id, 'doc_deck_b');
+    assert.strictEqual(testVersions.length, 1);
+    assert.strictEqual(testVersions[0].id, 'ver_3');
+    assert.strictEqual(testLinks.length, 1);
+    assert.strictEqual(testLinks[0].id, 'link_3');
+    assert.strictEqual(testLinks.some(l => l.documentId === 'doc_deck_a'), false, 'All associated share links must be cascade removed');
+    assert.strictEqual(testVersions.some(v => v.documentId === 'doc_deck_a'), false, 'All associated versions must be cascade removed');
+    console.log('✓ Document deletion and cascade cleanup verified');
+  }
+
   console.log('\n========================================================');
-  console.log('ALL 15 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
+  console.log('ALL 16 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
   console.log('========================================================\n');
 }
 

@@ -119,6 +119,17 @@ export function createUVLMCPServer() {
             required: ['token']
           }
         },
+        {
+          name: 'delete_document',
+          description: 'Permanently deletes a presentation document, cascading deletion to all its versions, share links, sessions, and page events.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              documentId: { type: 'string', description: 'The unique identifier of the document to delete' }
+            },
+            required: ['documentId']
+          }
+        },
 
         // CAMPAIGNS MODULE TOOLS
         {
@@ -454,6 +465,30 @@ export function createUVLMCPServer() {
                   status: link.status,
                   totalViews: allSessions.length,
                   downloadsRequested: allSessions.filter(s => s.download_requested).length
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'delete_document': {
+          const { documentId } = a;
+          if (!documentId) throw new Error('Missing required argument: documentId');
+
+          await supabase.from('document_page_events').delete().eq('document_id', documentId);
+          await supabase.from('document_sessions').delete().eq('document_id', documentId);
+          await supabase.from('document_share_links').delete().eq('document_id', documentId);
+          await supabase.from('document_versions').delete().eq('document_id', documentId);
+          const { error } = await supabase.from('documents').delete().eq('id', documentId);
+          if (error) throw error;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  message: `Document ${documentId} and all associated versions, share links, and sessions were successfully deleted.`
                 }, null, 2)
               }
             ]

@@ -119,7 +119,7 @@ export const CampaignsView: React.FC = () => {
   const [linkAppId, setLinkAppId] = useState<string>('');
   const [linkCustomSlug, setLinkCustomSlug] = useState<string>('');
   const [linkDestRoute, setLinkDestRoute] = useState<string>('home');
-  const [linkFallback, setLinkFallback] = useState<string>('https://app.ziggers.in');
+  const [linkFallback, setLinkFallback] = useState<string>('');
   const [linkDeepLink, setLinkDeepLink] = useState<boolean>(true);
 
   // Simulation form
@@ -267,7 +267,7 @@ export const CampaignsView: React.FC = () => {
     if (targetFallback && !/^[a-zA-Z]+:\/\//.test(targetFallback)) {
       targetFallback = `https://${targetFallback}`;
     }
-    const finalFallback = targetFallback || 'https://app.ziggers.in';
+    const finalFallback = targetFallback || 'https://uvl.ventures';
 
     await createTrackingLink({
       campaignId: targetCamp,
@@ -283,7 +283,7 @@ export const CampaignsView: React.FC = () => {
     setCreateLinkModalOpen(false);
     setLinkTitle('');
     setLinkCustomSlug('');
-    setLinkFallback('https://app.ziggers.in');
+    setLinkFallback('');
   };
 
   // Simulate Event Submit
@@ -307,8 +307,7 @@ export const CampaignsView: React.FC = () => {
     setSimToken('');
   };
 
-  // Build unified table rows matching reference screenshot
-  // Includes Organic users row, existing campaigns with tracking URLs, and demo rows if empty
+  // Build unified table rows strictly from real user data (Zero mock or fake data)
   const tableRows = useMemo(() => {
     const rows: Array<{
       id: string;
@@ -329,153 +328,110 @@ export const CampaignsView: React.FC = () => {
       platform?: string;
     }> = [];
 
-    // Row 1: Organic users from reference screenshot
-    rows.push({
-      id: 'row_organic',
-      isOrganic: true,
-      name: 'Organic users',
-      content: '',
-      clicks: 'N/A',
-      impressions: 'N/A',
-      installs: 58,
-      signups: 74,
-      conversion: '127.59%',
-      revenue: '-',
-      source: 'organic'
-    });
+    // Organic row: Only include if real app events exist without an attributed campaign
+    const organicOpens = appEvents.filter(e => !e.attributedCampaignId && e.eventName === 'first_open').length;
+    const organicSignups = appEvents.filter(e => !e.attributedCampaignId && e.eventName === 'signup_completed').length;
+    if (organicOpens > 0 || organicSignups > 0) {
+      rows.push({
+        id: 'row_organic',
+        isOrganic: true,
+        name: 'Organic users',
+        content: '',
+        clicks: 'N/A',
+        impressions: 'N/A',
+        installs: organicOpens,
+        signups: organicSignups,
+        conversion: '—',
+        revenue: '-',
+        source: 'organic'
+      });
+    }
 
-    // Populate user campaigns and links
-    if (campaigns.length > 0) {
-      for (const camp of campaigns) {
-        const campLinks = trackingLinks.filter(l => l.campaignId === camp.id);
-        const metrics = campaignMetrics.find(m => m.campaignId === camp.id);
+    // Populate actual campaigns and their tracking links
+    for (const camp of campaigns) {
+      const campLinks = trackingLinks.filter(l => l.campaignId === camp.id);
+      const metrics = campaignMetrics.find(m => m.campaignId === camp.id);
 
-        if (campLinks.length === 0) {
+      if (campLinks.length === 0) {
+        rows.push({
+          id: `cmp_${camp.id}`,
+          campaignId: camp.id,
+          name: camp.name,
+          content: `${window.location.origin}/c/${camp.id.substring(0, 8)}`,
+          destinationUrl: '',
+          clicks: metrics?.filteredClicks ?? '-',
+          impressions: '-',
+          installs: metrics?.attributedFirstOpens ?? '-',
+          signups: metrics?.signups ?? '-',
+          conversion: metrics?.conversionRate !== null && metrics?.conversionRate !== undefined ? `${metrics.conversionRate}%` : '-',
+          revenue: '-',
+          source: camp.source
+        });
+      } else {
+        for (const link of campLinks) {
+          const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
+          const linkOpens = appEvents.filter(
+            e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
+          );
+          const linkSignups = appEvents.filter(
+            e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'signup_completed'
+          );
+          const cCount = linkClicks.length;
+          const iCount = linkOpens.length;
+          const sCount = linkSignups.length;
+          const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '-';
+
           rows.push({
-            id: `cmp_${camp.id}`,
+            id: `lnk_${link.id}`,
             campaignId: camp.id,
+            linkId: link.id,
+            slug: link.slug,
             name: camp.name,
-            content: camp.name.includes('.') ? camp.name : `${window.location.origin}/c/${camp.id.substring(0, 6)}`,
-            destinationUrl: 'https://app.ziggers.in',
-            clicks: metrics?.filteredClicks || '-',
+            content: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+            destinationUrl: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+            clicks: cCount > 0 ? cCount : '-',
             impressions: '-',
-            installs: metrics?.attributedFirstOpens || '-',
-            signups: metrics?.signups || '-',
-            conversion: metrics?.conversionRate !== null && metrics?.conversionRate !== undefined ? `${metrics.conversionRate}%` : '-',
+            installs: iCount > 0 ? iCount : '-',
+            signups: sCount > 0 ? sCount : '-',
+            conversion: conv,
             revenue: '-',
             source: camp.source
           });
-        } else {
-          for (const link of campLinks) {
-            const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
-            const linkOpens = appEvents.filter(e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open');
-            const linkSignups = appEvents.filter(e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'signup_completed');
-            const cCount = linkClicks.length;
-            const iCount = linkOpens.length;
-            const sCount = linkSignups.length;
-            const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(2)}%` : '-';
-
-            rows.push({
-              id: `lnk_${link.id}`,
-              campaignId: camp.id,
-              linkId: link.id,
-              slug: link.slug,
-              name: camp.name,
-              content: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
-              destinationUrl: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
-              clicks: cCount > 0 ? cCount : '-',
-              impressions: '-',
-              installs: iCount > 0 ? iCount : '-',
-              signups: sCount > 0 ? sCount : '-',
-              conversion: conv,
-              revenue: '-',
-              source: camp.source
-            });
-          }
         }
       }
-    } else {
-      // Baseline sample rows faithful to screenshot visual reference
-      rows.push(
-        {
-          id: 'row_ziggers',
-          name: 'app.ziggers.in',
-          content: 'app.ziggers.in',
-          destinationUrl: 'https://app.ziggers.in',
-          clicks: 431,
-          impressions: '-',
-          installs: 18,
-          signups: 19,
-          conversion: '105.56%',
-          revenue: '-',
-          source: 'direct'
-        },
-        {
-          id: 'row_cold_call',
-          name: 'EMPLOYERS COLD CALL',
-          content: 'https://app.ziggers.in/?c=JeUsAQ',
-          destinationUrl: 'https://app.ziggers.in/?c=JeUsAQ',
-          clicks: '-',
-          impressions: '-',
-          installs: '-',
-          signups: '-',
-          conversion: '-',
-          revenue: '-',
-          source: 'custom'
-        },
-        {
-          id: 'row_whatsapp',
-          name: 'whatsapp WORKERS CIRCU...',
-          content: 'https://app.ziggers.in/?c=WPkAsL',
-          destinationUrl: 'https://app.ziggers.in/?c=WPkAsL',
-          clicks: '-',
-          impressions: '-',
-          installs: '-',
-          signups: '-',
-          conversion: '-',
-          revenue: '-',
-          source: 'whatsapp'
-        },
-        {
-          id: 'row_qr',
-          name: 'QR',
-          content: 'https://app.ziggers.in/?c=Scan',
-          destinationUrl: 'https://app.ziggers.in/?c=Scan',
-          clicks: '-',
-          impressions: '-',
-          installs: '-',
-          signups: '-',
-          conversion: '-',
-          revenue: '-',
-          source: 'qr_code'
-        },
-        {
-          id: 'row_fb',
-          name: 'FACEBOOK CIRCULATION',
-          content: 'https://app.ziggers.in/?c=FB',
-          destinationUrl: 'https://app.ziggers.in/?c=FB',
-          clicks: '-',
-          impressions: '-',
-          installs: '-',
-          signups: '-',
-          conversion: '-',
-          revenue: '-',
-          source: 'meta_ads'
-        },
-        {
-          id: 'row_quora',
-          name: 'QUORA',
-          content: 'https://app.ziggers.in/?c=QUORA',
-          destinationUrl: 'https://app.ziggers.in/?c=QUORA',
-          clicks: '-',
-          impressions: '-',
-          installs: '-',
-          signups: '-',
-          conversion: '-',
-          revenue: '-',
-          source: 'custom'
-        }
+    }
+
+    // Standalone tracking links not attached to listed campaigns
+    const listedCampIds = new Set(campaigns.map(c => c.id));
+    const standaloneLinks = trackingLinks.filter(l => !listedCampIds.has(l.campaignId));
+    for (const link of standaloneLinks) {
+      const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
+      const linkOpens = appEvents.filter(
+        e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
       );
+      const linkSignups = appEvents.filter(
+        e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'signup_completed'
+      );
+      const cCount = linkClicks.length;
+      const iCount = linkOpens.length;
+      const sCount = linkSignups.length;
+      const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '-';
+
+      rows.push({
+        id: `lnk_${link.id}`,
+        linkId: link.id,
+        slug: link.slug,
+        name: link.title || 'Tracking Link',
+        content: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+        destinationUrl: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+        clicks: cCount > 0 ? cCount : '-',
+        impressions: '-',
+        installs: iCount > 0 ? iCount : '-',
+        signups: sCount > 0 ? sCount : '-',
+        conversion: conv,
+        revenue: '-',
+        source: 'custom'
+      });
     }
 
     return rows;
@@ -915,7 +871,32 @@ export const CampaignsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
-                {filteredRows.map(row => {
+                {filteredRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-xs text-neutral-500 bg-neutral-50/30">
+                      <div className="flex flex-col items-center justify-center space-y-2 max-w-sm mx-auto">
+                        <div className="w-9 h-9 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-400">
+                          <Flag size={16} />
+                        </div>
+                        <span className="font-semibold text-neutral-800">No campaigns or tracking links</span>
+                        <p className="text-[11px] text-neutral-500">
+                          Click "+ Create Link" to generate your first tracking link.
+                        </p>
+                        <button
+                          onClick={() => {
+                            sound.click();
+                            setCreateLinkModalOpen(true);
+                          }}
+                          className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-2xs cursor-pointer"
+                        >
+                          <Plus size={13} />
+                          <span>Create Link</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRows.map(row => {
                   const isOrganic = row.isOrganic;
                   return (
                     <tr
@@ -1030,7 +1011,7 @@ export const CampaignsView: React.FC = () => {
                       </td>
                     </tr>
                   );
-                })}
+                }))}
               </tbody>
             </table>
           </div>
