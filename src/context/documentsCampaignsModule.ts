@@ -1403,8 +1403,8 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       const slug = rawSlug.replace(/^\/+|\/+$/g, '');
       const now = new Date().toISOString();
 
-      // Generate QR Code targeting the public redirect URL
-      const fullUrl = `${window.location.origin}/c/${slug}`;
+      // Generate QR Code targeting the public redirect URL: /r/:slug
+      const fullUrl = `${window.location.origin}/r/${slug}`;
       const qrCodeDataUrl = await generateQRCodeDataUrl(fullUrl);
 
       const newLink: UVLTrackingLink = {
@@ -1488,20 +1488,184 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
   /**
    * Public click ingestion: records click, filters bots, generates attribution token, and returns redirect targets
    */
+  /**
+   * Ingests a public click event for a tracking link, resolves external destination with DB fallback,
+   * detects redirect loops and unsafe schemes, preserves query params, and returns redirect targets.
+   */
   const ingestClick = useCallback(
     async (
       slug: string,
-      meta: { userAgent?: string; ip?: string; referrer?: string }
-    ): Promise<{ redirectUrl: string; attributionToken: string; deepLinkUrl?: string }> => {
-      const link = trackingLinks.find(l => l.slug === slug && l.isActive);
+      meta: { userAgent?: string; ip?: string; referrer?: string },
+      incomingQuery?: string
+    ): Promise<{
+      redirectUrl: string;
+      attributionToken: string;
+      deepLinkUrl?: string;
+      error?: 'not_found' | 'disabled' | 'expired' | 'loop_detected' | 'invalid_scheme' | 'no_destination';
+      trackingLink?: UVLTrackingLink;
+    }> => {
+      // 1. Try resolving link from local memory first
+      let link = trackingLinks.find(l => l.slug === slug);
+      const matchedAppId = link?.appId;
+      let app = matchedAppId ? campaignApps.find(a => a.id === matchedAppId) : undefined;
+
+      // 2. If not found in memory (e.g. fresh visitor session / incognito), query Supabase directly
+      if (!link) {
+        try {
+          const { data: dbLink } = await supabase
+            .from('campaign_tracking_links')
+            .select('*')
+            .eq('slug', slug)
+            .maybeSingle();
+
+          if (dbLink) {
+            link = {
+              id: dbLink.id,
+              campaignId: dbLink.campaign_id,
+              appId: dbLink.app_id,
+              slug: dbLink.slug,
+              title: dbLink.title,
+              destinationRoute: dbLink.destination_route,
+              webFallbackUrl: dbLink.web_fallback_url,
+              deepLinkEnabled: dbLink.deep_link_enabled,
+              isActive: dbLink.is_active,
+              expiresAt: dbLink.expires_at,
+              qrCodeDataUrl: dbLink.qr_code_data_url,
+              auditHistory: dbLink.audit_history || [],
+              createdAt: dbLink.created_at
+            };
+
+            const { data: dbApp } = await supabase
+              .from('campaign_apps')
+              .select('*')
+              .eq('id', dbLink.app_id)
+              .maybeSingle();
+
+            if (dbApp) {
+              app = {
+                id: dbApp.id,
+                workspaceId: dbApp.workspace_id,
+                name: dbApp.name,
+                platform: dbApp.platform,
+                androidPackageName: dbApp.android_package_name,
+                iosBundleId: dbApp.ios_bundle_id,
+                playStoreUrl: dbApp.play_store_url,
+                appStoreUrl: dbApp.app_store_url,
+                webFallbackUrl: dbApp.web_fallback_url,
+                approvedDeepLinkRoutes: dbApp.approved_deep_link_routes || [],
+                approvedDomains: dbApp.approved_domains || [],
+                environment: dbApp.environment,
+                publishableClientKey: dbApp.publishable_client_key,
+                serverSecretKey: dbApp.server_secret_key,
+                integrationStatus: dbApp.integration_status,
+                lastEventReceivedAt: dbApp.last_event_received_at,
+                createdAt: dbApp.created_at,
+                updatedAt: dbApp.updated_at
+              };
+            }
+          }
+        } catch (err) {
+          console.warn('Direct database link fetch warning:', err);
+        }
+      }
+
       if (!link) {
         return {
-          redirectUrl: window.location.origin,
-          attributionToken: ''
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'not_found'
         };
       }
 
-      const app = campaignApps.find(a => a.id === link.appId);
+      if (!link.isActive) {
+        return {
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'disabled',
+          trackingLink: link
+        };
+      }
+
+      if (link.expiresAt && new Date(link.expiresAt).getTime() < Date.now()) {
+        return {
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'expired',
+          trackingLink: link
+        };
+      }
+
+      // 3. Resolve destination without UVL homepage fallback
+      let rawDestination = '';
+      if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
+        rawDestination = link.webFallbackUrl.trim();
+      } else if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
+        rawDestination = link.destinationRoute.trim();
+      } else if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
+        rawDestination = app.webFallbackUrl.trim();
+      } else if (app?.playStoreUrl && /Android/i.test(meta.userAgent || '')) {
+        rawDestination = app.playStoreUrl.trim();
+      } else if (app?.appStoreUrl && /iPhone|iPad|iPod/i.test(meta.userAgent || '')) {
+        rawDestination = app.appStoreUrl.trim();
+      }
+
+      if (!rawDestination) {
+        return {
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'no_destination',
+          trackingLink: link
+        };
+      }
+
+      // 4. Reject dangerous schemes (javascript:, data:, vbscript:, file:)
+      if (/^(javascript|data|vbscript|file):/i.test(rawDestination)) {
+        return {
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'invalid_scheme',
+          trackingLink: link
+        };
+      }
+
+      // 5. Detect self-redirect loops
+      const isLoop = (
+        rawDestination.includes(`/r/${slug}`) ||
+        rawDestination.includes(`/c/${slug}`) ||
+        (typeof window !== 'undefined' && (rawDestination === window.location.href || rawDestination === `${window.location.origin}/r/${slug}`))
+      );
+      if (isLoop) {
+        return {
+          redirectUrl: '',
+          attributionToken: '',
+          error: 'loop_detected',
+          trackingLink: link
+        };
+      }
+
+      // Ensure protocol is present
+      if (!/^[a-zA-Z]+:\/\//.test(rawDestination)) {
+        rawDestination = `https://${rawDestination}`;
+      }
+
+      // 6. Preserve and merge incoming query parameters
+      let finalRedirectUrl = rawDestination;
+      try {
+        const destUrl = new URL(rawDestination);
+        if (incomingQuery) {
+          const incomingParams = new URLSearchParams(incomingQuery);
+          for (const [key, value] of incomingParams.entries()) {
+            // Do not copy internal framework routing query parameters
+            if (!['cSlug', 'docToken', 'r', 'c'].includes(key) && !destUrl.searchParams.has(key)) {
+              destUrl.searchParams.set(key, value);
+            }
+          }
+        }
+        finalRedirectUrl = destUrl.toString();
+      } catch {
+        finalRedirectUrl = rawDestination;
+      }
+
       const isBot = isLikelyBotOrPreview(meta.userAgent);
       const token = generateAttributionToken();
       const ipHash = hashIpAddress(meta.ip || 'anonymous_ip');
@@ -1522,6 +1686,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
 
       setClickEvents(prev => [clickRecord, ...prev]);
 
+      // Durable Supabase ingestion with bounded failure handling
       try {
         await supabase.from('campaign_clicks').insert([
           {
@@ -1537,33 +1702,15 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             is_suspected_bot: clickRecord.isSuspectedBot
           }
         ]);
-      } catch {}
+      } catch (err) {
+        console.warn('Click ingestion error (proceeding with redirect):', err);
+      }
 
-      // Resolve redirect targets: reroute to user-specified website, custom route, or app fallback
+      // 7. Mobile deep link resolution
       let deepLinkUrl: string | undefined = undefined;
-
-      let destination = '';
-      if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
-        destination = link.webFallbackUrl.trim();
-      } else if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
-        destination = link.destinationRoute.trim();
-      } else if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
-        destination = app.webFallbackUrl.trim();
-      } else {
-        destination = 'https://uvl.ventures';
-      }
-
-      // Ensure protocol is present so the browser redirects to the target website externally
-      if (!/^[a-zA-Z]+:\/\//.test(destination)) {
-        destination = `https://${destination}`;
-      }
-
-      const redirectUrl = destination;
-
       if (link.deepLinkEnabled && app) {
-        // If destinationRoute is a custom in-app path (and not an external http/https URL)
-        if (!/^https?:\/\//i.test(link.destinationRoute.trim())) {
-          const route = link.destinationRoute ? link.destinationRoute.replace(/^\/+/, '') : '';
+        if (link.destinationRoute && !/^https?:\/\//i.test(link.destinationRoute.trim())) {
+          const route = link.destinationRoute.replace(/^\/+/, '');
           if (app.platform === 'android' && app.androidPackageName) {
             deepLinkUrl = `${app.androidPackageName}://${route}?uvl_token=${token}`;
           } else if (app.platform === 'ios' && app.iosBundleId) {
@@ -1575,9 +1722,10 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       }
 
       return {
-        redirectUrl,
+        redirectUrl: finalRedirectUrl,
         attributionToken: token,
-        deepLinkUrl
+        deepLinkUrl,
+        trackingLink: link
       };
     },
     [trackingLinks, campaignApps]

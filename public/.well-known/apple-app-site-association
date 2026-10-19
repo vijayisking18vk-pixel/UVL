@@ -5,6 +5,7 @@
       {
         "appID": "UVLTEAM123.com.loop.student",
         "paths": [
+          "/r/*",
           "/c/*",
           "/l/*",
           "/deal/*",

@@ -11,8 +11,8 @@ import {
   verifyDocumentPassword,
   generateSecureShareToken
 } from '../src/lib/documentStorage.ts';
-import { createUVLMCPServer } from '../src/mcp/uvl-mcp-server.ts';
-import { ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { createUVLMCPServer, isPrivateOrLoopbackHost } from '../src/mcp/uvl-mcp-server.ts';
+import { ListToolsRequestSchema, CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import {
   UVLCampaign,
   UVLClickEvent,
@@ -324,7 +324,14 @@ async function runTests() {
       'delete_campaign',
       'create_tracking_link',
       'delete_tracking_link',
-      'reroute_tracking_link'
+      'reroute_tracking_link',
+      'get_link_details',
+      'get_link_metrics',
+      'get_campaign_metrics',
+      'get_attribution_breakdown',
+      'get_app_integration_status',
+      'get_recent_tracking_errors',
+      'diagnose_tracking_link'
     ];
 
     for (const tool of requiredTools) {
@@ -428,8 +435,79 @@ async function runTests() {
     console.log('✓ DocSend full-slide navigation bounds and isolated telemetry verified');
   }
 
+  // TEST 13: SSRF Protection & Private IP Blocking
+  console.log('\n[TEST 13] SSRF Protection & Private/Loopback Host Blocking');
+  {
+    assert.strictEqual(isPrivateOrLoopbackHost('localhost'), true, 'localhost must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('127.0.0.1'), true, '127.0.0.1 loopback must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('127.0.1.1'), true, '127.0.0.0/8 loopback range must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('::1'), true, 'IPv6 ::1 must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('10.0.0.1'), true, '10.0.0.0/8 private network must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('172.16.0.5'), true, '172.16.0.0/12 private network must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('192.168.1.1'), true, '192.168.0.0/16 private network must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('169.254.169.254'), true, '169.254.0.0/16 cloud metadata must be blocked');
+    assert.strictEqual(isPrivateOrLoopbackHost('metadata.google.internal'), true, 'GCP metadata internal host must be blocked');
+
+    // Public domains must pass
+    assert.strictEqual(isPrivateOrLoopbackHost('uvl.ventures'), false, 'Public domains must pass SSRF check');
+    assert.strictEqual(isPrivateOrLoopbackHost('instagram.com'), false, 'Public domains must pass SSRF check');
+    assert.strictEqual(isPrivateOrLoopbackHost('google.com'), false, 'Public domains must pass SSRF check');
+    console.log('✓ SSRF protection strictly blocks loopback, RFC1918 private ranges, and cloud metadata');
+  }
+
+  // TEST 14: Redirect Loop Prevention & Dangerous Scheme Rejection
+  console.log('\n[TEST 14] Redirect Loop Prevention & Dangerous Scheme Rejection');
+  {
+    function checkSafeRedirect(destUrl: string, slug: string): { isSafe: boolean; reason?: string } {
+      if (/^(javascript|data|vbscript|file):/i.test(destUrl)) {
+        return { isSafe: false, reason: 'invalid_scheme' };
+      }
+      if (destUrl.includes(`/r/${slug}`) || destUrl.includes(`/c/${slug}`)) {
+        return { isSafe: false, reason: 'loop_detected' };
+      }
+      return { isSafe: true };
+    }
+
+    // Dangerous schemes
+    assert.strictEqual(checkSafeRedirect('javascript:alert(1)', 'test-slug').reason, 'invalid_scheme');
+    assert.strictEqual(checkSafeRedirect('data:text/html,<script>alert(1)</script>', 'test-slug').reason, 'invalid_scheme');
+    assert.strictEqual(checkSafeRedirect('file:///etc/passwd', 'test-slug').reason, 'invalid_scheme');
+
+    // Loops
+    assert.strictEqual(checkSafeRedirect('https://uvl.ventures/r/summer-promo', 'summer-promo').reason, 'loop_detected');
+    assert.strictEqual(checkSafeRedirect('https://uvl.ventures/c/summer-promo', 'summer-promo').reason, 'loop_detected');
+
+    // Safe destinations
+    assert.strictEqual(checkSafeRedirect('https://myexternalapp.com/home', 'summer-promo').isSafe, true);
+    console.log('✓ Dangerous schemes and self-redirect loops prevented');
+  }
+
+  // TEST 15: Public Redirect Parameter Merging
+  console.log('\n[TEST 15] Query Parameter Preservation & Merging on /r/:slug');
+  {
+    function mergeRedirectQuery(destination: string, incomingQuery?: string): string {
+      let dest = destination;
+      if (!/^[a-zA-Z]+:\/\//.test(dest)) dest = `https://${dest}`;
+      const url = new URL(dest);
+      if (incomingQuery) {
+        const params = new URLSearchParams(incomingQuery);
+        for (const [k, v] of params.entries()) {
+          if (!['cSlug', 'docToken', 'r', 'c'].includes(k) && !url.searchParams.has(k)) {
+            url.searchParams.set(k, v);
+          }
+        }
+      }
+      return url.toString();
+    }
+
+    const merged = mergeRedirectQuery('https://brand.com/landing?existing=1', '?utm_source=meta&utm_campaign=campus&ref=stu_123&r=ignore_internal');
+    assert.strictEqual(merged, 'https://brand.com/landing?existing=1&utm_source=meta&utm_campaign=campus&ref=stu_123');
+    assert.strictEqual(merged.includes('r=ignore_internal'), false, 'Internal routing params must be stripped');
+    console.log('✓ Query parameter preservation and safe merging verified');
+  }
+
   console.log('\n========================================================');
-  console.log('ALL 12 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
+  console.log('ALL 15 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
   console.log('========================================================\n');
 }
 

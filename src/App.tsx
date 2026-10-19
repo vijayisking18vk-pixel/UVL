@@ -49,16 +49,24 @@ const AppContent: React.FC = () => {
   }
 
   let campaignSlug: string | null = null;
-  if (pathname.startsWith('/c/')) {
-    campaignSlug = pathname.replace('/c/', '').split('/')[0];
+  if (pathname.startsWith('/r/')) {
+    campaignSlug = pathname.replace('/r/', '').split('/')[0].split('?')[0];
+  } else if (pathname.startsWith('/c/')) {
+    campaignSlug = pathname.replace('/c/', '').split('/')[0].split('?')[0];
+  } else if (search.has('r')) {
+    campaignSlug = search.get('r');
   } else if (search.has('cSlug')) {
     campaignSlug = search.get('cSlug');
+  } else if (search.has('c')) {
+    campaignSlug = search.get('c');
+  } else if (hash.startsWith('#/r/')) {
+    campaignSlug = hash.replace('#/r/', '').split('/')[0].split('?')[0];
   } else if (hash.startsWith('#/c/')) {
-    campaignSlug = hash.replace('#/c/', '').split('/')[0];
+    campaignSlug = hash.replace('#/c/', '').split('/')[0].split('?')[0];
   }
 
   if (campaignSlug) {
-    return <CampaignClickRedirect slug={campaignSlug} />;
+    return <CampaignClickRedirect slug={campaignSlug} incomingQuery={window.location.search} />;
   }
 
   // Keyboard shortcut listener for fast operations

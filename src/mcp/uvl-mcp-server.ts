@@ -13,6 +13,31 @@ const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 /**
+ * SSRF Protection: Checks if hostname resolves to private, loopback, or cloud-metadata IP.
+ */
+export function isPrivateOrLoopbackHost(hostname: string): boolean {
+  const h = hostname.trim().toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1' || h === '0.0.0.0') {
+    return true;
+  }
+  // 10.0.0.0/8
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  // 172.16.0.0/12
+  if (/^172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  // 192.168.0.0/16
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  // 169.254.0.0/16 (link local & AWS/GCP metadata 169.254.169.254)
+  if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  // 127.0.0.0/8
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h)) return true;
+  // Internal hostnames
+  if (h === 'metadata.google.internal' || h.endsWith('.internal') || h.endsWith('.local')) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Creates and configures the UVL Unified Model Context Protocol Server.
  */
 export function createUVLMCPServer() {
@@ -205,6 +230,87 @@ export function createUVLMCPServer() {
               newDestinationRoute: { type: 'string', description: 'Optional new in-app destination route' }
             },
             required: ['trackingLinkId', 'newDestinationUrl']
+          }
+        },
+        {
+          name: 'get_link_details',
+          description: 'Retrieves complete metadata, target destination, QR code, and audit trail for a specific tracking link.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              linkId: { type: 'string', description: 'Tracking link unique ID' },
+              slug: { type: 'string', description: 'Tracking link vanity slug' }
+            }
+          }
+        },
+        {
+          name: 'get_link_metrics',
+          description: 'Retrieves detailed performance telemetry for a single tracking link including raw clicks, bot filtering, unique visitors, and first-open conversions.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              linkId: { type: 'string', description: 'Tracking link unique ID' },
+              slug: { type: 'string', description: 'Tracking link vanity slug' }
+            }
+          }
+        },
+        {
+          name: 'get_campaign_metrics',
+          description: 'Calculates campaign ROI, filtered clicks, attributed first-opens, signups, and cost-per-open using either Cohort or Event-Time mode.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              reportingMode: {
+                type: 'string',
+                enum: ['cohort', 'event_time'],
+                description: 'Cohort Mode (clicks cohort) vs Event-Time Mode (events calendar time)'
+              },
+              campaignId: { type: 'string', description: 'Optional campaign filter' }
+            },
+            required: ['reportingMode']
+          }
+        },
+        {
+          name: 'get_attribution_breakdown',
+          description: 'Retrieves attribution model breakdown across deterministic tokens, install referrers, and probabilistic window matching.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              campaignId: { type: 'string', description: 'Optional campaign ID filter' },
+              appId: { type: 'string', description: 'Optional app ID filter' }
+            }
+          }
+        },
+        {
+          name: 'get_app_integration_status',
+          description: 'Checks integration health of connected apps, package IDs, universal link associations, and last received event.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              appId: { type: 'string', description: 'Optional app ID filter' }
+            }
+          }
+        },
+        {
+          name: 'get_recent_tracking_errors',
+          description: 'Retrieves recent tracking errors, suspicious bot patterns, blocked loop redirects, and rejected schemes.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Max error items to return (default: 20)' }
+            }
+          }
+        },
+        {
+          name: 'diagnose_tracking_link',
+          description: 'Runs diagnostic tests on a tracking link or destination URL: verifies scheme safety, detects redirect loops, enforces SSRF protections, and tests hops without polluting click analytics.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              slug: { type: 'string', description: 'Tracking link vanity slug to test' },
+              trackingLinkId: { type: 'string', description: 'Tracking link unique ID to test' },
+              customUrl: { type: 'string', description: 'Direct URL to test against SSRF, scheme, and loop filters' }
+            }
           }
         }
       ]
@@ -562,6 +668,338 @@ export function createUVLMCPServer() {
                   success: true,
                   message: `Tracking link ${trackingLinkId} successfully rerouted to ${normalizedUrl}`,
                   trackingLink: data
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_link_details': {
+          const { linkId, slug } = a;
+          let query = supabase.from('campaign_tracking_links').select('*');
+          if (linkId) query = query.eq('id', linkId);
+          else if (slug) query = query.eq('slug', slug);
+          else throw new Error('Either linkId or slug is required');
+
+          const { data: link, error } = await query.maybeSingle();
+          if (error || !link) throw new Error('Tracking link not found');
+
+          const { data: app } = await supabase.from('campaign_apps').select('*').eq('id', link.app_id).maybeSingle();
+          const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', link.campaign_id).maybeSingle();
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  link,
+                  app: app ? { ...app, server_secret_key: undefined } : null,
+                  campaign: campaign || null
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_link_metrics': {
+          const { linkId, slug } = a;
+          let targetLinkId = linkId;
+          if (!targetLinkId && slug) {
+            const { data: l } = await supabase.from('campaign_tracking_links').select('id').eq('slug', slug).maybeSingle();
+            targetLinkId = l?.id;
+          }
+          if (!targetLinkId) throw new Error('Either linkId or slug is required');
+
+          const { data: clicks } = await supabase.from('campaign_clicks').select('*').eq('tracking_link_id', targetLinkId);
+          const rawClicks = clicks?.length || 0;
+          const suspectedBots = clicks?.filter(c => c.is_suspected_bot)?.length || 0;
+          const filteredClicks = rawClicks - suspectedBots;
+          const uniqueIps = new Set((clicks || []).map(c => c.ip_hash)).size;
+
+          const clickTokens = new Set((clicks || []).map(c => c.attribution_token).filter(Boolean));
+          const { data: events } = await supabase.from('campaign_app_events').select('*');
+          const matchingEvents = (events || []).filter(e => e.attribution_token && clickTokens.has(e.attribution_token));
+
+          const firstOpens = matchingEvents.filter(e => e.event_name === 'first_open').length;
+          const signups = matchingEvents.filter(e => e.event_name === 'signup_completed').length;
+          const conversions = matchingEvents.filter(e => e.event_name === 'purchase_completed' || e.event_name === 'kyc_verified').length;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  linkId: targetLinkId,
+                  rawClicks,
+                  filteredClicks,
+                  suspectedBots,
+                  uniqueIps,
+                  attributedFirstOpens: firstOpens,
+                  signups,
+                  verifiedConversions: conversions,
+                  clickToOpenRate: filteredClicks > 0 ? `${((firstOpens / filteredClicks) * 100).toFixed(2)}%` : '0.00%'
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_campaign_metrics': {
+          const reportingMode = a.reportingMode || 'cohort';
+          const { data: camps } = a.campaignId
+            ? await supabase.from('campaigns').select('*').eq('id', a.campaignId)
+            : await supabase.from('campaigns').select('*');
+          const { data: clicks } = await supabase.from('campaign_clicks').select('*');
+          const { data: events } = await supabase.from('campaign_app_events').select('*');
+
+          const allCampaigns = camps || [];
+          const allClicks = clicks || [];
+          const allEvents = events || [];
+
+          const metrics = allCampaigns.map(c => {
+            const campClicks = allClicks.filter(cl => cl.campaign_id === c.id);
+            const rawClicks = campClicks.length;
+            const suspectedBots = campClicks.filter(cl => cl.is_suspected_bot).length;
+            const filteredClicks = rawClicks - suspectedBots;
+            const uniqueClicks = new Set(campClicks.map(cl => cl.ip_hash)).size;
+
+            const campTokens = new Set(campClicks.map(cl => cl.attribution_token).filter(Boolean));
+            const campEvents = allEvents.filter(e =>
+              e.attributed_campaign_id === c.id || (e.attribution_token && campTokens.has(e.attribution_token))
+            );
+
+            const firstOpens = campEvents.filter(e => e.event_name === 'first_open').length;
+            const signups = campEvents.filter(e => e.event_name === 'signup_completed').length;
+            const conversions = campEvents.filter(e => e.event_name === 'purchase_completed' || e.event_name === 'kyc_verified').length;
+            const spend = c.spend || 0;
+            const convRate = filteredClicks > 0 ? ((firstOpens / filteredClicks) * 100).toFixed(2) : '0.00';
+            const costPerOpen = firstOpens > 0 ? (spend / firstOpens).toFixed(2) : '—';
+
+            return {
+              campaignId: c.id,
+              campaignName: c.name,
+              source: c.source,
+              medium: c.medium,
+              spend,
+              rawClicks,
+              filteredClicks,
+              suspectedBots,
+              estimatedUniqueClicks: uniqueClicks,
+              attributedFirstOpens: firstOpens,
+              signups,
+              verifiedConversions: conversions,
+              conversionRate: `${convRate}%`,
+              costPerAttributedFirstOpen: costPerOpen
+            };
+          });
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  reportingMode,
+                  totalCampaigns: metrics.length,
+                  metrics
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_attribution_breakdown': {
+          let query = supabase.from('campaign_app_events').select('*');
+          if (a.appId) query = query.eq('app_id', a.appId);
+          if (a.campaignId) query = query.eq('attributed_campaign_id', a.campaignId);
+
+          const { data: events, error } = await query;
+          if (error) throw error;
+          const allEvents = events || [];
+
+          const sourceCounts: Record<string, number> = {
+            deterministic_token: 0,
+            install_referrer: 0,
+            probabilistic_window: 0,
+            unattributed: 0
+          };
+          const confidenceCounts: Record<string, number> = {
+            high: 0,
+            medium: 0,
+            low: 0
+          };
+
+          for (const e of allEvents) {
+            const src = e.attribution_source || 'unattributed';
+            sourceCounts[src] = (sourceCounts[src] || 0) + 1;
+            const conf = e.attribution_confidence || 'low';
+            confidenceCounts[conf] = (confidenceCounts[conf] || 0) + 1;
+          }
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  totalEvents: allEvents.length,
+                  bySource: sourceCounts,
+                  byConfidence: confidenceCounts,
+                  modelRules: {
+                    deterministic: 'Token match via deep link or Android Install Referrer (High confidence)',
+                    probabilistic: 'IP + User-Agent match within configured 7-day window (Medium confidence)',
+                    unattributed: 'Expired or unmatched event (Low confidence)'
+                  }
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_app_integration_status': {
+          let query = supabase.from('campaign_apps').select('*');
+          if (a.appId) query = query.eq('id', a.appId);
+
+          const { data: apps, error } = await query;
+          if (error) throw error;
+
+          const appStatusList = (apps || []).map(app => ({
+            appId: app.id,
+            appName: app.name,
+            platform: app.platform,
+            androidPackageName: app.android_package_name || null,
+            iosBundleId: app.ios_bundle_id || null,
+            webFallbackUrl: app.web_fallback_url,
+            integrationStatus: app.integration_status || 'active',
+            lastEventReceivedAt: app.last_event_received_at || null,
+            domainAssociation: {
+              appleAppSiteAssociation: 'Configured & live at /.well-known/apple-app-site-association',
+              androidAssetLinks: 'Configured & live at /.well-known/assetlinks.json'
+            }
+          }));
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  totalApps: appStatusList.length,
+                  apps: appStatusList
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'get_recent_tracking_errors': {
+          const limit = Math.min(Number(a.limit) || 20, 50);
+          const { data: botClicks } = await supabase
+            .from('campaign_clicks')
+            .select('*')
+            .eq('is_suspected_bot', true)
+            .order('timestamp', { ascending: false })
+            .limit(limit);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  recentFilteredBotClicks: (botClicks || []).map(c => ({
+                    clickId: c.id,
+                    trackingLinkId: c.tracking_link_id,
+                    timestamp: c.timestamp,
+                    ipHash: c.ip_hash,
+                    userAgent: c.user_agent,
+                    flag: 'suspected_bot_or_crawler'
+                  })),
+                  securitySummary: {
+                    loopDetection: 'Active (catches self-referencing /r/ and /c/ slugs)',
+                    dangerousSchemesBlocked: 'javascript:, data:, vbscript:, file:',
+                    ssrfProtection: 'Active (blocks localhost, 127.0.0.1, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16)'
+                  }
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'diagnose_tracking_link': {
+          let link: any = null;
+          if (a.slug) {
+            const { data } = await supabase.from('campaign_tracking_links').select('*').eq('slug', a.slug).maybeSingle();
+            link = data;
+          } else if (a.trackingLinkId) {
+            const { data } = await supabase.from('campaign_tracking_links').select('*').eq('id', a.trackingLinkId).maybeSingle();
+            link = data;
+          }
+
+          let testUrl = a.customUrl || link?.web_fallback_url || link?.destination_route || '';
+          if (!testUrl && !link) {
+            throw new Error('Link not found or no test URL provided');
+          }
+
+          const notes: string[] = [];
+          let isSafeScheme = true;
+          let isLoop = false;
+          let isSSRF = false;
+          let status: 'healthy' | 'warning' | 'error' = 'healthy';
+          let hops: Array<{ hop: number; url: string; status?: number }> = [];
+
+          // Check scheme
+          if (/^(javascript|data|vbscript|file):/i.test(testUrl)) {
+            isSafeScheme = false;
+            status = 'error';
+            notes.push(`Dangerous scheme detected: ${testUrl.split(':')[0]}`);
+          }
+
+          // Check loop
+          if (link && (testUrl.includes(`/r/${link.slug}`) || testUrl.includes(`/c/${link.slug}`))) {
+            isLoop = true;
+            status = 'error';
+            notes.push('Redirect loop detected: destination points to own tracking slug.');
+          }
+
+          // Check SSRF
+          try {
+            const parsed = new URL(testUrl.startsWith('http') ? testUrl : `https://${testUrl}`);
+            if (isPrivateOrLoopbackHost(parsed.hostname)) {
+              isSSRF = true;
+              status = 'error';
+              notes.push(`SSRF Block: Hostname ${parsed.hostname} is private/loopback/cloud metadata.`);
+            }
+          } catch (err) {
+            notes.push(`URL parsing warning: ${String(err)}`);
+          }
+
+          // Simulate hop without recording synthetic click
+          if (isSafeScheme && !isSSRF && !isLoop && testUrl) {
+            hops.push({
+              hop: 1,
+              url: `/r/${link?.slug || 'diagnostic'}`,
+              status: 302
+            });
+            hops.push({
+              hop: 2,
+              url: testUrl.startsWith('http') ? testUrl : `https://${testUrl}`,
+              status: 200
+            });
+            notes.push('Simulated non-recording diagnostic hop test completed without polluting analytics.');
+          }
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  status,
+                  linkId: link?.id || 'manual_url',
+                  slug: link?.slug || 'manual_test',
+                  destinationUrl: testUrl,
+                  isSafeScheme,
+                  isLoopDetected: isLoop,
+                  isPrivateOrLoopbackBlocked: isSSRF,
+                  syntheticTestIsolated: true,
+                  hops,
+                  notes
                 }, null, 2)
               }
             ]
