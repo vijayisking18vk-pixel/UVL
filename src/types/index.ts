@@ -621,8 +621,10 @@ export interface UVLCampaignApp {
   integrationStatus: 'connected' | 'pending' | 'error';
   lastEventReceivedAt?: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
 }
+
+export type UVLProject = UVLCampaignApp;
 
 export interface UVLCampaign {
   id: string;

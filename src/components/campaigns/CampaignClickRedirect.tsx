@@ -46,6 +46,17 @@ export const CampaignClickRedirect: React.FC<CampaignClickRedirectProps> = ({ sl
           return;
         }
 
+        if (result.attributionToken) {
+          try {
+            localStorage.setItem('UVL_ATTRIBUTION_TOKEN', result.attributionToken);
+            sessionStorage.setItem('UVL_ATTRIBUTION_TOKEN', result.attributionToken);
+            if (result.trackingLink?.campaignId) {
+              localStorage.setItem('UVL_ATTRIBUTED_CAMPAIGN_ID', result.trackingLink.campaignId);
+              sessionStorage.setItem('UVL_ATTRIBUTED_CAMPAIGN_ID', result.trackingLink.campaignId);
+            }
+          } catch {}
+        }
+
         setTargetUrl(result.redirectUrl);
         setStatus('redirecting');
 
@@ -97,7 +108,7 @@ export const CampaignClickRedirect: React.FC<CampaignClickRedirectProps> = ({ sl
           </div>
           <h2 className="text-xl font-bold text-black mb-2">Tracking Link Not Found</h2>
           <p className="text-sm text-[#6E6E73] mb-4">
-            The tracking link <code className="font-mono bg-neutral-100 px-1.5 py-0.5 rounded text-black text-xs">/r/{slug}</code> does not exist or has been removed.
+            The tracking link code <code className="font-mono bg-neutral-100 px-1.5 py-0.5 rounded text-black text-xs">?c={slug}</code> does not exist or has been removed.
           </p>
           <span className="text-xs text-[#A1A1AA] font-mono block">Status: 404 Not Found</span>
         </div>

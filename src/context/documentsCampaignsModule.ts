@@ -1396,7 +1396,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
   );
 
   /**
-   * Generates a smart campaign tracking link with high-res QR code
+   * Generates a smart campaign tracking link with high-res QR code targeting https://<project_domain>/?c=<code_for_campaign>
    */
   const createTrackingLink = useCallback(
     async (
@@ -1405,18 +1405,34 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       }
     ): Promise<UVLTrackingLink> => {
       const linkId = 'trk_' + Date.now();
-      const rawSlug = linkData.customSlug || `${linkData.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substring(2, 6)}`;
+      // Generate clean 5-character short campaign code (e.g. WPkAs) if custom slug is omitted
+      const generateCode = (len = 5) => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let res = '';
+        for (let i = 0; i < len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+        return res;
+      };
+      const rawSlug = linkData.customSlug?.trim() || generateCode(5);
       const slug = rawSlug.replace(/^\/+|\/+$/g, '');
       const now = new Date().toISOString();
 
-      // Generate QR Code targeting the public redirect URL: /r/:slug
-      const fullUrl = `${window.location.origin}/r/${slug}`;
+      // Resolve target project / app to construct canonical tracking URL: https://<project_domain>/?c=<campaign_code>
+      const targetApp = campaignApps.find(a => a.id === linkData.appId);
+      let targetFallback = (linkData.webFallbackUrl || targetApp?.webFallbackUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://uvl.ventures')).trim();
+      if (targetFallback && !/^[a-zA-Z]+:\/\//.test(targetFallback)) {
+        targetFallback = `https://${targetFallback}`;
+      }
+      const projectBaseUrl = targetFallback.replace(/\/+$/, '');
+
+      // Generate QR Code targeting the canonical project campaign tracking URL: https://<domain>/?c=<slug>
+      const fullUrl = `${projectBaseUrl}/?c=${slug}`;
       const qrCodeDataUrl = await generateQRCodeDataUrl(fullUrl);
 
       const newLink: UVLTrackingLink = {
         ...linkData,
         id: linkId,
         slug,
+        webFallbackUrl: targetFallback,
         qrCodeDataUrl,
         auditHistory: [
           {
@@ -1638,7 +1654,13 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       const isLoop = (
         rawDestination.includes(`/r/${slug}`) ||
         rawDestination.includes(`/c/${slug}`) ||
-        (typeof window !== 'undefined' && (rawDestination === window.location.href || rawDestination === `${window.location.origin}/r/${slug}`))
+        rawDestination.includes(`?c=${slug}`) ||
+        rawDestination.includes(`&c=${slug}`) ||
+        (typeof window !== 'undefined' && (
+          rawDestination === window.location.href ||
+          rawDestination === `${window.location.origin}/r/${slug}` ||
+          rawDestination === `${window.location.origin}/?c=${slug}`
+        ))
       );
       if (isLoop) {
         return {
@@ -1658,10 +1680,13 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       let finalRedirectUrl = rawDestination;
       try {
         const destUrl = new URL(rawDestination);
+        if (destUrl.searchParams.get('c') === slug) {
+          destUrl.searchParams.delete('c');
+        }
         if (incomingQuery) {
           const incomingParams = new URLSearchParams(incomingQuery);
           for (const [key, value] of incomingParams.entries()) {
-            // Do not copy internal framework routing query parameters
+            // Do not copy internal framework routing query parameters or the campaign slug itself
             if (!['cSlug', 'docToken', 'r', 'c'].includes(key) && !destUrl.searchParams.has(key)) {
               destUrl.searchParams.set(key, value);
             }

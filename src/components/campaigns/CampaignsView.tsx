@@ -60,6 +60,8 @@ export const CampaignsView: React.FC = () => {
     attributionPolicy,
     updateAttributionPolicy,
     registerCampaignApp,
+    updateCampaignApp,
+    deleteCampaignApp,
     createCampaign,
     createTrackingLink,
     deleteCampaign,
@@ -68,12 +70,13 @@ export const CampaignsView: React.FC = () => {
     ingestAppEvent
   } = useWorkspace();
 
-  // Primary subnavigation tabs matching reference screenshot: 'campaigns' | 'channels'
-  // Secondary subtabs accessible for advanced modules: 'overview' | 'connected_apps' | 'conversions' | 'diagnostics'
-  const [activeTab, setActiveTab] = useState<'campaigns' | 'channels' | 'overview' | 'connected_apps' | 'conversions' | 'diagnostics'>('campaigns');
+  // Primary subnavigation tabs: 'campaigns' | 'channels' | 'projects' | 'overview' | 'conversions' | 'diagnostics'
+  const [activeTab, setActiveTab] = useState<'campaigns' | 'channels' | 'projects' | 'overview' | 'conversions' | 'diagnostics'>('campaigns');
 
   // Filter Bar State
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('all');
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState<boolean>(false);
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
   const [channelDropdownOpen, setChannelDropdownOpen] = useState<boolean>(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'android' | 'ios'>('all');
@@ -97,12 +100,12 @@ export const CampaignsView: React.FC = () => {
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
   const [simModalOpen, setSimModalOpen] = useState<boolean>(false);
 
-  // Form State: Register App
+  // Form State: Register App / Project
   const [appName, setAppName] = useState<string>('');
   const [appPlatform, setAppPlatform] = useState<AppPlatform>('flutter');
   const [appPkg, setAppPkg] = useState<string>('com.loop.student');
   const [appBundle, setAppBundle] = useState<string>('com.loop.student');
-  const [appWebFallback, setAppWebFallback] = useState<string>('https://uvl.ventures');
+  const [appWebFallback, setAppWebFallback] = useState<string>('https://app.ziggers.in');
   const [appEnv, setAppEnv] = useState<AppEnvironment>('production');
 
   // Form State: Campaign
@@ -173,12 +176,32 @@ export const CampaignsView: React.FC = () => {
     }, 600);
   };
 
-  // Copy tracking link URL to clipboard
-  const handleCopyLink = (slug: string) => {
+  // 5-character clean alphanumeric campaign code generator (e.g. WPkAs)
+  const generateCampaignCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let res = '';
+    for (let i = 0; i < 5; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+    return res;
+  };
+
+  // Open Create Link Modal with defaults for project and campaign
+  const handleOpenCreateLinkModal = (preselectedAppId?: string, preselectedCampId?: string) => {
     sound.click();
-    const url = `${window.location.origin}/r/${slug}`;
-    navigator.clipboard.writeText(url);
-    setCopiedSlug(slug);
+    const targetApp = preselectedAppId || (selectedProjectId !== 'all' ? selectedProjectId : (campaignApps[0]?.id || ''));
+    const appObj = campaignApps.find(a => a.id === targetApp);
+    setLinkAppId(targetApp);
+    setLinkCampaignId(preselectedCampId || campaigns.find(c => c.appId === targetApp)?.id || campaigns[0]?.id || '');
+    setLinkCustomSlug(generateCampaignCode());
+    setLinkFallback(appObj?.webFallbackUrl || 'https://app.ziggers.in');
+    setLinkTitle('');
+    setCreateLinkModalOpen(true);
+  };
+
+  // Copy tracking link URL to clipboard
+  const handleCopyLink = (urlOrText: string) => {
+    sound.click();
+    navigator.clipboard.writeText(urlOrText);
+    setCopiedSlug(urlOrText);
     setTimeout(() => setCopiedSlug(null), 2500);
   };
 
@@ -206,6 +229,15 @@ export const CampaignsView: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  // Delete Project (App / Website) handler
+  const handleDeleteProject = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete project "${name}"?\nAssociated tracking links and campaigns will be affected.`)) {
+      sound.click();
+      await deleteCampaignApp(id);
+      if (selectedProjectId === id) setSelectedProjectId('all');
+    }
+  };
+
   // Delete Campaign handler
   const handleDeleteCampaign = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete campaign "${name}"?\nThis will permanently remove the campaign and all associated tracking links.`)) {
@@ -222,25 +254,31 @@ export const CampaignsView: React.FC = () => {
     }
   };
 
-  // Create App Submit
+  // Create Project (App / Website) Submit
   const handleCreateAppSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await registerCampaignApp({
-      name: appName,
+    let normalizedUrl = (appWebFallback.trim() || 'https://app.ziggers.in');
+    if (!/^[a-zA-Z]+:\/\//.test(normalizedUrl)) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
+    const created = await registerCampaignApp({
+      name: appName.trim() || 'Ziggers App',
       platform: appPlatform,
-      androidPackageName: appPkg,
-      iosBundleId: appBundle,
-      webFallbackUrl: appWebFallback,
+      androidPackageName: appPkg.trim() || undefined,
+      iosBundleId: appBundle.trim() || undefined,
+      webFallbackUrl: normalizedUrl,
       environment: appEnv
     });
     setCreateAppModalOpen(false);
     setAppName('');
+    setAppWebFallback('https://app.ziggers.in');
+    setSelectedProjectId(created.id);
   };
 
   // Create Campaign Submit
   const handleCreateCampaignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetApp = campAppId || campaignApps[0]?.id || 'app_default';
+    const targetApp = campAppId || (selectedProjectId !== 'all' ? selectedProjectId : (campaignApps[0]?.id || 'app_default'));
     await createCampaign({
       workspaceId: 'default',
       appId: targetApp,
@@ -260,22 +298,24 @@ export const CampaignsView: React.FC = () => {
   // Create Tracking Link Submit
   const handleCreateLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetCamp = linkCampaignId || campaigns[0]?.id || 'cmp_default';
-    const targetApp = linkAppId || campaignApps[0]?.id || 'app_default';
+    const targetApp = linkAppId || (selectedProjectId !== 'all' ? selectedProjectId : (campaignApps[0]?.id || 'app_default'));
+    const targetCamp = linkCampaignId || campaigns.find(c => c.appId === targetApp)?.id || campaigns[0]?.id || 'cmp_default';
+    const matchedApp = campaignApps.find(a => a.id === targetApp);
 
-    let targetFallback = linkFallback.trim();
+    let targetFallback = (linkFallback.trim() || matchedApp?.webFallbackUrl || 'https://app.ziggers.in');
     if (targetFallback && !/^[a-zA-Z]+:\/\//.test(targetFallback)) {
       targetFallback = `https://${targetFallback}`;
     }
-    const finalFallback = targetFallback || 'https://uvl.ventures';
+
+    const slug = linkCustomSlug.trim() || generateCampaignCode();
 
     await createTrackingLink({
       campaignId: targetCamp,
       appId: targetApp,
-      title: linkTitle,
-      customSlug: linkCustomSlug.trim() || undefined,
-      destinationRoute: linkDestRoute,
-      webFallbackUrl: finalFallback,
+      title: linkTitle.trim() || `Link ${slug}`,
+      customSlug: slug,
+      destinationRoute: linkDestRoute.trim() || 'home',
+      webFallbackUrl: targetFallback,
       deepLinkEnabled: linkDeepLink,
       isActive: true
     });
@@ -283,7 +323,6 @@ export const CampaignsView: React.FC = () => {
     setCreateLinkModalOpen(false);
     setLinkTitle('');
     setLinkCustomSlug('');
-    setLinkFallback('');
   };
 
   // Simulate Event Submit
@@ -326,7 +365,13 @@ export const CampaignsView: React.FC = () => {
       revenue: string;
       source?: string;
       platform?: string;
+      qrCodeDataUrl?: string;
     }> = [];
+
+    // Filter campaigns by selected project
+    const relevantCampaigns = selectedProjectId === 'all'
+      ? campaigns
+      : campaigns.filter(c => c.appId === selectedProjectId);
 
     // Organic row: Only include if real app events exist without an attributed campaign
     const organicOpens = appEvents.filter(e => !e.attributedCampaignId && e.eventName === 'first_open').length;
@@ -348,17 +393,21 @@ export const CampaignsView: React.FC = () => {
     }
 
     // Populate actual campaigns and their tracking links
-    for (const camp of campaigns) {
+    for (const camp of relevantCampaigns) {
       const campLinks = trackingLinks.filter(l => l.campaignId === camp.id);
       const metrics = campaignMetrics.find(m => m.campaignId === camp.id);
+      const matchedApp = campaignApps.find(a => a.id === camp.appId);
+      const projectBaseUrl = (matchedApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
 
       if (campLinks.length === 0) {
+        const defaultCode = camp.utmCampaign || camp.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const defaultTrackingUrl = `${projectBaseUrl}/?c=${defaultCode}`;
         rows.push({
           id: `cmp_${camp.id}`,
           campaignId: camp.id,
           name: camp.name,
-          content: `${window.location.origin}/c/${camp.id.substring(0, 8)}`,
-          destinationUrl: '',
+          content: defaultTrackingUrl,
+          destinationUrl: projectBaseUrl,
           clicks: metrics?.filteredClicks ?? '-',
           impressions: '-',
           installs: metrics?.attributedFirstOpens ?? '-',
@@ -369,6 +418,9 @@ export const CampaignsView: React.FC = () => {
         });
       } else {
         for (const link of campLinks) {
+          const linkApp = campaignApps.find(a => a.id === link.appId) || matchedApp;
+          const linkBaseUrl = (link.webFallbackUrl || linkApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
+          const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
           const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
           const linkOpens = appEvents.filter(
             e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
@@ -387,15 +439,16 @@ export const CampaignsView: React.FC = () => {
             linkId: link.id,
             slug: link.slug,
             name: camp.name,
-            content: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
-            destinationUrl: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+            content: canonicalUrl,
+            destinationUrl: linkBaseUrl,
             clicks: cCount > 0 ? cCount : '-',
             impressions: '-',
             installs: iCount > 0 ? iCount : '-',
             signups: sCount > 0 ? sCount : '-',
             conversion: conv,
             revenue: '-',
-            source: camp.source
+            source: camp.source,
+            qrCodeDataUrl: link.qrCodeDataUrl
           });
         }
       }
@@ -405,6 +458,12 @@ export const CampaignsView: React.FC = () => {
     const listedCampIds = new Set(campaigns.map(c => c.id));
     const standaloneLinks = trackingLinks.filter(l => !listedCampIds.has(l.campaignId));
     for (const link of standaloneLinks) {
+      if (selectedProjectId !== 'all' && link.appId !== selectedProjectId) {
+        continue;
+      }
+      const matchedApp = campaignApps.find(a => a.id === link.appId);
+      const linkBaseUrl = (link.webFallbackUrl || matchedApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
+      const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
       const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
       const linkOpens = appEvents.filter(
         e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
@@ -422,20 +481,21 @@ export const CampaignsView: React.FC = () => {
         linkId: link.id,
         slug: link.slug,
         name: link.title || 'Tracking Link',
-        content: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
-        destinationUrl: link.webFallbackUrl || `${window.location.origin}/r/${link.slug}`,
+        content: canonicalUrl,
+        destinationUrl: linkBaseUrl,
         clicks: cCount > 0 ? cCount : '-',
         impressions: '-',
         installs: iCount > 0 ? iCount : '-',
         signups: sCount > 0 ? sCount : '-',
         conversion: conv,
         revenue: '-',
-        source: 'custom'
+        source: 'custom',
+        qrCodeDataUrl: link.qrCodeDataUrl
       });
     }
 
     return rows;
-  }, [campaigns, trackingLinks, clickEvents, appEvents, campaignMetrics]);
+  }, [campaigns, trackingLinks, clickEvents, appEvents, campaignMetrics, campaignApps, selectedProjectId]);
 
   // Apply filters & search
   const filteredRows = useMemo(() => {
@@ -458,15 +518,20 @@ export const CampaignsView: React.FC = () => {
   return (
     <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-neutral-900">
       {/* ----------------------------------------------------------------- */}
-      {/* 1. TOP HEADER: "All Campaigns", Sync status, Refresh, + Create Link */}
+      {/* 1. TOP HEADER: "All Campaigns", Sync status, Refresh, + Project, + Campaign, + Create Link */}
       {/* ----------------------------------------------------------------- */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900">All Campaigns</h1>
+          {selectedProjectId !== 'all' && (
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              Project: {campaignApps.find(a => a.id === selectedProjectId)?.name || 'Filtered'}
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <span className="text-xs text-neutral-500 whitespace-nowrap">
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <span className="text-xs text-neutral-500 whitespace-nowrap hidden sm:inline">
             Last synced today, {lastSyncedTime}
           </span>
 
@@ -479,12 +544,35 @@ export const CampaignsView: React.FC = () => {
             <RotateCw size={14} className={isSyncing ? 'animate-spin text-blue-600' : ''} />
           </button>
 
-          {/* + Create Link Primary Blue Button */}
+          {/* + Project Button */}
           <button
             onClick={() => {
               sound.click();
-              setCreateLinkModalOpen(true);
+              setCreateAppModalOpen(true);
             }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+            title="Create Project (App / Website) where all campaign links direct"
+          >
+            <Layers size={13} className="text-blue-600" />
+            <span>+ Project</span>
+          </button>
+
+          {/* + Campaign Button */}
+          <button
+            onClick={() => {
+              sound.click();
+              setCreateCampaignModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-800 text-xs font-semibold shadow-2xs transition-all cursor-pointer whitespace-nowrap"
+            title="Create Marketing Campaign"
+          >
+            <Flag size={13} className="text-emerald-600" />
+            <span>+ Campaign</span>
+          </button>
+
+          {/* + Create Link Primary Blue Button */}
+          <button
+            onClick={() => handleOpenCreateLinkModal()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all cursor-pointer whitespace-nowrap"
           >
             <Plus size={14} />
@@ -494,10 +582,24 @@ export const CampaignsView: React.FC = () => {
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* 2. SUB-NAVIGATION TABS: Channels & Campaigns                       */}
+      {/* 2. SUB-NAVIGATION TABS: Campaigns, Channels, Projects               */}
       {/* ----------------------------------------------------------------- */}
       <div className="flex items-center justify-between border-b border-neutral-200">
         <div className="flex items-center gap-6">
+          <button
+            onClick={() => {
+              sound.click();
+              setActiveTab('campaigns');
+            }}
+            className={`pb-2.5 text-sm font-medium transition-all cursor-pointer border-b-2 ${
+              activeTab === 'campaigns'
+                ? 'border-blue-600 text-neutral-900 font-semibold'
+                : 'border-transparent text-neutral-500 hover:text-neutral-800'
+            }`}
+          >
+            Campaigns
+          </button>
+
           <button
             onClick={() => {
               sound.click();
@@ -515,19 +617,22 @@ export const CampaignsView: React.FC = () => {
           <button
             onClick={() => {
               sound.click();
-              setActiveTab('campaigns');
+              setActiveTab('projects');
             }}
-            className={`pb-2.5 text-sm font-medium transition-all cursor-pointer border-b-2 ${
-              activeTab === 'campaigns'
+            className={`pb-2.5 text-sm font-medium transition-all cursor-pointer border-b-2 flex items-center gap-1.5 ${
+              activeTab === 'projects'
                 ? 'border-blue-600 text-neutral-900 font-semibold'
                 : 'border-transparent text-neutral-500 hover:text-neutral-800'
             }`}
           >
-            Campaigns
+            <span>Projects (Apps & Websites)</span>
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-neutral-100 text-neutral-600 font-mono">
+              {campaignApps.length}
+            </span>
           </button>
         </div>
 
-        {/* Secondary pill shortcuts for connected apps, conversions stream, diagnostics */}
+        {/* Secondary pill shortcuts for overview, conversions stream, diagnostics */}
         <div className="hidden lg:flex items-center gap-1.5 pb-2 text-[11px] font-medium text-neutral-500">
           <button
             onClick={() => setActiveTab('overview')}
@@ -536,14 +641,6 @@ export const CampaignsView: React.FC = () => {
             }`}
           >
             KPI Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('connected_apps')}
-            className={`px-2.5 py-1 rounded-full transition-all ${
-              activeTab === 'connected_apps' ? 'bg-neutral-900 text-white font-semibold' : 'hover:bg-neutral-100 text-neutral-600'
-            }`}
-          >
-            Connected Apps ({campaignApps.length})
           </button>
           <button
             onClick={() => setActiveTab('conversions')}
@@ -565,7 +662,7 @@ export const CampaignsView: React.FC = () => {
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* 3. FILTER BAR: Search, Channels ∨, All|Android|Apple, Date, Attribution */}
+      {/* 3. FILTER BAR: Search, Project ∨, Channels ∨, All|Android|Apple, Date, Attribution */}
       {/* ----------------------------------------------------------------- */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -574,11 +671,65 @@ export const CampaignsView: React.FC = () => {
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search campaigns"
+              placeholder="Search campaigns or links"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-48 sm:w-60 pl-8 pr-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-xs text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-2xs"
+              className="w-44 sm:w-56 pl-8 pr-3 py-1.5 rounded-lg border border-neutral-200 bg-white text-xs text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-2xs"
             />
+          </div>
+
+          {/* Project Dropdown Filter */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                sound.click();
+                setProjectDropdownOpen(!projectDropdownOpen);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 bg-white hover:bg-neutral-50 text-xs font-medium text-neutral-700 shadow-2xs transition-all cursor-pointer"
+            >
+              <Layers size={13} className="text-blue-600" />
+              <span>
+                {selectedProjectId === 'all'
+                  ? 'All Projects'
+                  : campaignApps.find(a => a.id === selectedProjectId)?.name || 'Project'}
+              </span>
+              <ChevronDown size={13} className="text-neutral-400 ml-0.5" />
+            </button>
+
+            {projectDropdownOpen && (
+              <div className="absolute left-0 mt-1 w-52 rounded-xl border border-neutral-200 bg-white shadow-lg py-1 z-30 text-xs">
+                <button
+                  onClick={() => {
+                    setSelectedProjectId('all');
+                    setProjectDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 hover:bg-neutral-100 flex items-center justify-between ${
+                    selectedProjectId === 'all' ? 'font-semibold text-blue-600 bg-blue-50/50' : 'text-neutral-700'
+                  }`}
+                >
+                  <span>All Projects</span>
+                  {selectedProjectId === 'all' && <Check size={12} />}
+                </button>
+                {campaignApps.map(app => (
+                  <button
+                    key={app.id}
+                    onClick={() => {
+                      setSelectedProjectId(app.id);
+                      setProjectDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 hover:bg-neutral-100 flex items-center justify-between ${
+                      selectedProjectId === app.id ? 'font-semibold text-blue-600 bg-blue-50/50' : 'text-neutral-700'
+                    }`}
+                  >
+                    <div className="truncate">
+                      <span className="font-medium">{app.name}</span>
+                      <span className="text-[10px] text-neutral-400 block truncate font-mono">{app.webFallbackUrl}</span>
+                    </div>
+                    {selectedProjectId === app.id && <Check size={12} className="shrink-0" />}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* All Channels Dropdown */}
@@ -919,22 +1070,20 @@ export const CampaignsView: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Content Column (Displays tracking URL / destination URL) */}
+                      {/* Content Column (Displays canonical tracking URL formatted as https://<domain>/?c=<campaign_code>) */}
                       <td className="py-3 px-4 text-neutral-600 font-mono text-[11px]">
                         {row.content ? (
-                          <div className="flex items-center gap-1.5 group max-w-[260px]">
-                            <span className="truncate" title={row.content}>
+                          <div className="flex items-center gap-1.5 group max-w-[280px]">
+                            <span className="truncate font-semibold text-neutral-800" title={row.content}>
                               {row.content}
                             </span>
-                            {row.slug && (
-                              <button
-                                onClick={() => handleCopyLink(row.slug!)}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-opacity"
-                                title="Copy tracking link"
-                              >
-                                {copiedSlug === row.slug ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleCopyLink(row.content)}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-opacity"
+                              title="Copy tracking link"
+                            >
+                              {copiedSlug === row.content ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                            </button>
                           </div>
                         ) : (
                           <span className="text-neutral-300">—</span>
@@ -962,22 +1111,32 @@ export const CampaignsView: React.FC = () => {
                       {/* Actions */}
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          {row.slug && (
+                          {row.content && (
                             <>
                               <button
-                                onClick={() => handleCopyLink(row.slug!)}
+                                onClick={() => handleCopyLink(row.content)}
                                 className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
                                 title="Copy link"
                               >
-                                {copiedSlug === row.slug ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                                {copiedSlug === row.content ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                               </button>
 
+                              {row.qrCodeDataUrl && (
+                                <button
+                                  onClick={() => setQrModalDataUrl(row.qrCodeDataUrl!)}
+                                  className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
+                                  title="View QR Code"
+                                >
+                                  <QrCode size={13} />
+                                </button>
+                              )}
+
                               <a
-                                href={`/r/${row.slug}`}
+                                href={row.content}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
-                                title="Test live redirect"
+                                title={`Test live tracking redirect (${row.content})`}
                               >
                                 <ExternalLink size={13} />
                               </a>
@@ -1022,60 +1181,102 @@ export const CampaignsView: React.FC = () => {
       {/* 5. ADDITIONAL VIEWS: Connected Apps, Conversions, Diagnostics     */}
       {/* ----------------------------------------------------------------- */}
 
-      {/* Connected Apps View */}
-      {activeTab === 'connected_apps' && (
+      {/* Projects (Apps & Websites) View */}
+      {activeTab === 'projects' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="text-sm font-bold text-neutral-900">Registered Client Applications</h2>
+              <h2 className="text-sm font-bold text-neutral-900">Projects (Applications & Websites)</h2>
               <p className="text-xs text-neutral-500">
-                Flutter, Android, iOS, and Web platforms receiving deep link routes with deterministic fallback.
+                Every project directs to its configured application or website (e.g. <span className="font-mono text-neutral-800">https://app.ziggers.in</span>). All campaign links created inside a project output the canonical format: <span className="font-mono text-neutral-800">https://&lt;domain&gt;/?c=&lt;code&gt;</span>.
               </p>
             </div>
 
             <button
-              onClick={() => setCreateAppModalOpen(true)}
-              className="px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm hover:bg-neutral-800"
+              onClick={() => {
+                sound.click();
+                setCreateAppModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm hover:bg-black self-start sm:self-auto cursor-pointer"
             >
               <Plus size={13} />
-              <span>Register App</span>
+              <span>Create Project</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {campaignApps.length === 0 ? (
               <div className="col-span-full p-8 text-center bg-neutral-50 rounded-xl text-xs text-neutral-500 border border-neutral-200">
-                No apps connected yet. Click "Register App" to add Loop Student or other connected platforms.
+                <div className="max-w-xs mx-auto space-y-2">
+                  <Layers size={24} className="mx-auto text-neutral-400" />
+                  <p className="font-semibold text-neutral-800">No Projects Created Yet</p>
+                  <p className="text-[11px] text-neutral-500">
+                    Create your first project (e.g. Ziggers at https://app.ziggers.in) to generate custom campaign tracking links.
+                  </p>
+                  <button
+                    onClick={() => {
+                      sound.click();
+                      setCreateAppModalOpen(true);
+                    }}
+                    className="mt-2 px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                  >
+                    + Create Project
+                  </button>
+                </div>
               </div>
             ) : (
-              campaignApps.map(app => (
-                <div key={app.id} className="p-4 rounded-xl border border-neutral-200 bg-white shadow-2xs space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-[10px] font-mono text-neutral-800 font-semibold uppercase">
-                      {app.platform}
-                    </span>
-                    <span className="text-[10px] text-emerald-700 bg-emerald-50 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
-                      {app.integrationStatus.toUpperCase()}
-                    </span>
-                  </div>
+              campaignApps.map(app => {
+                const appCampaigns = campaigns.filter(c => c.appId === app.id);
+                const appLinks = trackingLinks.filter(l => l.appId === app.id);
+                const projectBase = app.webFallbackUrl.replace(/\/+$/, '');
+                return (
+                  <div key={app.id} className="p-4 rounded-xl border border-neutral-200 bg-white shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-[10px] font-mono text-neutral-800 font-semibold uppercase">
+                        {app.platform}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-emerald-700 bg-emerald-50 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+                          {app.integrationStatus.toUpperCase()}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteProject(app.id, app.name)}
+                          className="p-1 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded transition-colors cursor-pointer"
+                          title="Delete Project"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
 
-                  <div>
-                    <h3 className="text-sm font-bold text-neutral-900">{app.name}</h3>
-                    <span className="text-[10px] text-neutral-500 font-mono block mt-0.5">
-                      {app.androidPackageName || app.iosBundleId || 'Web/PWA Domain'}
-                    </span>
-                  </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-neutral-900">{app.name}</h3>
+                      <div className="text-xs font-mono text-blue-600 mt-1 flex items-center gap-1 truncate">
+                        <ExternalLink size={11} className="shrink-0" />
+                        <span className="truncate">{app.webFallbackUrl}</span>
+                      </div>
+                    </div>
 
-                  <div className="p-2.5 bg-neutral-50 rounded-lg text-[10px] font-mono text-neutral-600 space-y-1">
-                    <div className="truncate">Client Key: <b className="text-neutral-900">{app.publishableClientKey}</b></div>
-                    <div className="truncate">Secret Key: <b className="text-neutral-900">{app.serverSecretKey.substring(0, 10)}...</b></div>
-                  </div>
+                    <div className="p-2.5 bg-neutral-50 rounded-lg text-[11px] space-y-1 border border-neutral-100 font-mono">
+                      <div className="text-neutral-500 text-[10px] uppercase font-sans font-semibold">Generated Link Structure</div>
+                      <div className="text-emerald-700 font-bold truncate">
+                        {projectBase}/?c=WPkAs
+                      </div>
+                    </div>
 
-                  <div className="text-[11px] text-neutral-500 pt-1">
-                    Fallback: <span className="text-neutral-900 font-medium">{app.webFallbackUrl}</span>
+                    <div className="flex items-center justify-between text-xs text-neutral-500 pt-1 border-t border-neutral-100">
+                      <span>{appCampaigns.length} campaigns • {appLinks.length} links</span>
+                      <button
+                        onClick={() => handleOpenCreateLinkModal(app.id)}
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus size={12} />
+                        <span>Create Link</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -1196,135 +1397,198 @@ export const CampaignsView: React.FC = () => {
       {/* ----------------------------------------------------------------- */}
 
       {/* MODAL: CREATE TRACKING LINK */}
-      {createLinkModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 border border-neutral-200 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-neutral-900">Generate Smart Tracking Link</h2>
-              <button
-                onClick={() => setCreateLinkModalOpen(false)}
-                className="text-neutral-400 hover:text-neutral-800 text-sm font-semibold"
-              >
-                ✕
-              </button>
-            </div>
+      {createLinkModalOpen && (() => {
+        const activeProj = campaignApps.find(a => a.id === (linkAppId || campaignApps[0]?.id));
+        const activeBaseDomain = (linkFallback.trim() || activeProj?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
+        const codeVal = (linkCustomSlug.trim() || 'WPkAs').replace(/^\/+|\/+$/g, '');
+        const liveCanonicalUrl = `${activeBaseDomain}/?c=${codeVal}`;
 
-            <form onSubmit={handleCreateLinkSubmit} className="space-y-3.5">
-              <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">Link Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Quora Answers or Campus Posters"
-                  value={linkTitle}
-                  onChange={e => setLinkTitle(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
-                />
+        return (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-lg w-full p-6 border border-neutral-200 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-neutral-900">Generate Campaign Tracking Link</h2>
+                  <p className="text-xs text-neutral-500">
+                    Tied directly to your project and campaign for deterministic attribution.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCreateLinkModalOpen(false)}
+                  className="text-neutral-400 hover:text-neutral-800 text-sm font-semibold cursor-pointer"
+                >
+                  ✕
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="text-xs font-medium text-neutral-800 block mb-1">Campaign</label>
-                  <select
-                    value={linkCampaignId}
-                    onChange={e => setLinkCampaignId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
-                  >
-                    {campaigns.length > 0 ? (
-                      campaigns.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="cmp_default">Default Campaign</option>
-                    )}
-                  </select>
+              {/* LIVE CANONICAL LINK PREVIEW CARD */}
+              <div className="p-3.5 bg-neutral-900 rounded-xl text-white space-y-2 border border-neutral-800 shadow-sm">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-semibold uppercase tracking-wider text-blue-400 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Generated Tracking Link Preview
+                  </span>
+                  <span className="text-[10px] text-neutral-400">Canonical Format</span>
                 </div>
+                <div className="flex items-center justify-between gap-2 bg-neutral-800/90 p-2.5 rounded-lg border border-neutral-700 font-mono text-xs text-emerald-400 select-all">
+                  <span className="truncate">{liveCanonicalUrl}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.click();
+                      navigator.clipboard.writeText(liveCanonicalUrl);
+                    }}
+                    className="p-1 hover:bg-neutral-700 rounded text-neutral-300 hover:text-white transition-colors shrink-0 cursor-pointer"
+                    title="Copy preview link"
+                  >
+                    <Copy size={13} />
+                  </button>
+                </div>
+                <p className="text-[10px] text-neutral-400 leading-relaxed">
+                  Visitors clicking this link are attributed to this campaign code (<span className="text-white font-mono">{codeVal}</span>) and redirected directly to <span className="text-white font-mono">{activeBaseDomain}</span>.
+                </p>
+              </div>
 
+              <form onSubmit={handleCreateLinkSubmit} className="space-y-3.5">
+                {/* Project Selector */}
                 <div>
-                  <label className="text-xs font-medium text-neutral-800 block mb-1">Target Application</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-neutral-800">Target Project (App / Website)</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateLinkModalOpen(false);
+                        setCreateAppModalOpen(true);
+                      }}
+                      className="text-[11px] text-blue-600 hover:underline font-medium"
+                    >
+                      + New Project
+                    </button>
+                  </div>
                   <select
                     value={linkAppId}
-                    onChange={e => setLinkAppId(e.target.value)}
+                    onChange={e => {
+                      const newAppId = e.target.value;
+                      setLinkAppId(newAppId);
+                      const matched = campaignApps.find(a => a.id === newAppId);
+                      if (matched) {
+                        setLinkFallback(matched.webFallbackUrl);
+                      }
+                    }}
                     className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
                   >
                     {campaignApps.length > 0 ? (
                       campaignApps.map(a => (
                         <option key={a.id} value={a.id}>
-                          {a.name} ({a.platform})
+                          {a.name} ({a.webFallbackUrl})
                         </option>
                       ))
                     ) : (
-                      <option value="app_default">Loop Mobile App</option>
+                      <option value="app_default">Ziggers App (https://app.ziggers.in)</option>
                     )}
                   </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">Custom Vanity Slug (Optional)</label>
-                <div className="flex items-center">
-                  <span className="px-2.5 py-2 rounded-l-lg border border-r-0 border-neutral-200 bg-neutral-100 text-xs font-mono text-neutral-500">
-                    /r/
-                  </span>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="text-xs font-medium text-neutral-800 block mb-1">Link Title / Label</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. WhatsApp Workers Circulation"
+                      value={linkTitle}
+                      onChange={e => setLinkTitle(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-medium text-neutral-800 block mb-1">Associated Campaign</label>
+                    <select
+                      value={linkCampaignId}
+                      onChange={e => setLinkCampaignId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                    >
+                      {campaigns.length > 0 ? (
+                        campaigns.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="cmp_default">Default Campaign</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Campaign Code (Slug) with domain prefix and randomize button */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-neutral-800">
+                      Campaign Code (<span className="font-mono text-blue-600">?c=<code></code></span>)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setLinkCustomSlug(generateCampaignCode())}
+                      className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      🎲 Generate New Code
+                    </button>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="px-2.5 py-2 rounded-l-lg border border-r-0 border-neutral-200 bg-neutral-100 text-xs font-mono text-neutral-600 shrink-0 select-none">
+                      {activeBaseDomain}/?c=
+                    </span>
+                    <input
+                      type="text"
+                      required
+                      placeholder="WPkAs"
+                      value={linkCustomSlug}
+                      onChange={e => setLinkCustomSlug(e.target.value)}
+                      className="w-full px-3 py-2 rounded-r-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono font-bold focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                    />
+                  </div>
+                  <p className="text-[10px] text-neutral-500 mt-1">
+                    This unique code is embedded in the link to attribute all clicks, installs, and conversions back to this specific campaign.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-neutral-800 block mb-1">
+                    Target Destination Website / App URL
+                  </label>
                   <input
                     type="text"
-                    placeholder="e.g. summer-pass or Scan"
-                    value={linkCustomSlug}
-                    onChange={e => setLinkCustomSlug(e.target.value)}
-                    className="w-full px-3 py-2 rounded-r-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                    required
+                    placeholder="https://app.ziggers.in"
+                    value={linkFallback}
+                    onChange={e => setLinkFallback(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">
-                  Destination Redirect Website or App URL
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. https://app.ziggers.in or https://mywebsite.com"
-                  value={linkFallback}
-                  onChange={e => setLinkFallback(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
-                />
-                <p className="text-[10px] text-neutral-500 mt-1">
-                  Visitors who click this link will be tracked and immediately redirected to this destination website or store.
-                </p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">In-App Destination Route (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. home or onboarding"
-                  value={linkDestRoute}
-                  onChange={e => setLinkDestRoute(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
-                <button
-                  type="button"
-                  onClick={() => setCreateLinkModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs"
-                >
-                  Generate Link & QR
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+                  <button
+                    type="button"
+                    onClick={() => setCreateLinkModalOpen(false)}
+                    className="px-4 py-2 rounded-lg border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Plus size={13} />
+                    <span>Generate Link & QR</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: CREATE CAMPAIGN */}
       {createCampaignModalOpen && (
@@ -1412,12 +1676,17 @@ export const CampaignsView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: REGISTER APP */}
+      {/* MODAL: CREATE PROJECT (APP / WEBSITE) */}
       {createAppModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 border border-neutral-200 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-neutral-900">Register Connected App</h2>
+              <div>
+                <h2 className="text-base font-bold text-neutral-900">Create Project (App / Website)</h2>
+                <p className="text-[11px] text-neutral-500 mt-0.5">
+                  Links under this project direct visitors to this URL: <span className="font-mono font-medium text-blue-600">https://&lt;domain&gt;/?c=&lt;code&gt;</span>
+                </p>
+              </div>
               <button
                 onClick={() => setCreateAppModalOpen(false)}
                 className="text-neutral-400 hover:text-neutral-800 text-sm font-semibold"
@@ -1428,15 +1697,30 @@ export const CampaignsView: React.FC = () => {
 
             <form onSubmit={handleCreateAppSubmit} className="space-y-3.5">
               <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">Application Name</label>
+                <label className="text-xs font-medium text-neutral-800 block mb-1">Project Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Loop Student Mobile"
+                  placeholder="e.g. Ziggers or Loop Student"
                   value={appName}
                   onChange={e => setAppName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none"
+                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
                 />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-neutral-800 block mb-1">Project App / Website Destination URL</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://app.ziggers.in"
+                  value={appWebFallback}
+                  onChange={e => setAppWebFallback(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                />
+                <p className="text-[10px] text-neutral-400 mt-1">
+                  Example: <span className="font-mono text-neutral-600">https://app.ziggers.in</span> → tracking link will be <span className="font-mono text-blue-600 font-medium">https://app.ziggers.in/?c=WPkAs</span>
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -1445,13 +1729,13 @@ export const CampaignsView: React.FC = () => {
                   <select
                     value={appPlatform}
                     onChange={e => setAppPlatform(e.target.value as AppPlatform)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none"
+                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
                   >
                     <option value="flutter">Flutter</option>
+                    <option value="web_pwa">Web / PWA</option>
                     <option value="android">Native Android</option>
                     <option value="ios">Native iOS</option>
                     <option value="react_native">React Native</option>
-                    <option value="web_pwa">Web / PWA</option>
                   </select>
                 </div>
 
@@ -1460,7 +1744,7 @@ export const CampaignsView: React.FC = () => {
                   <select
                     value={appEnv}
                     onChange={e => setAppEnv(e.target.value as AppEnvironment)}
-                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none"
+                    className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
                   >
                     <option value="production">Production</option>
                     <option value="staging">Staging</option>
@@ -1470,23 +1754,13 @@ export const CampaignsView: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">Android Package Name</label>
+                <label className="text-xs font-medium text-neutral-800 block mb-1">Android Package Name (Optional)</label>
                 <input
                   type="text"
+                  placeholder="e.g. in.ziggers.app"
                   value={appPkg}
                   onChange={e => setAppPkg(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-neutral-800 block mb-1">Web Fallback URL</label>
-                <input
-                  type="url"
-                  required
-                  value={appWebFallback}
-                  onChange={e => setAppWebFallback(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none"
+                  className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
                 />
               </div>
 
@@ -1502,7 +1776,7 @@ export const CampaignsView: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-semibold shadow-xs"
                 >
-                  Register App
+                  Create Project
                 </button>
               </div>
             </form>

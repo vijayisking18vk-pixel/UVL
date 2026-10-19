@@ -133,6 +133,22 @@ export function createUVLMCPServer() {
 
         // CAMPAIGNS MODULE TOOLS
         {
+          name: 'create_project',
+          description: 'Creates a project representing an application or website (e.g. Ziggers at https://app.ziggers.in). All campaign links generated for this project will direct to this app/website formatted as https://<project_domain>/?c=<campaign_code>.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Name of the project/app (e.g. "Ziggers")' },
+              webFallbackUrl: { type: 'string', description: 'Base website or app URL that all project campaign links direct to (e.g. "https://app.ziggers.in")' },
+              platform: { type: 'string', enum: ['flutter', 'android', 'ios', 'web_pwa', 'react_native'], description: 'Platform type (default: flutter)' },
+              androidPackageName: { type: 'string', description: 'Optional Android package name' },
+              iosBundleId: { type: 'string', description: 'Optional iOS bundle ID' },
+              environment: { type: 'string', enum: ['production', 'staging', 'development'], description: 'Target environment' }
+            },
+            required: ['name', 'webFallbackUrl']
+          }
+        },
+        {
           name: 'list_campaign_apps',
           description: 'Lists registered client applications (Flutter, Android, iOS, Web) receiving deep link routes.',
           inputSchema: {
@@ -496,6 +512,65 @@ export function createUVLMCPServer() {
         }
 
         // --- CAMPAIGNS TOOLS ---
+        case 'create_project': {
+          const { name, webFallbackUrl, platform, androidPackageName, iosBundleId, environment } = a;
+          if (!name || !webFallbackUrl) {
+            throw new Error('Missing required arguments: name, webFallbackUrl');
+          }
+
+          let normalizedUrl = String(webFallbackUrl).trim();
+          if (!/^[a-zA-Z]+:\/\//.test(normalizedUrl)) {
+            normalizedUrl = `https://${normalizedUrl}`;
+          }
+
+          const appId = 'app_' + Date.now();
+          const pubKey = 'uvl_pub_' + Math.random().toString(36).substring(2, 12);
+          const secKey = 'uvl_sec_' + Math.random().toString(36).substring(2, 18);
+          const now = new Date().toISOString();
+
+          let domainHostname = 'uvl.ventures';
+          try {
+            domainHostname = new URL(normalizedUrl).hostname;
+          } catch {}
+
+          const newProject = {
+            id: appId,
+            workspace_id: 'default',
+            name: name.trim(),
+            platform: platform || 'flutter',
+            android_package_name: androidPackageName || null,
+            ios_bundle_id: iosBundleId || null,
+            web_fallback_url: normalizedUrl,
+            approved_deep_link_routes: ['home', 'product', 'invite', 'deal'],
+            approved_domains: [domainHostname],
+            environment: environment || 'production',
+            publishable_client_key: pubKey,
+            server_secret_key: secKey,
+            integration_status: 'connected',
+            created_at: now,
+            updated_at: now
+          };
+
+          const { error } = await supabase.from('campaign_apps').insert([newProject]);
+          if (error) throw error;
+
+          const exampleTrackingUrl = `${normalizedUrl.replace(/\/+$/, '')}/?c=WPkAs`;
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  project: { ...newProject, server_secret_key: undefined },
+                  exampleTrackingUrl,
+                  message: `Project "${name}" created. Campaign tracking links will be generated as ${exampleTrackingUrl}.`
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
         case 'list_campaign_apps': {
           const { data, error } = await supabase.from('campaign_apps').select('*');
           if (error) throw error;
@@ -552,11 +627,23 @@ export function createUVLMCPServer() {
 
           const { data, error } = await q;
           if (error) throw error;
+
+          const { data: apps } = await supabase.from('campaign_apps').select('id, web_fallback_url');
+          const appMap = new Map((apps || []).map(app => [app.id, app.web_fallback_url]));
+
+          const formattedLinks = (data || []).map(link => {
+            const base = (link.web_fallback_url || appMap.get(link.app_id) || 'https://uvl.ventures').replace(/\/+$/, '');
+            return {
+              ...link,
+              trackingUrl: `${base}/?c=${link.slug}`
+            };
+          });
+
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({ links: data || [] }, null, 2)
+                text: JSON.stringify({ links: formattedLinks }, null, 2)
               }
             ]
           };
@@ -607,15 +694,29 @@ export function createUVLMCPServer() {
             throw new Error('Missing required arguments: campaignId, appId, title');
           }
 
-          let webFallbackUrl = destinationUrl ? String(destinationUrl).trim() : 'https://uvl.ventures';
+          // Fetch the project / app to obtain its base website/app URL
+          const { data: appData } = await supabase.from('campaign_apps').select('*').eq('id', appId).maybeSingle();
+
+          let webFallbackUrl = destinationUrl ? String(destinationUrl).trim() : (appData?.web_fallback_url || 'https://uvl.ventures');
           if (webFallbackUrl && !/^[a-zA-Z]+:\/\//.test(webFallbackUrl)) {
             webFallbackUrl = `https://${webFallbackUrl}`;
           }
 
           const linkId = 'trk_' + Date.now();
-          const rawSlug = customSlug || `${title.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.random().toString(36).substring(2, 6)}`;
+          // Generate clean 5-character short campaign code (e.g. WPkAs) if not specified
+          const generateCode = (len = 5) => {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let res = '';
+            for (let i = 0; i < len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+            return res;
+          };
+          const rawSlug = customSlug || generateCode(5);
           const slug = rawSlug.replace(/^\/+|\/+$/g, '');
           const now = new Date().toISOString();
+
+          // Canonical tracking link format: https://<project_domain>/?c=<campaign_code>
+          const projectBaseUrl = webFallbackUrl.replace(/\/+$/, '');
+          const canonicalTrackingUrl = `${projectBaseUrl}/?c=${slug}`;
 
           const newLink = {
             id: linkId,
@@ -640,7 +741,9 @@ export function createUVLMCPServer() {
                 text: JSON.stringify({
                   success: true,
                   trackingLink: newLink,
-                  trackingUrl: `/c/${slug}`,
+                  trackingUrl: canonicalTrackingUrl,
+                  campaignCode: slug,
+                  projectBaseUrl: projectBaseUrl,
                   reroutesTo: webFallbackUrl
                 }, null, 2)
               }
@@ -722,12 +825,16 @@ export function createUVLMCPServer() {
           const { data: app } = await supabase.from('campaign_apps').select('*').eq('id', link.app_id).maybeSingle();
           const { data: campaign } = await supabase.from('campaigns').select('*').eq('id', link.campaign_id).maybeSingle();
 
+          const base = (link.web_fallback_url || app?.web_fallback_url || 'https://uvl.ventures').replace(/\/+$/, '');
+          const trackingUrl = `${base}/?c=${link.slug}`;
+
           return {
             content: [
               {
                 type: 'text',
                 text: JSON.stringify({
-                  link,
+                  link: { ...link, trackingUrl },
+                  trackingUrl,
                   app: app ? { ...app, server_secret_key: undefined } : null,
                   campaign: campaign || null
                 }, null, 2)
