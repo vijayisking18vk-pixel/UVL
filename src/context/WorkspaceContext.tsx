@@ -5,8 +5,12 @@ import {
   Expense, ExpenseStatus, Investor, InvestorStage, InvestorInteraction,
   InvestorDocument, AgentTask, AgentActivityLog, AgentReport, AgentConfig, AgentActionStep,
   AgentChatMessage, AgentExecutedAction, HackathonEvent, EventAttachment,
-  TimeTelemetry
+  TimeTelemetry, UVLDocument, UVLDocumentVersion, UVLShareLink,
+  UVLDocumentSession, UVLDocumentPageEvent, DocumentAnalyticsSummary,
+  UVLCampaignApp, UVLCampaign, UVLTrackingLink, UVLClickEvent,
+  UVLAppEvent, UVLAttributionPolicy, CampaignMetricsRow, UVLAuditLog
 } from '../types';
+import { useDocumentsAndCampaigns } from './documentsCampaignsModule';
 import {
   initialUsers, initialProjects, initialTasks, initialCalendarEvents,
   initialMeetings, initialNotes, initialFiles, initialChannels,
@@ -178,6 +182,71 @@ interface WorkspaceContextType {
   exportWorkspaceData: () => void;
   importWorkspaceData: (jsonData: string) => boolean;
   resetWorkspaceData: () => void;
+
+  // UVL Documents (DocSend-Inspired Module)
+  documents: UVLDocument[];
+  documentVersions: UVLDocumentVersion[];
+  shareLinks: UVLShareLink[];
+  documentSessions: UVLDocumentSession[];
+  documentPageEvents: UVLDocumentPageEvent[];
+  activeDocumentId: string | null;
+  setActiveDocumentId: (id: string | null) => void;
+  uploadDocument: (file: File, name: string, description: string, folder?: string, tags?: string[]) => Promise<UVLDocument>;
+  uploadDocumentVersion: (documentId: string, file: File, changelog?: string) => Promise<UVLDocumentVersion>;
+  createShareLink: (linkData: {
+    documentId: string;
+    label: string;
+    expiresAt?: string;
+    password?: string;
+    requireEmail?: boolean;
+    requireVerifiedEmail?: boolean;
+    allowlistDomains?: string[];
+    allowlistEmails?: string[];
+    allowDownload?: boolean;
+    watermarkEnabled?: boolean;
+    watermarkText?: string;
+  }) => Promise<UVLShareLink>;
+  updateShareLink: (linkId: string, updates: Partial<UVLShareLink> & { newPassword?: string }) => Promise<void>;
+  revokeShareLink: (linkId: string) => Promise<void>;
+  deleteDocument: (documentId: string) => Promise<void>;
+  getDocumentAnalytics: (documentId: string, versionId?: string, linkId?: string) => DocumentAnalyticsSummary;
+  recordDocumentSession: (sessionData: Omit<UVLDocumentSession, 'id' | 'startedAt' | 'lastActiveAt'>) => Promise<UVLDocumentSession>;
+  ingestDocumentHeartbeat: (sessionId: string, pageNumber: number, durationSeconds: number) => Promise<void>;
+  recordDocumentDownload: (sessionId: string) => Promise<void>;
+
+  // UVL Campaigns (Linkrunner-Inspired Module)
+  campaignApps: UVLCampaignApp[];
+  campaigns: UVLCampaign[];
+  trackingLinks: UVLTrackingLink[];
+  clickEvents: UVLClickEvent[];
+  appEvents: UVLAppEvent[];
+  attributionPolicy: UVLAttributionPolicy;
+  updateAttributionPolicy: (policy: Partial<UVLAttributionPolicy>) => void;
+  registerCampaignApp: (appData: {
+    name: string;
+    platform: 'android' | 'ios' | 'react_native' | 'flutter' | 'web_pwa';
+    androidPackageName?: string;
+    iosBundleId?: string;
+    playStoreUrl?: string;
+    appStoreUrl?: string;
+    webFallbackUrl: string;
+    approvedDeepLinkRoutes?: string[];
+    approvedDomains?: string[];
+    environment: 'development' | 'staging' | 'production';
+  }) => Promise<UVLCampaignApp>;
+  updateCampaignApp: (id: string, updates: Partial<UVLCampaignApp>) => Promise<void>;
+  deleteCampaignApp: (id: string) => Promise<void>;
+  createCampaign: (campaignData: Omit<UVLCampaign, 'id' | 'createdAt' | 'updatedAt'>) => Promise<UVLCampaign>;
+  updateCampaign: (id: string, updates: Partial<UVLCampaign>) => Promise<void>;
+  deleteCampaign: (id: string) => Promise<void>;
+  createTrackingLink: (linkData: Omit<UVLTrackingLink, 'id' | 'slug' | 'auditHistory' | 'createdAt'> & { customSlug?: string }) => Promise<UVLTrackingLink>;
+  updateTrackingLink: (id: string, updates: Partial<UVLTrackingLink>) => Promise<void>;
+  ingestClick: (slug: string, meta: { userAgent?: string; ip?: string; referrer?: string }) => Promise<{ redirectUrl: string; attributionToken: string; deepLinkUrl?: string }>;
+  ingestAppEvent: (eventData: Omit<UVLAppEvent, 'id' | 'ingestedAt' | 'attributionConfidence' | 'attributionSource'>) => Promise<UVLAppEvent>;
+  getCampaignMetrics: (reportingMode: 'cohort' | 'event_time', dateRange?: { start: string; end: string }) => CampaignMetricsRow[];
+
+  // Audit Logs
+  auditLogs: UVLAuditLog[];
 }
 
 export const DEFAULT_OPERATOR_PINS: Record<string, string> = {
@@ -469,6 +538,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const currentUser = users.find(u => u.id === currentUserId) || users[0];
   const isVijayrajkumar = currentUser?.id === 'u-1' || currentUser?.name?.toLowerCase().includes('vijay') || currentUser?.handle?.toLowerCase().includes('vijay');
+
+  // UVL Documents and Campaigns integrated modules
+  const docsAndCampaigns = useDocumentsAndCampaigns(currentUserId, isVijayrajkumar);
 
   // Sync with Live Supabase Database
   useEffect(() => {
@@ -3708,7 +3780,8 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         reorderWidgets,
         exportWorkspaceData,
         importWorkspaceData,
-        resetWorkspaceData
+        resetWorkspaceData,
+        ...docsAndCampaigns
       }}
     >
       {children}

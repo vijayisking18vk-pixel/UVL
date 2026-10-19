@@ -471,3 +471,276 @@ export interface HackathonEvent {
   updatedAt: string;
 }
 
+// ==========================================
+// UVL DOCUMENTS (DOCSEND-INSPIRED) TYPES
+// ==========================================
+export type DocumentStatus = 'processing' | 'ready' | 'failed' | 'archived';
+
+export interface UVLDocumentVersion {
+  id: string;
+  documentId: string;
+  versionNumber: number;
+  storagePath: string;
+  fileName: string;
+  fileSize: number;
+  totalPages: number;
+  pageDimensions?: { width: number; height: number }[];
+  uploadedBy: string;
+  changelog?: string;
+  createdAt: string;
+}
+
+export interface UVLShareLink {
+  id: string;
+  documentId: string;
+  token: string;
+  label: string;
+  status: 'active' | 'revoked' | 'expired';
+  expiresAt?: string;
+  revokedAt?: string;
+  revokedBy?: string;
+  passwordProtected: boolean;
+  passwordHash?: string;
+  requireEmail: boolean;
+  requireVerifiedEmail: boolean;
+  allowlistDomains: string[];
+  allowlistEmails: string[];
+  allowDownload: boolean;
+  watermarkEnabled: boolean;
+  watermarkText?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export type ViewerType = 'anonymous' | 'self_reported' | 'verified';
+
+export interface UVLDocumentSession {
+  id: string;
+  documentId: string;
+  versionId: string;
+  shareLinkId: string;
+  viewerType: ViewerType;
+  viewerEmail?: string;
+  ipHash: string;
+  userAgent?: string;
+  browser?: string;
+  os?: string;
+  deviceType?: 'desktop' | 'mobile' | 'tablet';
+  country?: string;
+  city?: string;
+  startedAt: string;
+  lastActiveAt: string;
+  endedAt?: string;
+  totalDurationSeconds: number;
+  activeDurationSeconds: number;
+  pagesViewed: number[];
+  completionPercent: number;
+  downloadRequested: boolean;
+  isSuspectedBot: boolean;
+}
+
+export interface UVLDocumentPageEvent {
+  id: string;
+  sessionId: string;
+  documentId: string;
+  versionId: string;
+  pageNumber: number;
+  activeSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UVLDocument {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description: string;
+  folder: string;
+  status: DocumentStatus;
+  currentVersionNumber: number;
+  totalPages: number;
+  fileSize: number;
+  fileType: string;
+  storagePath: string;
+  thumbnailUrl?: string;
+  isArchived: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+  versions?: UVLDocumentVersion[];
+  shareLinks?: UVLShareLink[];
+}
+
+export interface DocumentAnalyticsSummary {
+  documentId: string;
+  totalSessions: number;
+  estimatedUniqueViewers: number;
+  verifiedViewers: number;
+  returningSessions: number;
+  averageActiveDurationSeconds: number;
+  averageCompletionPercent: number;
+  totalDownloads: number;
+  pagePerformance: { pageNumber: number; averageActiveSeconds: number; viewCount: number }[];
+  dropoffCurve: { pageNumber: number; viewersReached: number; percentReached: number }[];
+  versionBreakdown: { versionNumber: number; sessionsCount: number; averageDurationSeconds: number }[];
+  linkBreakdown: { linkId: string; label: string; token: string; sessionsCount: number; activeSeconds: number }[];
+  recentSessions: UVLDocumentSession[];
+}
+
+// ==========================================
+// UVL CAMPAIGNS (LINKRUNNER-INSPIRED) TYPES
+// ==========================================
+export type AppPlatform = 'android' | 'ios' | 'react_native' | 'flutter' | 'web_pwa';
+export type AppEnvironment = 'development' | 'staging' | 'production';
+export type CampaignSource =
+  | 'instagram'
+  | 'meta_ads'
+  | 'google_ads'
+  | 'whatsapp'
+  | 'influencer'
+  | 'qr_code'
+  | 'email'
+  | 'custom';
+
+export interface UVLCampaignApp {
+  id: string;
+  workspaceId: string;
+  name: string;
+  platform: AppPlatform;
+  androidPackageName?: string;
+  iosBundleId?: string;
+  playStoreUrl?: string;
+  appStoreUrl?: string;
+  webFallbackUrl: string;
+  approvedDeepLinkRoutes: string[];
+  approvedDomains: string[];
+  environment: AppEnvironment;
+  publishableClientKey: string;
+  serverSecretKey: string;
+  integrationStatus: 'connected' | 'pending' | 'error';
+  lastEventReceivedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UVLCampaign {
+  id: string;
+  workspaceId: string;
+  appId: string;
+  name: string;
+  source: CampaignSource;
+  medium: string;
+  status: 'active' | 'paused' | 'archived';
+  spend: number;
+  currency: string;
+  reportingPeriod: string;
+  startDate?: string;
+  endDate?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  utmTerm?: string;
+  creativeLabel?: string;
+  placementLabel?: string;
+  influencerLabel?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UVLTrackingLink {
+  id: string;
+  campaignId: string;
+  appId: string;
+  slug: string;
+  title: string;
+  destinationRoute: string;
+  webFallbackUrl: string;
+  deepLinkEnabled: boolean;
+  isActive: boolean;
+  expiresAt?: string;
+  qrCodeDataUrl?: string;
+  auditHistory: { timestamp: string; modifiedBy: string; change: string }[];
+  createdAt: string;
+}
+
+export interface UVLClickEvent {
+  id: string;
+  trackingLinkId: string;
+  campaignId: string;
+  appId: string;
+  attributionToken: string;
+  timestamp: string;
+  ipHash: string;
+  userAgent?: string;
+  browser?: string;
+  os?: string;
+  platform?: string;
+  referrer?: string;
+  coarseGeo?: string;
+  isSuspectedBot: boolean;
+}
+
+export type AttributionSourceType =
+  | 'deterministic_token'
+  | 'play_install_referrer'
+  | 'universal_link'
+  | 'organic'
+  | 'unattributed';
+
+export interface UVLAppEvent {
+  id: string;
+  appId: string;
+  eventName: 'first_open' | 'app_open' | 'signup_completed' | 'purchase_completed' | 'kyc_verified' | 'custom' | string;
+  environment: AppEnvironment;
+  appInstanceId: string;
+  userId?: string;
+  occurredAt: string;
+  ingestedAt: string;
+  attributionToken?: string;
+  attributedCampaignId?: string;
+  attributedLinkId?: string;
+  attributionSource: AttributionSourceType;
+  attributionConfidence: 'high' | 'medium' | 'unattributed';
+  properties: Record<string, any>;
+  sdkVersion: string;
+}
+
+export interface UVLAttributionPolicy {
+  windowDays: number; // default 7
+  model: 'last_touch' | 'first_touch';
+  separateReengagement: boolean;
+  policyVersion: string;
+}
+
+export interface CampaignMetricsRow {
+  campaignId: string;
+  campaignName: string;
+  source: string;
+  medium: string;
+  status: string;
+  rawClicks: number;
+  filteredClicks: number;
+  estimatedUniqueClicks: number;
+  suspectedBots: number;
+  attributedFirstOpens: number;
+  signups: number;
+  verifiedConversions: number;
+  spend: number;
+  currency: string;
+  costPerAttributedFirstOpen: number | null;
+  conversionRate: number | null;
+}
+
+export interface UVLAuditLog {
+  id: string;
+  workspaceId: string;
+  actorId?: string;
+  module: 'documents' | 'campaigns' | 'access' | 'system';
+  action: string;
+  entityType: string;
+  entityId: string;
+  metadata: Record<string, any>;
+  createdAt: string;
+}
+
+

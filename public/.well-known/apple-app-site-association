@@ -1,0 +1,22 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "UVLTEAM123.com.loop.student",
+        "paths": [
+          "/c/*",
+          "/l/*",
+          "/deal/*",
+          "/event/*",
+          "/register*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "UVLTEAM123.com.loop.student"
+    ]
+  }
+}

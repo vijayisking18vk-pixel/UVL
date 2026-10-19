@@ -14,6 +14,10 @@ import { ExpenseView } from './components/expenses/ExpenseView';
 import { InvestorView } from './components/investors/InvestorView';
 import { HackathonsView } from './components/hackathons/HackathonsView';
 import { AgentView } from './components/agent/AgentView';
+import { DocumentsView } from './components/documents/DocumentsView';
+import { CampaignsView } from './components/campaigns/CampaignsView';
+import { DocumentPublicViewer } from './components/documents/DocumentPublicViewer';
+import { CampaignClickRedirect } from './components/campaigns/CampaignClickRedirect';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { AccessControlModal } from './components/access/AccessControlModal';
@@ -25,6 +29,37 @@ const AppContent: React.FC = () => {
     setQuickCaptureOpen,
     setCommandPaletteOpen
   } = useWorkspace();
+
+  // Public routing inspection: /d/:token (Documents) and /c/:slug (Campaigns)
+  const pathname = window.location.pathname;
+  const search = new URLSearchParams(window.location.search);
+  const hash = window.location.hash;
+
+  let docToken: string | null = null;
+  if (pathname.startsWith('/d/')) {
+    docToken = pathname.replace('/d/', '').split('/')[0];
+  } else if (search.has('docToken')) {
+    docToken = search.get('docToken');
+  } else if (hash.startsWith('#/d/')) {
+    docToken = hash.replace('#/d/', '').split('/')[0];
+  }
+
+  if (docToken) {
+    return <DocumentPublicViewer token={docToken} />;
+  }
+
+  let campaignSlug: string | null = null;
+  if (pathname.startsWith('/c/')) {
+    campaignSlug = pathname.replace('/c/', '').split('/')[0];
+  } else if (search.has('cSlug')) {
+    campaignSlug = search.get('cSlug');
+  } else if (hash.startsWith('#/c/')) {
+    campaignSlug = hash.replace('#/c/', '').split('/')[0];
+  }
+
+  if (campaignSlug) {
+    return <CampaignClickRedirect slug={campaignSlug} />;
+  }
 
   // Keyboard shortcut listener for fast operations
   useEffect(() => {
@@ -53,6 +88,10 @@ const AppContent: React.FC = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardView />;
+      case 'documents':
+        return <DocumentsView />;
+      case 'campaigns':
+        return <CampaignsView />;
       case 'tasks':
         return <TasksView />;
       case 'calendar':

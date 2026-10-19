@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://winapknggfwotdazsqla.supabase.co';
+const env: any = (typeof import.meta !== 'undefined' && (import.meta as any).env) ? (import.meta as any).env : (typeof process !== 'undefined' && process.env) ? process.env : {};
+const supabaseUrl = env.VITE_SUPABASE_URL || 'https://winapknggfwotdazsqla.supabase.co';
 // Use authenticated service role key to ensure all private operator transactions persist without RLS 42501 rejections
-const supabaseKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbmFwa25nZ2Z3b3RkYXpzcWxhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODk0NzM5NywiZXhwIjoyMTA0NTIzMzk3fQ.OtLZSSOtyWdGpx7ISsSkivB3h_C2ytTW7F2TgajNCqE';
+const supabaseKey = env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbmFwa25nZ2Z3b3RkYXpzcWxhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODk0NzM5NywiZXhwIjoyMTA0NTIzMzk3fQ.OtLZSSOtyWdGpx7ISsSkivB3h_C2ytTW7F2TgajNCqE';
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {

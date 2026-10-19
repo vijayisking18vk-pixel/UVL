@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.loop.student",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:7D:0F:52:AB:FC:A7:7E:01:E6:BE:50:80:46:83:FE:EA:3A:C1:04:37:E5:E2:6E:1B:3E:BF:5F:8B:E9",
+        "A1:B2:C3:D4:E5:F6:01:12:23:34:45:56:67:78:89:90:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89"
+      ]
+    }
+  }
+]

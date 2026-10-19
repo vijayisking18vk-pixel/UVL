@@ -25,7 +25,9 @@ import {
   IndianRupee,
   Briefcase,
   Bot,
-  Trophy
+  Trophy,
+  Share2,
+  Compass
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -53,6 +55,8 @@ export const Header: React.FC = () => {
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'documents', label: 'Documents', icon: Share2 },
+    { id: 'campaigns', label: 'Campaigns', icon: Compass },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'meetings', label: 'Meetings', icon: Users },
