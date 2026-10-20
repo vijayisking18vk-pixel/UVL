@@ -10,6 +10,7 @@ import {
 import { retrieveDocumentBlob, verifyDocumentPassword } from '../../lib/documentStorage';
 import { loadPDFDocument, renderPDFPageToCanvas } from '../../lib/pdfHelper';
 import { hashIpAddress, isLikelyBotOrPreview } from '../../lib/campaignAttribution';
+import { supabase } from '../../lib/supabase';
 import {
   ChevronLeft,
   ChevronRight,
@@ -45,12 +46,210 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     recordDocumentDownload
   } = useWorkspace();
 
-  // 1. Link & Document resolution
-  const shareLink: UVLShareLink | undefined = shareLinks.find(l => l.token === token);
-  const uvlDoc: UVLDocument | undefined = documents.find(d => d.id === shareLink?.documentId);
-  const activeVersion: UVLDocumentVersion | undefined = documentVersions.find(
-    v => v.documentId === shareLink?.documentId && v.versionNumber === (uvlDoc?.currentVersionNumber || 1)
-  );
+  // 1. Link & Document resolution state (local memory + remote cloud hydration)
+  const [remoteShareLink, setRemoteShareLink] = useState<UVLShareLink | null>(null);
+  const [remoteDoc, setRemoteDoc] = useState<UVLDocument | null>(null);
+  const [remoteVersion, setRemoteVersion] = useState<UVLDocumentVersion | null>(null);
+  const [isResolving, setIsResolving] = useState<boolean>(!shareLinks.find(l => l.token === token));
+
+  const shareLink: UVLShareLink | undefined = shareLinks.find(l => l.token === token) || remoteShareLink || undefined;
+  const uvlDoc: UVLDocument | undefined = (shareLink ? documents.find(d => d.id === shareLink.documentId) : undefined) || remoteDoc || undefined;
+  const activeVersion: UVLDocumentVersion | undefined = (shareLink && uvlDoc
+    ? documentVersions.find(v => v.documentId === shareLink.documentId && v.versionNumber === (uvlDoc.currentVersionNumber || 1))
+    : undefined) || remoteVersion || undefined;
+
+  // Remote Hydration Effect for external viewers / incognito sessions
+  useEffect(() => {
+    let mounted = true;
+
+    async function resolveRemoteData() {
+      // If already resolved in memory, we are ready
+      if (shareLinks.find(l => l.token === token) && uvlDoc && activeVersion) {
+        setIsResolving(false);
+        return;
+      }
+
+      setIsResolving(true);
+      try {
+        let foundLink: UVLShareLink | null = null;
+
+        // 1. Check dedicated Supabase table
+        try {
+          const { data: dbLink } = await supabase
+            .from('document_share_links')
+            .select('*')
+            .eq('token', token)
+            .maybeSingle();
+
+          if (dbLink) {
+            foundLink = {
+              id: dbLink.id,
+              documentId: dbLink.document_id,
+              token: dbLink.token,
+              label: dbLink.label,
+              status: dbLink.status,
+              expiresAt: dbLink.expires_at,
+              revokedAt: dbLink.revoked_at,
+              revokedBy: dbLink.revoked_by,
+              passwordProtected: dbLink.password_protected,
+              passwordHash: dbLink.password_hash,
+              requireEmail: dbLink.require_email,
+              requireVerifiedEmail: dbLink.require_verified_email,
+              allowlistDomains: dbLink.allowlist_domains || [],
+              allowlistEmails: dbLink.allowlist_emails || [],
+              allowDownload: dbLink.allow_download,
+              watermarkEnabled: dbLink.watermark_enabled,
+              watermarkText: dbLink.watermark_text,
+              createdBy: dbLink.created_by,
+              createdAt: dbLink.created_at
+            };
+          }
+        } catch {}
+
+        // 2. Fallback to Cloud Entity Store in Supabase notes table
+        if (!foundLink) {
+          try {
+            const { data: cloudNotes } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('type', 'uvl_document_share_link')
+              .contains('tags', [token]);
+
+            if (cloudNotes && cloudNotes.length > 0) {
+              foundLink = JSON.parse(cloudNotes[0].content);
+            }
+          } catch {}
+        }
+
+        // 3. Fallback scan of all cloud share links if tag search missed
+        if (!foundLink) {
+          try {
+            const { data: allCloudNotes } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('type', 'uvl_document_share_link')
+              .limit(50);
+
+            if (allCloudNotes && allCloudNotes.length > 0) {
+              const matched = allCloudNotes.map(n => {
+                try { return JSON.parse(n.content) as UVLShareLink; } catch { return null; }
+              }).find(l => l?.token === token);
+              if (matched) foundLink = matched;
+            }
+          } catch {}
+        }
+
+        if (!foundLink) {
+          if (mounted) setIsResolving(false);
+          return;
+        }
+
+        if (mounted) setRemoteShareLink(foundLink);
+
+        // Fetch associated document metadata
+        let foundDoc: UVLDocument | null = null;
+        try {
+          const { data: dbDoc } = await supabase
+            .from('documents')
+            .select('*')
+            .eq('id', foundLink.documentId)
+            .maybeSingle();
+
+          if (dbDoc) {
+            foundDoc = {
+              id: dbDoc.id,
+              workspaceId: dbDoc.workspace_id,
+              name: dbDoc.name,
+              description: dbDoc.description || '',
+              folder: dbDoc.folder || 'Default',
+              status: dbDoc.status,
+              currentVersionNumber: dbDoc.current_version_number,
+              totalPages: dbDoc.total_pages,
+              fileSize: dbDoc.file_size,
+              fileType: dbDoc.file_type,
+              storagePath: dbDoc.storage_path,
+              thumbnailUrl: dbDoc.thumbnail_url,
+              isArchived: dbDoc.is_archived,
+              createdBy: dbDoc.created_by,
+              createdAt: dbDoc.created_at,
+              updatedAt: dbDoc.updated_at,
+              tags: dbDoc.tags || []
+            };
+          }
+        } catch {}
+
+        if (!foundDoc) {
+          try {
+            const { data: cloudDocNotes } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('id', foundLink.documentId)
+              .maybeSingle();
+
+            if (cloudDocNotes) {
+              foundDoc = JSON.parse(cloudDocNotes.content);
+            }
+          } catch {}
+        }
+
+        if (mounted && foundDoc) setRemoteDoc(foundDoc);
+
+        // Fetch associated active version
+        let foundVersion: UVLDocumentVersion | null = null;
+        try {
+          const { data: dbVer } = await supabase
+            .from('document_versions')
+            .select('*')
+            .eq('document_id', foundLink.documentId)
+            .eq('version_number', foundDoc?.currentVersionNumber || 1)
+            .maybeSingle();
+
+          if (dbVer) {
+            foundVersion = {
+              id: dbVer.id,
+              documentId: dbVer.document_id,
+              versionNumber: dbVer.version_number,
+              storagePath: dbVer.storage_path,
+              fileName: dbVer.file_name,
+              fileSize: dbVer.file_size,
+              totalPages: dbVer.total_pages,
+              uploadedBy: dbVer.uploaded_by,
+              changelog: dbVer.changelog,
+              createdAt: dbVer.created_at
+            };
+          }
+        } catch {}
+
+        if (!foundVersion && foundDoc) {
+          try {
+            const { data: cloudVerNotes } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('type', 'uvl_document_version')
+              .contains('tags', [foundDoc.id]);
+
+            if (cloudVerNotes && cloudVerNotes.length > 0) {
+              const allVers: UVLDocumentVersion[] = cloudVerNotes.map(n => JSON.parse(n.content));
+              foundVersion = allVers.find(v => v.versionNumber === foundDoc.currentVersionNumber) || allVers[0];
+            }
+          } catch {}
+        }
+
+        if (mounted && foundVersion) setRemoteVersion(foundVersion);
+
+        if (mounted) setIsResolving(false);
+      } catch (err) {
+        console.warn('Remote document resolution warning:', err);
+        if (mounted) setIsResolving(false);
+      }
+    }
+
+    resolveRemoteData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, shareLinks, documents, documentVersions]);
 
   // 2. Access gates state
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
@@ -535,6 +734,20 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
   // ----------------------------------------------------
   // ERROR & ACCESS GATE SCREENS
   // ----------------------------------------------------
+  if (isResolving && (!shareLink || !uvlDoc)) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-[#E5E5E7] text-center shadow-lg space-y-4">
+          <div className="w-10 h-10 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
+          <h3 className="text-sm font-semibold text-black">Securing Document Session</h3>
+          <p className="text-xs text-[#6E6E73]">
+            Connecting to cloud repository and validating presentation credentials...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!shareLink || !uvlDoc) {
     return (
       <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center p-4">

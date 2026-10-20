@@ -76,7 +76,7 @@ export async function uploadDocumentStorage(
   await storeBlobLocally(path, file);
 
   try {
-    // Attempt Supabase storage upload
+    // 1. Attempt primary Supabase storage upload to 'documents' bucket
     const { data, error } = await supabase.storage.from('documents').upload(path, file, {
       upsert: true,
       contentType: file.type || 'application/pdf'
@@ -85,8 +85,18 @@ export async function uploadDocumentStorage(
     if (!error && data) {
       return { storagePath: path, isRemote: true };
     }
+
+    // 2. Fallback to 'files' bucket if 'documents' bucket has any issue
+    const { data: fileData, error: fileError } = await supabase.storage.from('files').upload(path, file, {
+      upsert: true,
+      contentType: file.type || 'application/pdf'
+    });
+
+    if (!fileError && fileData) {
+      return { storagePath: path, isRemote: true };
+    }
   } catch (err) {
-    console.warn('Supabase remote storage upload skipped, using local persistent cache:', err);
+    console.warn('Supabase remote storage upload error, using local persistent cache:', err);
   }
 
   return { storagePath: path, isRemote: false };
@@ -102,16 +112,43 @@ export async function retrieveDocumentBlob(storagePath: string): Promise<Blob | 
     return localBlob;
   }
 
-  // Otherwise download from Supabase Storage
+  // 1. Try download from 'documents' Supabase bucket
   try {
     const { data, error } = await supabase.storage.from('documents').download(storagePath);
-    if (!error && data) {
-      // Cache locally for subsequent page views
+    if (!error && data && data.size > 0) {
       await storeBlobLocally(storagePath, data);
       return data;
     }
   } catch (err) {
-    console.error('Failed to retrieve document blob:', err);
+    console.warn('Failed to download from documents bucket, trying files bucket:', err);
+  }
+
+  // 2. Try download from 'files' Supabase bucket fallback
+  try {
+    const { data, error } = await supabase.storage.from('files').download(storagePath);
+    if (!error && data && data.size > 0) {
+      await storeBlobLocally(storagePath, data);
+      return data;
+    }
+  } catch (err) {
+    console.warn('Failed to download from files bucket:', err);
+  }
+
+  // 3. Try fetching via Public URL as an external fetch fallback
+  try {
+    const { data: pubData } = supabase.storage.from('documents').getPublicUrl(storagePath);
+    if (pubData?.publicUrl) {
+      const res = await fetch(pubData.publicUrl);
+      if (res.ok) {
+        const fetchedBlob = await res.blob();
+        if (fetchedBlob && fetchedBlob.size > 0) {
+          await storeBlobLocally(storagePath, fetchedBlob);
+          return fetchedBlob;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to fetch via public url:', err);
   }
 
   return null;

@@ -441,6 +441,116 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             }))
           );
         }
+
+        // 11. Sync from Supabase Cloud Entity Store in notes table
+        try {
+          const { data: cloudRecords } = await supabase
+            .from('notes')
+            .select('*')
+            .ilike('type', 'uvl_%');
+
+          if (mounted && cloudRecords && cloudRecords.length > 0) {
+            const cloudDocs: UVLDocument[] = [];
+            const cloudVers: UVLDocumentVersion[] = [];
+            const cloudLinks: UVLShareLink[] = [];
+            const cloudSessions: UVLDocumentSession[] = [];
+            const cloudPageEvents: UVLDocumentPageEvent[] = [];
+            const cloudApps: UVLCampaignApp[] = [];
+            const cloudCamps: UVLCampaign[] = [];
+            const cloudTrackLinks: UVLTrackingLink[] = [];
+            const cloudClicks: UVLClickEvent[] = [];
+            const cloudAppEvents: UVLAppEvent[] = [];
+
+            for (const r of cloudRecords) {
+              try {
+                const parsed = JSON.parse(r.content);
+                if (r.type === 'uvl_document') cloudDocs.push(parsed);
+                else if (r.type === 'uvl_document_version') cloudVers.push(parsed);
+                else if (r.type === 'uvl_document_share_link') cloudLinks.push(parsed);
+                else if (r.type === 'uvl_document_session') cloudSessions.push(parsed);
+                else if (r.type === 'uvl_document_page_event') cloudPageEvents.push(parsed);
+                else if (r.type === 'uvl_campaign_app') cloudApps.push(parsed);
+                else if (r.type === 'uvl_campaign') cloudCamps.push(parsed);
+                else if (r.type === 'uvl_tracking_link') cloudTrackLinks.push(parsed);
+                else if (r.type === 'uvl_click_event') cloudClicks.push(parsed);
+                else if (r.type === 'uvl_app_event') cloudAppEvents.push(parsed);
+              } catch {}
+            }
+
+            if (cloudDocs.length > 0) {
+              setDocuments(prev => {
+                const map = new Map(prev.map(d => [d.id, d]));
+                cloudDocs.forEach(d => map.set(d.id, d));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudVers.length > 0) {
+              setDocumentVersions(prev => {
+                const map = new Map(prev.map(v => [v.id, v]));
+                cloudVers.forEach(v => map.set(v.id, v));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudLinks.length > 0) {
+              setShareLinks(prev => {
+                const map = new Map(prev.map(l => [l.id, l]));
+                cloudLinks.forEach(l => map.set(l.id, l));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudSessions.length > 0) {
+              setDocumentSessions(prev => {
+                const map = new Map(prev.map(s => [s.id, s]));
+                cloudSessions.forEach(s => map.set(s.id, s));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudPageEvents.length > 0) {
+              setDocumentPageEvents(prev => {
+                const map = new Map(prev.map(pe => [pe.id, pe]));
+                cloudPageEvents.forEach(pe => map.set(pe.id, pe));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudApps.length > 0) {
+              setCampaignApps(prev => {
+                const map = new Map(prev.map(a => [a.id, a]));
+                cloudApps.forEach(a => map.set(a.id, a));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudCamps.length > 0) {
+              setCampaigns(prev => {
+                const map = new Map(prev.map(c => [c.id, c]));
+                cloudCamps.forEach(c => map.set(c.id, c));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudTrackLinks.length > 0) {
+              setTrackingLinks(prev => {
+                const map = new Map(prev.map(tl => [tl.id, tl]));
+                cloudTrackLinks.forEach(tl => map.set(tl.id, tl));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudClicks.length > 0) {
+              setClickEvents(prev => {
+                const map = new Map(prev.map(ck => [ck.id, ck]));
+                cloudClicks.forEach(ck => map.set(ck.id, ck));
+                return Array.from(map.values());
+              });
+            }
+            if (cloudAppEvents.length > 0) {
+              setAppEvents(prev => {
+                const map = new Map(prev.map(ae => [ae.id, ae]));
+                cloudAppEvents.forEach(ae => map.set(ae.id, ae));
+                return Array.from(map.values());
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('Supabase cloud store sync note:', err);
+        }
       } catch (err) {
         console.warn('Initial Supabase fetch completed with fallback to local state:', err);
       }
@@ -450,6 +560,36 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
     return () => {
       mounted = false;
     };
+  }, []);
+
+  // Helper: Persist entity to Supabase Cloud Entity Store in notes table
+  const saveCloudEntity = useCallback(
+    async (id: string, type: string, data: any, tags: string[] = []) => {
+      try {
+        await supabase.from('notes').upsert({
+          id,
+          title: `${type}:${id}`,
+          content: JSON.stringify(data),
+          author_id: currentUserId || 'u-1',
+          type,
+          tags: [type, ...tags],
+          is_pinned: false,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn(`Failed to persist cloud entity ${type}:${id}:`, err);
+      }
+    },
+    [currentUserId]
+  );
+
+  // Helper: Delete entity from Supabase Cloud Entity Store
+  const deleteCloudEntity = useCallback(async (id: string) => {
+    try {
+      await supabase.from('notes').delete().eq('id', id);
+    } catch (err) {
+      console.warn(`Failed to delete cloud entity ${id}:`, err);
+    }
   }, []);
 
   // Helper: Append Audit Log
@@ -598,8 +738,16 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             created_at: newVersion.createdAt
           }
         ]);
+
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newDoc.id, 'uvl_document', newDoc, [newDoc.folder, ...(newDoc.tags || [])]);
+        await saveCloudEntity(newVersion.id, 'uvl_document_version', newVersion, [newDoc.id]);
       } catch (err) {
-        console.warn('Document Supabase insert error, persisted locally:', err);
+        console.warn('Document Supabase insert error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newDoc.id, 'uvl_document', newDoc, [newDoc.folder, ...(newDoc.tags || [])]);
+          await saveCloudEntity(newVersion.id, 'uvl_document_version', newVersion, [newDoc.id]);
+        } catch {}
       }
 
       await logAudit('documents', 'document_created', 'document', newDoc.id, {
@@ -693,8 +841,23 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             created_at: newVersion.createdAt
           }
         ]);
+
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newVersion.id, 'uvl_document_version', newVersion, [documentId]);
+        await saveCloudEntity(documentId, 'uvl_document', {
+          ...doc,
+          currentVersionNumber: nextVersionNum,
+          totalPages: inspection.totalPages,
+          fileSize: file.size,
+          storagePath,
+          thumbnailUrl: inspection.thumbnailDataUrl || doc.thumbnailUrl,
+          updatedAt: now
+        }, [doc.folder, ...(doc.tags || [])]);
       } catch (err) {
         console.warn('Document version sync error:', err);
+        try {
+          await saveCloudEntity(newVersion.id, 'uvl_document_version', newVersion, [documentId]);
+        } catch {}
       }
 
       await logAudit('documents', 'version_uploaded', 'document', documentId, {
@@ -781,8 +944,14 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             created_at: newLink.createdAt
           }
         ]);
+
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newLink.id, 'uvl_document_share_link', newLink, [newLink.token, newLink.documentId]);
       } catch (err) {
-        console.warn('Share link Supabase insert error:', err);
+        console.warn('Share link Supabase insert error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newLink.id, 'uvl_document_share_link', newLink, [newLink.token, newLink.documentId]);
+        } catch {}
       }
 
       await logAudit('documents', 'share_link_created', 'document_share_link', newLink.id, {
@@ -842,14 +1011,24 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         if (mergedUpdates.watermarkText !== undefined) dbPayload.watermark_text = mergedUpdates.watermarkText;
 
         await supabase.from('document_share_links').update(dbPayload).eq('id', linkId);
+        const updated = shareLinks.find(l => l.id === linkId);
+        if (updated) {
+          await saveCloudEntity(linkId, 'uvl_document_share_link', { ...updated, ...mergedUpdates }, [updated.token, updated.documentId]);
+        }
       } catch (err) {
         console.warn('Share link update error:', err);
+        try {
+          const updated = shareLinks.find(l => l.id === linkId);
+          if (updated) {
+            await saveCloudEntity(linkId, 'uvl_document_share_link', { ...updated, ...mergedUpdates }, [updated.token, updated.documentId]);
+          }
+        } catch {}
       }
 
       await logAudit('documents', 'share_link_updated', 'document_share_link', linkId, mergedUpdates);
       sound.click();
     },
-    [logAudit]
+    [logAudit, shareLinks, saveCloudEntity]
   );
 
   /**
@@ -871,14 +1050,24 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
           .from('document_share_links')
           .update({ status: 'revoked', revoked_at: now, revoked_by: currentUserId })
           .eq('id', linkId);
+        const targetLink = shareLinks.find(l => l.id === linkId);
+        if (targetLink) {
+          await saveCloudEntity(linkId, 'uvl_document_share_link', { ...targetLink, status: 'revoked', revokedAt: now, revokedBy: currentUserId }, [targetLink.token, targetLink.documentId]);
+        }
       } catch (err) {
         console.warn('Revoke link Supabase error:', err);
+        try {
+          const targetLink = shareLinks.find(l => l.id === linkId);
+          if (targetLink) {
+            await saveCloudEntity(linkId, 'uvl_document_share_link', { ...targetLink, status: 'revoked', revokedAt: now, revokedBy: currentUserId }, [targetLink.token, targetLink.documentId]);
+          }
+        } catch {}
       }
 
       await logAudit('documents', 'share_link_revoked', 'document_share_link', linkId);
       sound.alert();
     },
-    [currentUserId, logAudit]
+    [currentUserId, logAudit, shareLinks, saveCloudEntity]
   );
 
   /**
@@ -886,6 +1075,11 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
    */
   const deleteDocument = useCallback(
     async (documentId: string): Promise<void> => {
+      const linksToDelete = shareLinks.filter(l => l.documentId === documentId);
+      const versToDelete = documentVersions.filter(v => v.documentId === documentId);
+      const sessionsToDelete = documentSessions.filter(s => s.documentId === documentId);
+      const pageEventsToDelete = documentPageEvents.filter(e => e.documentId === documentId);
+
       setDocuments(prev => prev.filter(d => d.id !== documentId));
       setDocumentVersions(prev => prev.filter(v => v.documentId !== documentId));
       setShareLinks(prev => prev.filter(l => l.documentId !== documentId));
@@ -898,14 +1092,26 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         await supabase.from('document_share_links').delete().eq('document_id', documentId);
         await supabase.from('document_versions').delete().eq('document_id', documentId);
         await supabase.from('documents').delete().eq('id', documentId);
+
+        // Delete from cloud entity store
+        await deleteCloudEntity(documentId);
+        for (const l of linksToDelete) await deleteCloudEntity(l.id);
+        for (const v of versToDelete) await deleteCloudEntity(v.id);
+        for (const s of sessionsToDelete) await deleteCloudEntity(s.id);
+        for (const pe of pageEventsToDelete) await deleteCloudEntity(pe.id);
       } catch (err) {
         console.warn('Delete document Supabase error:', err);
+        try {
+          await deleteCloudEntity(documentId);
+          for (const l of linksToDelete) await deleteCloudEntity(l.id);
+          for (const v of versToDelete) await deleteCloudEntity(v.id);
+        } catch {}
       }
 
       await logAudit('documents', 'document_deleted', 'document', documentId);
       sound.alert();
     },
-    [logAudit]
+    [logAudit, shareLinks, documentVersions, documentSessions, documentPageEvents, deleteCloudEntity]
   );
 
   /**
@@ -1076,13 +1282,19 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             is_suspected_bot: newSession.isSuspectedBot
           }
         ]);
+
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newSession.id, 'uvl_document_session', newSession, [newSession.documentId, newSession.shareLinkId]);
       } catch (err) {
-        console.warn('Session Supabase insert error:', err);
+        console.warn('Session Supabase insert error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newSession.id, 'uvl_document_session', newSession, [newSession.documentId, newSession.shareLinkId]);
+        } catch {}
       }
 
       return newSession;
     },
-    []
+    [saveCloudEntity]
   );
 
   /**
@@ -1178,9 +1390,32 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             updated_at: now
           }
         ]);
-      } catch {}
+
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        const updatedSession: UVLDocumentSession = {
+          ...session,
+          lastActiveAt: now,
+          totalDurationSeconds: Math.max(session.totalDurationSeconds || 0, (session.activeDurationSeconds || 0) + addedDuration),
+          activeDurationSeconds: (session.activeDurationSeconds || 0) + addedDuration,
+          pagesViewed: updatedPages,
+          completionPercent: newCompletion
+        };
+        await saveCloudEntity(sessionId, 'uvl_document_session', updatedSession, [session.documentId, session.shareLinkId]);
+      } catch (err) {
+        try {
+          const updatedSession: UVLDocumentSession = {
+            ...session,
+            lastActiveAt: now,
+            totalDurationSeconds: Math.max(session.totalDurationSeconds || 0, (session.activeDurationSeconds || 0) + addedDuration),
+            activeDurationSeconds: (session.activeDurationSeconds || 0) + addedDuration,
+            pagesViewed: updatedPages,
+            completionPercent: newCompletion
+          };
+          await saveCloudEntity(sessionId, 'uvl_document_session', updatedSession, [session.documentId, session.shareLinkId]);
+        } catch {}
+      }
     },
-    [documentSessions, documents]
+    [documentSessions, documents, saveCloudEntity]
   );
 
   /**
@@ -1266,8 +1501,13 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             updated_at: newApp.updatedAt
           }
         ]);
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newApp.id, 'uvl_campaign_app', newApp, [newApp.platform, newApp.name]);
       } catch (err) {
-        console.warn('Register app Supabase error:', err);
+        console.warn('Register app Supabase error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newApp.id, 'uvl_campaign_app', newApp, [newApp.platform, newApp.name]);
+        } catch {}
       }
 
       await logAudit('campaigns', 'app_registered', 'campaign_app', newApp.id, {
@@ -1278,7 +1518,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       sound.patchStamp();
       return newApp;
     },
-    [logAudit]
+    [logAudit, saveCloudEntity]
   );
 
   const updateCampaignApp = useCallback(
@@ -1286,11 +1526,22 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       setCampaignApps(prev => prev.map(a => (a.id === id ? { ...a, ...updates, updatedAt: new Date().toISOString() } : a)));
       try {
         await supabase.from('campaign_apps').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-      } catch {}
+        const app = campaignApps.find(a => a.id === id);
+        if (app) {
+          await saveCloudEntity(id, 'uvl_campaign_app', { ...app, ...updates, updatedAt: new Date().toISOString() }, [app.platform, app.name]);
+        }
+      } catch {
+        try {
+          const app = campaignApps.find(a => a.id === id);
+          if (app) {
+            await saveCloudEntity(id, 'uvl_campaign_app', { ...app, ...updates, updatedAt: new Date().toISOString() }, [app.platform, app.name]);
+          }
+        } catch {}
+      }
       await logAudit('campaigns', 'app_updated', 'campaign_app', id, updates);
       sound.click();
     },
-    [logAudit]
+    [logAudit, campaignApps, saveCloudEntity]
   );
 
   const deleteCampaignApp = useCallback(
@@ -1298,11 +1549,16 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       setCampaignApps(prev => prev.filter(a => a.id !== id));
       try {
         await supabase.from('campaign_apps').delete().eq('id', id);
-      } catch {}
+        await deleteCloudEntity(id);
+      } catch {
+        try {
+          await deleteCloudEntity(id);
+        } catch {}
+      }
       await logAudit('campaigns', 'app_deleted', 'campaign_app', id);
       sound.alert();
     },
-    [logAudit]
+    [logAudit, deleteCloudEntity]
   );
 
   /**
@@ -1347,8 +1603,13 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             updated_at: newCampaign.updatedAt
           }
         ]);
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newCampaign.id, 'uvl_campaign', newCampaign, [newCampaign.appId, newCampaign.name, newCampaign.utmCampaign || '']);
       } catch (err) {
-        console.warn('Campaign insert error:', err);
+        console.warn('Campaign insert error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newCampaign.id, 'uvl_campaign', newCampaign, [newCampaign.appId, newCampaign.name, newCampaign.utmCampaign || '']);
+        } catch {}
       }
 
       await logAudit('campaigns', 'campaign_created', 'campaign', newCampaign.id, {
@@ -1360,7 +1621,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       sound.patchStamp();
       return newCampaign;
     },
-    [logAudit]
+    [logAudit, saveCloudEntity]
   );
 
   const updateCampaign = useCallback(
@@ -1368,27 +1629,45 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       setCampaigns(prev => prev.map(c => (c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c)));
       try {
         await supabase.from('campaigns').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id);
-      } catch {}
+        const camp = campaigns.find(c => c.id === id);
+        if (camp) {
+          await saveCloudEntity(id, 'uvl_campaign', { ...camp, ...updates, updatedAt: new Date().toISOString() }, [camp.appId, camp.name, camp.utmCampaign || '']);
+        }
+      } catch {
+        try {
+          const camp = campaigns.find(c => c.id === id);
+          if (camp) {
+            await saveCloudEntity(id, 'uvl_campaign', { ...camp, ...updates, updatedAt: new Date().toISOString() }, [camp.appId, camp.name, camp.utmCampaign || '']);
+          }
+        } catch {}
+      }
       await logAudit('campaigns', 'campaign_updated', 'campaign', id, updates);
       sound.click();
     },
-    [logAudit]
+    [logAudit, campaigns, saveCloudEntity]
   );
 
   const deleteCampaign = useCallback(
     async (id: string): Promise<void> => {
+      const linksToDelete = trackingLinks.filter(l => l.campaignId === id);
       setCampaigns(prev => prev.filter(c => c.id !== id));
       setTrackingLinks(prev => prev.filter(l => l.campaignId !== id));
       try {
         await supabase.from('campaign_tracking_links').delete().eq('campaign_id', id);
         await supabase.from('campaigns').delete().eq('id', id);
+        await deleteCloudEntity(id);
+        for (const l of linksToDelete) await deleteCloudEntity(l.id);
       } catch (err) {
         console.warn('Delete campaign error:', err);
+        try {
+          await deleteCloudEntity(id);
+          for (const l of linksToDelete) await deleteCloudEntity(l.id);
+        } catch {}
       }
       await logAudit('campaigns', 'campaign_deleted', 'campaign', id);
       sound.alert();
     },
-    [logAudit]
+    [logAudit, trackingLinks, deleteCloudEntity]
   );
 
   const deleteTrackingLink = useCallback(
@@ -1396,13 +1675,17 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       setTrackingLinks(prev => prev.filter(l => l.id !== id));
       try {
         await supabase.from('campaign_tracking_links').delete().eq('id', id);
+        await deleteCloudEntity(id);
       } catch (err) {
         console.warn('Delete tracking link error:', err);
+        try {
+          await deleteCloudEntity(id);
+        } catch {}
       }
       await logAudit('campaigns', 'tracking_link_deleted', 'campaign_tracking_link', id);
       sound.alert();
     },
-    [logAudit]
+    [logAudit, deleteCloudEntity]
   );
 
   /**
@@ -1474,8 +1757,13 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             created_at: newLink.createdAt
           }
         ]);
+        // Dual-tier persistence to Supabase Cloud Entity Store
+        await saveCloudEntity(newLink.id, 'uvl_tracking_link', newLink, [newLink.slug.toLowerCase(), newLink.campaignId, newLink.appId]);
       } catch (err) {
-        console.warn('Tracking link insert error:', err);
+        console.warn('Tracking link insert error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(newLink.id, 'uvl_tracking_link', newLink, [newLink.slug.toLowerCase(), newLink.campaignId, newLink.appId]);
+        } catch {}
       }
 
       await logAudit('campaigns', 'tracking_link_created', 'campaign_tracking_link', newLink.id, {
@@ -1486,7 +1774,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       sound.click();
       return newLink;
     },
-    [currentUserId, logAudit]
+    [currentUserId, logAudit, saveCloudEntity]
   );
 
   const updateTrackingLink = useCallback(
@@ -1509,12 +1797,25 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
 
       try {
         await supabase.from('campaign_tracking_links').update(updates).eq('id', id);
-      } catch {}
+        const l = trackingLinks.find(link => link.id === id);
+        if (l) {
+          const merged = { ...l, ...updates };
+          await saveCloudEntity(id, 'uvl_tracking_link', merged, [merged.slug.toLowerCase(), merged.campaignId, merged.appId]);
+        }
+      } catch {
+        try {
+          const l = trackingLinks.find(link => link.id === id);
+          if (l) {
+            const merged = { ...l, ...updates };
+            await saveCloudEntity(id, 'uvl_tracking_link', merged, [merged.slug.toLowerCase(), merged.campaignId, merged.appId]);
+          }
+        } catch {}
+      }
 
       await logAudit('campaigns', 'tracking_link_updated', 'campaign_tracking_link', id, updates);
       sound.click();
     },
-    [currentUserId, logAudit]
+    [currentUserId, logAudit, trackingLinks, saveCloudEntity]
   );
 
   /**
@@ -1633,6 +1934,96 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         } catch (err) {
           console.warn('Direct database link fetch warning:', err);
         }
+      }
+
+      // 2b. Check Cloud Entity Store in notes table if dedicated table lookup did not match
+      if (!link) {
+        try {
+          const { data: cloudNotes } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('type', 'uvl_tracking_link')
+            .contains('tags', [cleanSlug.toLowerCase()]);
+
+          if (cloudNotes && cloudNotes.length > 0) {
+            link = JSON.parse(cloudNotes[0].content);
+          }
+        } catch {}
+      }
+
+      // Check all cloud tracking links if tag filter missed
+      if (!link) {
+        try {
+          const { data: allCloudTrackNotes } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('type', 'uvl_tracking_link')
+            .limit(50);
+
+          if (allCloudTrackNotes && allCloudTrackNotes.length > 0) {
+            const allLinks: UVLTrackingLink[] = allCloudTrackNotes.map(n => {
+              try { return JSON.parse(n.content); } catch { return null; }
+            }).filter(Boolean);
+            link = allLinks.find(
+              l => l.slug.toLowerCase() === cleanSlug.toLowerCase() || l.id === cleanSlug
+            );
+          }
+        } catch {}
+      }
+
+      // Check cloud campaigns if cleanSlug matches a campaign name or utmCampaign
+      if (!link) {
+        try {
+          const { data: allCampNotes } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('type', 'uvl_campaign')
+            .limit(50);
+
+          if (allCampNotes && allCampNotes.length > 0) {
+            const allCamps: UVLCampaign[] = allCampNotes.map(n => {
+              try { return JSON.parse(n.content); } catch { return null; }
+            }).filter(Boolean);
+            const matchedCamp = allCamps.find(
+              c =>
+                (c.utmCampaign && c.utmCampaign.toLowerCase() === cleanSlug.toLowerCase()) ||
+                c.id === cleanSlug ||
+                c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanSlug.toLowerCase()
+            );
+
+            if (matchedCamp) {
+              const fallback = 'https://app.ziggers.in';
+              link = {
+                id: 'trk_syn_' + matchedCamp.id,
+                campaignId: matchedCamp.id,
+                appId: matchedCamp.appId,
+                slug: cleanSlug,
+                title: matchedCamp.name,
+                destinationRoute: fallback,
+                webFallbackUrl: fallback,
+                deepLinkEnabled: false,
+                isActive: true,
+                auditHistory: [],
+                createdAt: new Date().toISOString()
+              };
+            }
+          }
+        } catch {}
+      }
+
+      // Hydrate app from cloud if not present in memory
+      if (link && !app && link.appId) {
+        try {
+          const { data: appNote } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('id', link.appId)
+            .maybeSingle();
+
+          if (appNote) {
+            app = JSON.parse(appNote.content);
+          }
+        } catch {}
       }
 
       if (!link) {
@@ -1782,8 +2173,12 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             is_suspected_bot: clickRecord.isSuspectedBot
           }
         ]);
+        await saveCloudEntity(clickRecord.id, 'uvl_click_event', clickRecord, [cleanSlug.toLowerCase(), clickRecord.attributionToken, clickRecord.campaignId]);
       } catch (err) {
-        console.warn('Click ingestion error (proceeding with redirect):', err);
+        console.warn('Click ingestion error, persisted via cloud entity store:', err);
+        try {
+          await saveCloudEntity(clickRecord.id, 'uvl_click_event', clickRecord, [cleanSlug.toLowerCase(), clickRecord.attributionToken, clickRecord.campaignId]);
+        } catch {}
       }
 
       // 7. Mobile deep link resolution
@@ -1808,7 +2203,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         trackingLink: link
       };
     },
-    [trackingLinks, campaignApps]
+    [trackingLinks, campaignApps, campaigns, saveCloudEntity]
   );
 
   /**
@@ -1854,11 +2249,16 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             sdk_version: newEvent.sdkVersion
           }
         ]);
-      } catch {}
+        await saveCloudEntity(newEvent.id, 'uvl_app_event', newEvent, [newEvent.appId, newEvent.eventName, newEvent.attributionToken || '']);
+      } catch {
+        try {
+          await saveCloudEntity(newEvent.id, 'uvl_app_event', newEvent, [newEvent.appId, newEvent.eventName, newEvent.attributionToken || '']);
+        } catch {}
+      }
 
       return newEvent;
     },
-    [clickEvents, attributionPolicy]
+    [clickEvents, attributionPolicy, saveCloudEntity]
   );
 
   /**
