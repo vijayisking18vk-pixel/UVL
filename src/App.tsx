@@ -16,6 +16,7 @@ import { HackathonsView } from './components/hackathons/HackathonsView';
 import { AgentView } from './components/agent/AgentView';
 import { DocumentsView } from './components/documents/DocumentsView';
 import { CampaignsView } from './components/campaigns/CampaignsView';
+import { PlaygroundView } from './components/playground/PlaygroundView';
 import { DocumentPublicViewer } from './components/documents/DocumentPublicViewer';
 import { CampaignClickRedirect } from './components/campaigns/CampaignClickRedirect';
 import { QuickCaptureModal } from './components/common/QuickCaptureModal';
@@ -100,6 +101,8 @@ const AppContent: React.FC = () => {
         return <DocumentsView />;
       case 'campaigns':
         return <CampaignsView />;
+      case 'playground':
+        return <PlaygroundView />;
       case 'tasks':
         return <TasksView />;
       case 'calendar':
@@ -153,8 +156,12 @@ const AppContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Apple Content Viewport (max-w ~1200px, centered, generous negative space) */}
-      <main className="flex-1 max-w-[1200px] w-full mx-auto px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12 editorial-reveal">
+      {/* Main Apple Content Viewport (max-w ~1200px, centered, generous negative space; expanded for Playground) */}
+      <main className={`flex-1 w-full mx-auto editorial-reveal ${
+        activeTab === 'playground'
+          ? 'max-w-[1600px] px-3 sm:px-6 py-6 pb-28 md:pb-12'
+          : 'max-w-[1200px] px-4 sm:px-8 py-8 sm:py-12 pb-28 md:pb-12'
+      }`}>
         {renderActiveModule()}
       </main>
 

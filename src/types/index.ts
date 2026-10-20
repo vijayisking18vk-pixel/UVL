@@ -745,4 +745,36 @@ export interface UVLAuditLog {
   createdAt: string;
 }
 
+// ==========================================
+// PLAYGROUND (STARTUP WORKFLOW FLOW DIAGRAM) TYPES
+// ==========================================
+export type StartupStage = 'Idea' | 'Validation' | 'MVP' | 'Launched' | 'Scaling';
+export type WorkflowStatus = 'todo' | 'doing' | 'done';
+
+export interface PlaygroundStartup {
+  id: string;
+  name: string;
+  stage: StartupStage;
+  color: string;
+  x: number;
+  y: number;
+  createdAt: string;
+}
+
+export interface PlaygroundWorkflow {
+  id: string;
+  name: string;
+  status: WorkflowStatus;
+  x: number;
+  y: number;
+  startupId?: string;
+  notes?: string;
+}
+
+export interface PlaygroundEdge {
+  id: string;
+  from: string;
+  to: string;
+}
+
 

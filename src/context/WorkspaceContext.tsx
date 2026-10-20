@@ -8,9 +8,11 @@ import {
   TimeTelemetry, UVLDocument, UVLDocumentVersion, UVLShareLink,
   UVLDocumentSession, UVLDocumentPageEvent, DocumentAnalyticsSummary,
   UVLCampaignApp, UVLCampaign, UVLTrackingLink, UVLClickEvent,
-  UVLAppEvent, UVLAttributionPolicy, CampaignMetricsRow, UVLAuditLog
+  UVLAppEvent, UVLAttributionPolicy, CampaignMetricsRow, UVLAuditLog,
+  StartupStage, WorkflowStatus, PlaygroundStartup, PlaygroundWorkflow, PlaygroundEdge
 } from '../types';
 import { useDocumentsAndCampaigns } from './documentsCampaignsModule';
+import { usePlaygroundModule } from './playgroundModule';
 import {
   initialUsers, initialProjects, initialTasks, initialCalendarEvents,
   initialMeetings, initialNotes, initialFiles, initialChannels,
@@ -259,6 +261,32 @@ interface WorkspaceContextType {
 
   // Audit Logs
   auditLogs: UVLAuditLog[];
+
+  // Playground (Startup Workflow Flow Diagram)
+  startups: PlaygroundStartup[];
+  workflows: PlaygroundWorkflow[];
+  edges: PlaygroundEdge[];
+  startupStats: {
+    startupId: string;
+    totalWorkflows: number;
+    doneWorkflows: number;
+    doingWorkflows: number;
+    todoWorkflows: number;
+    progressPercent: number;
+    isCompleted: boolean;
+  }[];
+  addStartup: (data: { name: string; stage?: StartupStage; color?: string; x?: number; y?: number }) => PlaygroundStartup;
+  updateStartup: (id: string, updates: Partial<PlaygroundStartup>) => void;
+  deleteStartup: (id: string) => void;
+  addWorkflow: (data: { name: string; status?: WorkflowStatus; x?: number; y?: number; startupId?: string; notes?: string }) => PlaygroundWorkflow;
+  updateWorkflow: (id: string, updates: Partial<PlaygroundWorkflow>) => void;
+  updateWorkflowStatus: (id: string, newStatus: WorkflowStatus, allowOverride?: boolean) => { success: boolean; warning?: string; blockedBy?: string[] };
+  deleteWorkflow: (id: string) => void;
+  addEdge: (from: string, to: string) => boolean;
+  deleteEdge: (id: string) => void;
+  updateNodePosition: (id: string, type: 'startup' | 'workflow', x: number, y: number) => void;
+  autoArrangeNodes: () => void;
+  clearPlayground: () => void;
 }
 
 export const DEFAULT_OPERATOR_PINS: Record<string, string> = {
@@ -553,6 +581,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // UVL Documents and Campaigns integrated modules
   const docsAndCampaigns = useDocumentsAndCampaigns(currentUserId, isVijayrajkumar);
+
+  // UVL Playground (Startup Workflow Flow Diagram)
+  const playground = usePlaygroundModule(currentUserId);
 
   // Sync with Live Supabase Database
   useEffect(() => {
@@ -3793,7 +3824,8 @@ Autonomous operational scan of Unfounded Venture Lab enclaves. Engineering veloc
         exportWorkspaceData,
         importWorkspaceData,
         resetWorkspaceData,
-        ...docsAndCampaigns
+        ...docsAndCampaigns,
+        ...playground
       }}
     >
       {children}

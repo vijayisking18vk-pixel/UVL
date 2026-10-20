@@ -10,6 +10,7 @@ import {
   Zap,
   Sparkles,
   Trophy,
+  Workflow,
   X
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
@@ -62,6 +63,16 @@ export const CommandPalette: React.FC = () => {
       action: () => {
         setCommandPaletteOpen(false);
         setQuickCaptureOpen(true);
+      }
+    },
+    {
+      id: 'act-goto-playground',
+      title: 'Open Playground (Flow Diagrams & Status Board)',
+      category: 'Navigation',
+      icon: Workflow,
+      action: () => {
+        setCommandPaletteOpen(false);
+        setActiveTab('playground');
       }
     },
     {
