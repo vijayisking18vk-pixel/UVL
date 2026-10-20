@@ -953,8 +953,15 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
 
       const totalDownloads = relevantSessions.filter(s => s.downloadRequested).length;
 
-      // Page-by-page engagement
-      const relevantPageEvents = documentPageEvents.filter(pe => pe.documentId === documentId);
+      // Page-by-page engagement (strictly scoped by version and link if filtered)
+      let relevantPageEvents = documentPageEvents.filter(pe => pe.documentId === documentId);
+      if (versionId) {
+        relevantPageEvents = relevantPageEvents.filter(pe => pe.versionId === versionId);
+      }
+      if (linkId) {
+        const linkSessionIds = new Set(relevantSessions.map(s => s.id));
+        relevantPageEvents = relevantPageEvents.filter(pe => linkSessionIds.has(pe.sessionId));
+      }
       const pagePerformance: { pageNumber: number; averageActiveSeconds: number; viewCount: number }[] = [];
       const dropoffCurve: { pageNumber: number; viewersReached: number; percentReached: number }[] = [];
 
@@ -1081,11 +1088,12 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
   /**
    * Ingests a bounded active reading heartbeat for a specific page.
    * Caps credit to a maximum of 10s per heartbeat to prevent idle time accumulation.
+   * If durationSeconds is 0, registers page view and completion without inflating duration.
    */
   const ingestDocumentHeartbeat = useCallback(
     async (sessionId: string, pageNumber: number, durationSeconds: number): Promise<void> => {
-      // 1. Cap duration credit
-      const cappedDuration = Math.min(Math.max(1, durationSeconds), 10);
+      // 1. Cap duration credit (0 to 10s)
+      const addedDuration = durationSeconds > 0 ? Math.min(durationSeconds, 10) : 0;
       const now = new Date().toISOString();
 
       // Find session to get totalPages for completion calculation
@@ -1108,7 +1116,8 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             ? {
                 ...s,
                 lastActiveAt: now,
-                activeDurationSeconds: s.activeDurationSeconds + cappedDuration,
+                totalDurationSeconds: Math.max(s.totalDurationSeconds || 0, (s.activeDurationSeconds || 0) + addedDuration),
+                activeDurationSeconds: (s.activeDurationSeconds || 0) + addedDuration,
                 pagesViewed: updatedPages,
                 completionPercent: newCompletion
               }
@@ -1125,7 +1134,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
           const updated = [...prev];
           updated[existingIndex] = {
             ...updated[existingIndex],
-            activeSeconds: updated[existingIndex].activeSeconds + cappedDuration,
+            activeSeconds: updated[existingIndex].activeSeconds + addedDuration,
             updatedAt: now
           };
           return updated;
@@ -1138,7 +1147,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
               documentId: session.documentId,
               versionId: session.versionId,
               pageNumber,
-              activeSeconds: cappedDuration,
+              activeSeconds: addedDuration,
               createdAt: now,
               updatedAt: now
             }
@@ -1152,7 +1161,8 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
           .from('document_sessions')
           .update({
             last_active_at: now,
-            active_duration_seconds: session.activeDurationSeconds + cappedDuration,
+            total_duration_seconds: Math.max(session.totalDurationSeconds || 0, session.activeDurationSeconds + addedDuration),
+            active_duration_seconds: session.activeDurationSeconds + addedDuration,
             pages_viewed: updatedPages,
             completion_percent: newCompletion
           })
@@ -1164,7 +1174,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             document_id: session.documentId,
             version_id: session.versionId,
             page_number: pageNumber,
-            active_seconds: cappedDuration,
+            active_seconds: addedDuration,
             updated_at: now
           }
         ]);
@@ -1526,8 +1536,42 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       error?: 'not_found' | 'disabled' | 'expired' | 'loop_detected' | 'invalid_scheme' | 'no_destination';
       trackingLink?: UVLTrackingLink;
     }> => {
-      // 1. Try resolving link from local memory first
-      let link = trackingLinks.find(l => l.slug === slug);
+      const cleanSlug = slug.trim();
+      // 1. Try resolving link from local memory first (case-insensitive & id matching)
+      let link = trackingLinks.find(
+        l => l.slug.toLowerCase() === cleanSlug.toLowerCase() || l.id === cleanSlug
+      );
+
+      // Check if slug matches a campaign utmCampaign, id, or sanitized name
+      if (!link) {
+        const matchedCamp = campaigns.find(
+          c =>
+            (c.utmCampaign && c.utmCampaign.toLowerCase() === cleanSlug.toLowerCase()) ||
+            c.id === cleanSlug ||
+            c.name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanSlug.toLowerCase()
+        );
+        if (matchedCamp) {
+          link = trackingLinks.find(l => l.campaignId === matchedCamp.id);
+          if (!link) {
+            const campApp = campaignApps.find(a => a.id === matchedCamp.appId);
+            const fallback = campApp?.webFallbackUrl || 'https://app.ziggers.in';
+            link = {
+              id: 'trk_syn_' + matchedCamp.id,
+              campaignId: matchedCamp.id,
+              appId: matchedCamp.appId,
+              slug: cleanSlug,
+              title: matchedCamp.name,
+              destinationRoute: fallback,
+              webFallbackUrl: fallback,
+              deepLinkEnabled: false,
+              isActive: true,
+              auditHistory: [],
+              createdAt: new Date().toISOString()
+            };
+          }
+        }
+      }
+
       const matchedAppId = link?.appId;
       let app = matchedAppId ? campaignApps.find(a => a.id === matchedAppId) : undefined;
 
@@ -1537,7 +1581,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
           const { data: dbLink } = await supabase
             .from('campaign_tracking_links')
             .select('*')
-            .eq('slug', slug)
+            .ilike('slug', cleanSlug)
             .maybeSingle();
 
           if (dbLink) {
@@ -1618,17 +1662,22 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       }
 
       // 3. Resolve destination without UVL homepage fallback
+      // Priority:
+      // A. Specific destination URL if it's an absolute URL (http:// or https://)
+      // B. Link webFallbackUrl
+      // C. Mobile store URL if on mobile and configured
+      // D. Project / app webFallbackUrl
       let rawDestination = '';
-      if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
-        rawDestination = link.webFallbackUrl.trim();
-      } else if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
+      if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
         rawDestination = link.destinationRoute.trim();
-      } else if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
-        rawDestination = app.webFallbackUrl.trim();
+      } else if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
+        rawDestination = link.webFallbackUrl.trim();
       } else if (app?.playStoreUrl && /Android/i.test(meta.userAgent || '')) {
         rawDestination = app.playStoreUrl.trim();
       } else if (app?.appStoreUrl && /iPhone|iPad|iPod/i.test(meta.userAgent || '')) {
         rawDestination = app.appStoreUrl.trim();
+      } else if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
+        rawDestination = app.webFallbackUrl.trim();
       }
 
       if (!rawDestination) {

@@ -87,12 +87,14 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
 
-  // 4. Session & Engagement tracking
+  // 4. Session & Engagement tracking (Silent - Telemetry Never Displayed to Viewer)
   const sessionRef = useRef<UVLDocumentSession | null>(null);
-  const [activeSecondsOnCurrentPage, setActiveSecondsOnCurrentPage] = useState<number>(0);
-  const isActiveRef = useRef<boolean>(true);
+  const activePageRef = useRef<number>(1);
+  const pendingActiveMsRef = useRef<number>(0);
+  const lastTickTimeRef = useRef<number>(Date.now());
   const lastInteractionTimeRef = useRef<number>(Date.now());
-  const IDLE_TIMEOUT_MS = 20000; // 20s inactivity cutoff
+  const isActiveRef = useRef<boolean>(true);
+  const IDLE_TIMEOUT_MS = 15000; // 15s inactivity cutoff
 
   // Check Expiry / Revocation
   const isExpired = shareLink?.expiresAt ? new Date(shareLink.expiresAt).getTime() < Date.now() : false;
@@ -269,16 +271,35 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     };
   }, [isUnlocked, uvlDoc, activeVersion]);
 
-  // Switch Page / Slide
+  // Helper to flush accumulated active reading time to the session heartbeat
+  const flushActiveTime = useCallback((targetPage?: number) => {
+    if (!sessionRef.current) return;
+    const pageToCredit = targetPage ?? activePageRef.current;
+    const secondsToCredit = Math.floor(pendingActiveMsRef.current / 1000);
+    if (secondsToCredit >= 1) {
+      pendingActiveMsRef.current -= secondsToCredit * 1000;
+      ingestDocumentHeartbeat(sessionRef.current.id, pageToCredit, Math.min(secondsToCredit, 10));
+    }
+  }, [ingestDocumentHeartbeat]);
+
+  // Switch Page / Slide (Flushes dwell time on old slide immediately before transition)
   const goToPage = useCallback((page: number) => {
     if (page >= 1 && page <= totalPages && page !== currentPage) {
       sound.click();
+      // 1. Immediately flush pending active time for current page BEFORE switching
+      flushActiveTime(currentPage);
+      // 2. Switch page and update active ref
       setCurrentPage(page);
-      setActiveSecondsOnCurrentPage(0);
+      activePageRef.current = page;
+      // 3. Mark the new page view immediately in session
+      if (sessionRef.current) {
+        ingestDocumentHeartbeat(sessionRef.current.id, page, 0);
+      }
       lastInteractionTimeRef.current = Date.now();
+      lastTickTimeRef.current = Date.now();
       isActiveRef.current = true;
     }
-  }, [totalPages, currentPage]);
+  }, [totalPages, currentPage, flushActiveTime, ingestDocumentHeartbeat]);
 
   // Auto-fit slide scale to viewport
   const updateAutoFitScale = useCallback(async () => {
@@ -405,7 +426,7 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     touchStartYRef.current = null;
   };
 
-  // 8. User Activity & Inactivity Detection
+  // 8. User Activity Detection
   useEffect(() => {
     if (!isUnlocked) return;
 
@@ -414,53 +435,80 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
       isActiveRef.current = true;
     };
 
-    const handleVisibilityChange = () => {
-      if (window.document.hidden) {
-        isActiveRef.current = false;
-      } else {
-        lastInteractionTimeRef.current = Date.now();
-        isActiveRef.current = true;
-      }
-    };
-
     window.addEventListener('mousemove', handleUserActivity);
     window.addEventListener('keydown', handleUserActivity);
     window.addEventListener('scroll', handleUserActivity, true);
     window.addEventListener('touchstart', handleUserActivity);
-    window.document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('mousemove', handleUserActivity);
       window.removeEventListener('keydown', handleUserActivity);
       window.removeEventListener('scroll', handleUserActivity, true);
       window.removeEventListener('touchstart', handleUserActivity);
-      window.document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isUnlocked]);
 
-  // 9. Instrumented Bounded Heartbeats (every 5 seconds)
+  // 9. High-Precision Active Reading Heartbeat (1-second tick, periodic 3s flush)
   useEffect(() => {
     if (!isUnlocked) return;
 
+    lastTickTimeRef.current = Date.now();
+
     const interval = setInterval(() => {
       const now = Date.now();
-      const idleTime = now - lastInteractionTimeRef.current;
+      const elapsedMs = now - lastTickTimeRef.current;
+      lastTickTimeRef.current = now;
 
       // Inactivity cutoff
+      const idleTime = now - lastInteractionTimeRef.current;
       if (idleTime > IDLE_TIMEOUT_MS || window.document.hidden) {
         isActiveRef.current = false;
+      } else {
+        isActiveRef.current = true;
       }
 
       if (isActiveRef.current && sessionRef.current) {
-        // Active tick of 5s, capped strictly at 10s max
-        const credit = 5;
-        setActiveSecondsOnCurrentPage(prev => prev + credit);
-        ingestDocumentHeartbeat(sessionRef.current.id, currentPage, credit);
+        pendingActiveMsRef.current += elapsedMs;
+        // Flush every 3 seconds of active reading
+        if (pendingActiveMsRef.current >= 3000) {
+          flushActiveTime();
+        }
       }
-    }, 5000);
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [isUnlocked, currentPage, ingestDocumentHeartbeat]);
+  }, [isUnlocked, flushActiveTime]);
+
+  // 10. Flush pending dwell telemetry on Tab Switch (VisibilityChange) & Tab Close (BeforeUnload)
+  useEffect(() => {
+    if (!isUnlocked) return;
+
+    const handleVisibilityChange = () => {
+      if (window.document.hidden) {
+        // Tab hidden: flush immediately and pause
+        flushActiveTime();
+        isActiveRef.current = false;
+      } else {
+        // Tab resumed
+        lastInteractionTimeRef.current = Date.now();
+        lastTickTimeRef.current = Date.now();
+        isActiveRef.current = true;
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      flushActiveTime();
+    };
+
+    window.document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      flushActiveTime();
+      window.document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isUnlocked, flushActiveTime]);
 
   // Handle Download Click
   const handleDownload = () => {
@@ -515,7 +563,7 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
           <p className="text-sm text-[#6E6E73] mb-6">
             The sender has revoked access to this document link. Please contact the document owner for a new link.
           </p>
-          <span className="text-xs text-[#A1A1AA] font-mono">Link Label: {shareLink.label}</span>
+          <span className="text-xs text-[#A1A1AA] font-mono">Secure Presentation Link</span>
         </div>
       </div>
     );
@@ -695,12 +743,6 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
               <span>v{uvlDoc.currentVersionNumber}</span>
               <span>•</span>
               <span>{totalPages} Slides</span>
-              {shareLink.label && (
-                <>
-                  <span>•</span>
-                  <span className="text-neutral-300 truncate max-w-[120px]">{shareLink.label}</span>
-                </>
-              )}
             </div>
           </div>
 
@@ -929,8 +971,6 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
         <div className="flex items-center justify-between max-w-3xl mx-auto w-full">
           <div className="flex items-center gap-3">
             <span className="font-semibold text-white">Slide {currentPage} of {totalPages}</span>
-            <span>•</span>
-            <span className="text-neutral-400">{activeSecondsOnCurrentPage}s on current slide</span>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline text-neutral-500">Shortcuts: ← → / Space / F</span>

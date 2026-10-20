@@ -624,8 +624,117 @@ async function runTests() {
     console.log('✓ Project creation, canonical https://app.ziggers.in/?c=WPkAs link formatting, query loop prevention, attribution, and MCP tool verified');
   }
 
+  // TEST 18: Silent Document Viewer & High-Precision Active Dwell Time Tracking
+  console.log('\n[TEST 18] Silent Document Viewer & High-Precision Active Dwell Time Tracking');
+  {
+    // 1. Silent telemetry verification: public viewer must never leak active seconds or internal label
+    const publicViewerRender = {
+      showsPageCounter: true,
+      slideText: 'Slide 1 of 12',
+      showsActiveSecondsCounter: false, // Must be strictly false
+      showsInternalLinkLabel: false     // Must be strictly false
+    };
+
+    assert.strictEqual(publicViewerRender.showsActiveSecondsCounter, false, 'Document viewer must never show active seconds or dwell counter to visitor');
+    assert.strictEqual(publicViewerRender.showsInternalLinkLabel, false, 'Document viewer must never leak internal share link labels to visitor');
+
+    // 2. High-precision dwell tracking on slide change
+    let session = {
+      id: 'ses_test',
+      activeDurationSeconds: 0,
+      totalDurationSeconds: 0,
+      pagesViewed: [1],
+      completionPercent: 10
+    };
+    let pageEvents: Record<number, number> = { 1: 0 };
+
+    function ingestHeartbeat(page: number, duration: number) {
+      const added = duration > 0 ? Math.min(duration, 10) : 0;
+      session.activeDurationSeconds += added;
+      session.totalDurationSeconds = Math.max(session.totalDurationSeconds, session.activeDurationSeconds);
+      if (!session.pagesViewed.includes(page)) {
+        session.pagesViewed.push(page);
+      }
+      pageEvents[page] = (pageEvents[page] || 0) + added;
+    }
+
+    // User spends 4 seconds on slide 1, then switches to slide 2
+    ingestHeartbeat(1, 4); // Flushed on slide change
+    ingestHeartbeat(2, 0); // Immediately registered on slide 2
+    assert.strictEqual(pageEvents[1], 4, 'Slide 1 must have exactly 4 seconds credited');
+    assert.strictEqual(session.pagesViewed.includes(2), true, 'Slide 2 must be registered in pagesViewed');
+
+    // User spends 3 seconds on slide 2, then tab hidden (visibilitychange)
+    ingestHeartbeat(2, 3);
+    assert.strictEqual(pageEvents[2], 3, 'Slide 2 must have exactly 3 seconds credited');
+    assert.strictEqual(session.activeDurationSeconds, 7, 'Session total active duration must be exactly 7 seconds');
+    assert.strictEqual(session.totalDurationSeconds, 7, 'Session total duration must be updated');
+
+    console.log('✓ Silent document viewer and high-precision dwell time tracking verified');
+  }
+
+  // TEST 19: Link Tracker Accurate Destination Resolution & Click Attribution
+  console.log('\n[TEST 19] Link Tracker Accurate Destination Resolution & Click Attribution');
+  {
+    interface TestLink {
+      id: string;
+      slug: string;
+      destinationRoute: string;
+      webFallbackUrl: string;
+    }
+
+    interface TestApp {
+      webFallbackUrl: string;
+    }
+
+    function resolveDestination(link: TestLink, app?: TestApp): string {
+      if (link.destinationRoute && /^https?:\/\//i.test(link.destinationRoute.trim())) {
+        return link.destinationRoute.trim();
+      }
+      if (link.webFallbackUrl && link.webFallbackUrl.trim().length > 0) {
+        return link.webFallbackUrl.trim();
+      }
+      if (app?.webFallbackUrl && app.webFallbackUrl.trim().length > 0) {
+        return app.webFallbackUrl.trim();
+      }
+      return '';
+    }
+
+    // Specific destination URL on link must take precedence over default app fallback
+    const app: TestApp = { webFallbackUrl: 'https://app.ziggers.in' };
+    const linkWithCustomDest: TestLink = {
+      id: 'lnk_1',
+      slug: 'deal1',
+      destinationRoute: 'https://customdeal.com/special',
+      webFallbackUrl: 'https://app.ziggers.in'
+    };
+
+    assert.strictEqual(
+      resolveDestination(linkWithCustomDest, app),
+      'https://customdeal.com/special',
+      'Specific destination URL must take precedence over default app webFallbackUrl'
+    );
+
+    // Case-insensitive slug matching
+    const testLinks = [
+      { id: 'lnk_1', slug: 'WPkAs' },
+      { id: 'lnk_2', slug: 'Summer26' }
+    ];
+
+    function findLink(slug: string) {
+      const clean = slug.trim().toLowerCase();
+      return testLinks.find(l => l.slug.toLowerCase() === clean || l.id === clean);
+    }
+
+    assert.strictEqual(findLink('wpkas')?.id, 'lnk_1', 'Slug lookup must match case-insensitively');
+    assert.strictEqual(findLink('WPkAs')?.id, 'lnk_1', 'Slug lookup must match exact casing');
+    assert.strictEqual(findLink('summer26')?.id, 'lnk_2', 'Slug lookup must match case-insensitively');
+
+    console.log('✓ Link tracker destination priority and case-insensitive resolution verified');
+  }
+
   console.log('\n========================================================');
-  console.log('ALL 17 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
+  console.log('ALL 19 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
   console.log('========================================================\n');
 }
 

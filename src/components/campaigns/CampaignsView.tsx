@@ -299,12 +299,14 @@ export const CampaignsView: React.FC = () => {
   const handleCreateLinkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const targetApp = linkAppId || (selectedProjectId !== 'all' ? selectedProjectId : (campaignApps[0]?.id || 'app_default'));
-    const targetCamp = linkCampaignId || campaigns.find(c => c.appId === targetApp)?.id || campaigns[0]?.id || 'cmp_default';
     const matchedApp = campaignApps.find(a => a.id === targetApp);
 
-    let targetFallback = (linkFallback.trim() || matchedApp?.webFallbackUrl || 'https://app.ziggers.in');
-    if (targetFallback && !/^[a-zA-Z]+:\/\//.test(targetFallback)) {
-      targetFallback = `https://${targetFallback}`;
+    const projectCamps = campaigns.filter(c => c.appId === targetApp);
+    const targetCamp = linkCampaignId || projectCamps[0]?.id || campaigns[0]?.id || 'cmp_default';
+
+    let targetDestination = (linkFallback.trim() || matchedApp?.webFallbackUrl || 'https://app.ziggers.in');
+    if (targetDestination && !/^[a-zA-Z]+:\/\//.test(targetDestination)) {
+      targetDestination = `https://${targetDestination}`;
     }
 
     const slug = linkCustomSlug.trim() || generateCampaignCode();
@@ -314,8 +316,8 @@ export const CampaignsView: React.FC = () => {
       appId: targetApp,
       title: linkTitle.trim() || `Link ${slug}`,
       customSlug: slug,
-      destinationRoute: linkDestRoute.trim() || 'home',
-      webFallbackUrl: targetFallback,
+      destinationRoute: targetDestination,
+      webFallbackUrl: targetDestination,
       deepLinkEnabled: linkDeepLink,
       isActive: true
     });
@@ -351,6 +353,7 @@ export const CampaignsView: React.FC = () => {
     const rows: Array<{
       id: string;
       campaignId?: string;
+      campaignName?: string;
       linkId?: string;
       slug?: string;
       isOrganic?: boolean;
@@ -405,6 +408,7 @@ export const CampaignsView: React.FC = () => {
         rows.push({
           id: `cmp_${camp.id}`,
           campaignId: camp.id,
+          campaignName: camp.name,
           name: camp.name,
           content: defaultTrackingUrl,
           destinationUrl: projectBaseUrl,
@@ -421,7 +425,9 @@ export const CampaignsView: React.FC = () => {
           const linkApp = campaignApps.find(a => a.id === link.appId) || matchedApp;
           const linkBaseUrl = (link.webFallbackUrl || linkApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
           const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
-          const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
+          const linkClicks = clickEvents.filter(
+            c => c.trackingLinkId === link.id || c.trackingLinkId === link.slug
+          );
           const linkOpens = appEvents.filter(
             e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
           );
@@ -436,11 +442,12 @@ export const CampaignsView: React.FC = () => {
           rows.push({
             id: `lnk_${link.id}`,
             campaignId: camp.id,
+            campaignName: camp.name,
             linkId: link.id,
             slug: link.slug,
-            name: camp.name,
+            name: link.title || camp.name,
             content: canonicalUrl,
-            destinationUrl: linkBaseUrl,
+            destinationUrl: link.webFallbackUrl || linkBaseUrl,
             clicks: cCount > 0 ? cCount : '-',
             impressions: '-',
             installs: iCount > 0 ? iCount : '-',
@@ -464,7 +471,9 @@ export const CampaignsView: React.FC = () => {
       const matchedApp = campaignApps.find(a => a.id === link.appId);
       const linkBaseUrl = (link.webFallbackUrl || matchedApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
       const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
-      const linkClicks = clickEvents.filter(c => c.trackingLinkId === link.id);
+      const linkClicks = clickEvents.filter(
+        c => c.trackingLinkId === link.id || c.trackingLinkId === link.slug
+      );
       const linkOpens = appEvents.filter(
         e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
       );
@@ -482,7 +491,7 @@ export const CampaignsView: React.FC = () => {
         slug: link.slug,
         name: link.title || 'Tracking Link',
         content: canonicalUrl,
-        destinationUrl: linkBaseUrl,
+        destinationUrl: link.webFallbackUrl || linkBaseUrl,
         clicks: cCount > 0 ? cCount : '-',
         impressions: '-',
         installs: iCount > 0 ? iCount : '-',
@@ -1062,11 +1071,18 @@ export const CampaignsView: React.FC = () => {
                           {isOrganic ? (
                             <Leaf size={14} className="text-neutral-700 shrink-0" />
                           ) : (
-                            <div className="w-2 h-2 rounded-full bg-neutral-300 shrink-0" />
+                            <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                           )}
-                          <span className={`truncate max-w-[220px] ${isOrganic ? 'border-b border-dotted border-neutral-400 font-medium' : 'font-normal'}`}>
-                            {row.name}
-                          </span>
+                          <div className="truncate max-w-[220px]">
+                            <span className={`block truncate ${isOrganic ? 'border-b border-dotted border-neutral-400 font-medium' : 'font-semibold text-neutral-900'}`}>
+                              {row.name}
+                            </span>
+                            {row.campaignName && row.campaignName !== row.name && (
+                              <span className="text-[10px] text-neutral-400 block truncate">
+                                Campaign: {row.campaignName}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -1132,11 +1148,11 @@ export const CampaignsView: React.FC = () => {
                               )}
 
                               <a
-                                href={row.content}
+                                href={row.slug ? `${window.location.origin}/?c=${row.slug}` : row.content}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
-                                title={`Test live tracking redirect (${row.content})`}
+                                title={`Test live tracking redirect (Records click & redirects to ${row.destinationUrl || 'destination'})`}
                               >
                                 <ExternalLink size={13} />
                               </a>
@@ -1509,15 +1525,18 @@ export const CampaignsView: React.FC = () => {
                       onChange={e => setLinkCampaignId(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white"
                     >
-                      {campaigns.length > 0 ? (
-                        campaigns.map(c => (
+                      {(() => {
+                        const projectCamps = campaigns.filter(c => !linkAppId || c.appId === linkAppId);
+                        const displayCamps = projectCamps.length > 0 ? projectCamps : campaigns;
+                        if (displayCamps.length === 0) {
+                          return <option value="cmp_default">Default Campaign</option>;
+                        }
+                        return displayCamps.map(c => (
                           <option key={c.id} value={c.id}>
-                            {c.name}
+                            {c.name} ({c.source})
                           </option>
-                        ))
-                      ) : (
-                        <option value="cmp_default">Default Campaign</option>
-                      )}
+                        ));
+                      })()}
                     </select>
                   </div>
                 </div>
