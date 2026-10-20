@@ -1187,6 +1187,48 @@ async function runTests() {
     assert.ok(computeCampaignMetrics, 'Existing campaign metrics unchanged');
     assert.ok(hashDocumentPassword, 'Existing document hashing unchanged');
 
+    // Extension Test: Custom Text, User Assignment, and Embedded Workflow Tasks
+    const customWorkflow: {
+      id: string;
+      name: string;
+      status: 'todo' | 'doing' | 'done';
+      x: number;
+      y: number;
+      startupId?: string;
+      customText?: string;
+      assignedUserIds?: string[];
+      tasks?: Array<{ id: string; title: string; completed: boolean }>;
+    } = {
+      id: 'wf_custom_1',
+      name: 'Growth Hack Sprint',
+      status: 'todo',
+      x: 380,
+      y: 400,
+      startupId: 'sup_1',
+      customText: 'Execute rapid A/B testing on landing page CTAs and referral links.',
+      assignedUserIds: ['u-1', 'u-2'],
+      tasks: [
+        { id: 't_1', title: 'Deploy PostHog funnel', completed: false },
+        { id: 't_2', title: 'Verify attribution tokens', completed: false }
+      ]
+    };
+
+    assert.strictEqual(customWorkflow.customText, 'Execute rapid A/B testing on landing page CTAs and referral links.');
+    assert.deepStrictEqual(customWorkflow.assignedUserIds, ['u-1', 'u-2']);
+    assert.strictEqual(customWorkflow.tasks?.length, 2);
+
+    // Toggle task 1 completion
+    customWorkflow.tasks[0].completed = true;
+    assert.strictEqual(customWorkflow.tasks[0].completed, true);
+    assert.strictEqual(customWorkflow.tasks[1].completed, false);
+
+    // Test serialization of custom text, assigned operators, and tasks
+    const serializedCustom = JSON.stringify(customWorkflow);
+    const rehydratedCustom = JSON.parse(serializedCustom);
+    assert.strictEqual(rehydratedCustom.customText, customWorkflow.customText);
+    assert.deepStrictEqual(rehydratedCustom.assignedUserIds, ['u-1', 'u-2']);
+    assert.strictEqual(rehydratedCustom.tasks[0].completed, true);
+
     console.log('✓ Playground Startup Workflow Engine & 6 Acceptance Checks fully verified');
   }
 

@@ -761,6 +761,12 @@ export interface PlaygroundStartup {
   createdAt: string;
 }
 
+export interface PlaygroundWorkflowTask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface PlaygroundWorkflow {
   id: string;
   name: string;
@@ -769,6 +775,9 @@ export interface PlaygroundWorkflow {
   y: number;
   startupId?: string;
   notes?: string;
+  customText?: string;
+  assignedUserIds?: string[];
+  tasks?: PlaygroundWorkflowTask[];
 }
 
 export interface PlaygroundEdge {

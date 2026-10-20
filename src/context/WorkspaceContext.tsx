@@ -9,7 +9,7 @@ import {
   UVLDocumentSession, UVLDocumentPageEvent, DocumentAnalyticsSummary,
   UVLCampaignApp, UVLCampaign, UVLTrackingLink, UVLClickEvent,
   UVLAppEvent, UVLAttributionPolicy, CampaignMetricsRow, UVLAuditLog,
-  StartupStage, WorkflowStatus, PlaygroundStartup, PlaygroundWorkflow, PlaygroundEdge
+  StartupStage, WorkflowStatus, PlaygroundStartup, PlaygroundWorkflow, PlaygroundWorkflowTask, PlaygroundEdge
 } from '../types';
 import { useDocumentsAndCampaigns } from './documentsCampaignsModule';
 import { usePlaygroundModule } from './playgroundModule';
@@ -278,7 +278,17 @@ interface WorkspaceContextType {
   addStartup: (data: { name: string; stage?: StartupStage; color?: string; x?: number; y?: number }) => PlaygroundStartup;
   updateStartup: (id: string, updates: Partial<PlaygroundStartup>) => void;
   deleteStartup: (id: string) => void;
-  addWorkflow: (data: { name: string; status?: WorkflowStatus; x?: number; y?: number; startupId?: string; notes?: string }) => PlaygroundWorkflow;
+  addWorkflow: (data: {
+    name: string;
+    status?: WorkflowStatus;
+    x?: number;
+    y?: number;
+    startupId?: string;
+    notes?: string;
+    customText?: string;
+    assignedUserIds?: string[];
+    tasks?: PlaygroundWorkflowTask[];
+  }) => PlaygroundWorkflow;
   updateWorkflow: (id: string, updates: Partial<PlaygroundWorkflow>) => void;
   updateWorkflowStatus: (id: string, newStatus: WorkflowStatus, allowOverride?: boolean) => { success: boolean; warning?: string; blockedBy?: string[] };
   deleteWorkflow: (id: string) => void;
@@ -287,6 +297,10 @@ interface WorkspaceContextType {
   updateNodePosition: (id: string, type: 'startup' | 'workflow', x: number, y: number) => void;
   autoArrangeNodes: () => void;
   clearPlayground: () => void;
+  toggleWorkflowTask: (workflowId: string, taskId: string) => void;
+  addWorkflowTask: (workflowId: string, title: string) => void;
+  removeWorkflowTask: (workflowId: string, taskId: string) => void;
+  toggleUserAssignment: (workflowId: string, userId: string) => void;
 }
 
 export const DEFAULT_OPERATOR_PINS: Record<string, string> = {

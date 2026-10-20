@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   PlaygroundStartup,
   PlaygroundWorkflow,
+  PlaygroundWorkflowTask,
   PlaygroundEdge,
   StartupStage,
   WorkflowStatus
@@ -223,6 +224,9 @@ export function usePlaygroundModule(currentUserId: string = 'u-1') {
       y?: number;
       startupId?: string;
       notes?: string;
+      customText?: string;
+      assignedUserIds?: string[];
+      tasks?: PlaygroundWorkflowTask[];
     }): PlaygroundWorkflow => {
       sound.click();
       const newWorkflow: PlaygroundWorkflow = {
@@ -232,7 +236,10 @@ export function usePlaygroundModule(currentUserId: string = 'u-1') {
         x: data.x !== undefined ? data.x : 380 + (workflows.length % 3) * 60,
         y: data.y !== undefined ? data.y : 100 + workflows.length * 110,
         startupId: data.startupId,
-        notes: data.notes
+        notes: data.notes || data.customText,
+        customText: data.customText || data.notes,
+        assignedUserIds: data.assignedUserIds || [],
+        tasks: data.tasks || []
       };
 
       setWorkflows(prev => {
@@ -244,6 +251,82 @@ export function usePlaygroundModule(currentUserId: string = 'u-1') {
       return newWorkflow;
     },
     [startups, workflows, edges, saveCloudSnapshot]
+  );
+
+  const toggleWorkflowTask = useCallback(
+    (workflowId: string, taskId: string) => {
+      sound.click();
+      setWorkflows(prev => {
+        const next = prev.map(w => {
+          if (w.id !== workflowId) return w;
+          const currentTasks = w.tasks || [];
+          const updatedTasks = currentTasks.map(t =>
+            t.id === taskId ? { ...t, completed: !t.completed } : t
+          );
+          return { ...w, tasks: updatedTasks };
+        });
+        saveCloudSnapshot(startups, next, edges);
+        return next;
+      });
+    },
+    [startups, edges, saveCloudSnapshot]
+  );
+
+  const addWorkflowTask = useCallback(
+    (workflowId: string, title: string) => {
+      if (!title.trim()) return;
+      sound.click();
+      const newTask: PlaygroundWorkflowTask = {
+        id: 'task_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        title: title.trim(),
+        completed: false
+      };
+      setWorkflows(prev => {
+        const next = prev.map(w => {
+          if (w.id !== workflowId) return w;
+          const currentTasks = w.tasks || [];
+          return { ...w, tasks: [...currentTasks, newTask] };
+        });
+        saveCloudSnapshot(startups, next, edges);
+        return next;
+      });
+    },
+    [startups, edges, saveCloudSnapshot]
+  );
+
+  const removeWorkflowTask = useCallback(
+    (workflowId: string, taskId: string) => {
+      sound.alert();
+      setWorkflows(prev => {
+        const next = prev.map(w => {
+          if (w.id !== workflowId) return w;
+          const currentTasks = w.tasks || [];
+          return { ...w, tasks: currentTasks.filter(t => t.id !== taskId) };
+        });
+        saveCloudSnapshot(startups, next, edges);
+        return next;
+      });
+    },
+    [startups, edges, saveCloudSnapshot]
+  );
+
+  const toggleUserAssignment = useCallback(
+    (workflowId: string, userId: string) => {
+      sound.click();
+      setWorkflows(prev => {
+        const next = prev.map(w => {
+          if (w.id !== workflowId) return w;
+          const currentUsers = w.assignedUserIds || [];
+          const updatedUsers = currentUsers.includes(userId)
+            ? currentUsers.filter(u => u !== userId)
+            : [...currentUsers, userId];
+          return { ...w, assignedUserIds: updatedUsers };
+        });
+        saveCloudSnapshot(startups, next, edges);
+        return next;
+      });
+    },
+    [startups, edges, saveCloudSnapshot]
   );
 
   const updateWorkflow = useCallback(
@@ -547,6 +630,10 @@ export function usePlaygroundModule(currentUserId: string = 'u-1') {
     deleteEdge,
     updateNodePosition,
     autoArrangeNodes,
-    clearPlayground
+    clearPlayground,
+    toggleWorkflowTask,
+    addWorkflowTask,
+    removeWorkflowTask,
+    toggleUserAssignment
   };
 }

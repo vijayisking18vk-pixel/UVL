@@ -5,8 +5,10 @@ import {
   WorkflowStatus,
   PlaygroundStartup,
   PlaygroundWorkflow,
+  PlaygroundWorkflowTask,
   PlaygroundEdge
 } from '../../types';
+import { PatchAvatar } from '../common/PatchAvatar';
 import {
   Workflow,
   Plus,
@@ -18,15 +20,16 @@ import {
   AlertTriangle,
   RotateCcw,
   Sparkles,
-  ChevronDown,
   Layers,
   ArrowRight,
   Filter,
   Check,
   X,
-  Move,
-  Maximize2,
-  Minimize2
+  FileText,
+  Users,
+  CheckSquare,
+  Edit3,
+  ListTodo
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -60,6 +63,7 @@ export const PlaygroundView: React.FC = () => {
     workflows,
     edges,
     startupStats,
+    users,
     addStartup,
     updateStartup,
     deleteStartup,
@@ -71,7 +75,11 @@ export const PlaygroundView: React.FC = () => {
     deleteEdge,
     updateNodePosition,
     autoArrangeNodes,
-    clearPlayground
+    clearPlayground,
+    toggleWorkflowTask,
+    addWorkflowTask,
+    removeWorkflowTask,
+    toggleUserAssignment
   } = useWorkspace();
 
   // ----------------------------------------------------
@@ -82,8 +90,15 @@ export const PlaygroundView: React.FC = () => {
   const [newStartupStage, setNewStartupStage] = useState<StartupStage>('Idea');
   const [newStartupColor, setNewStartupColor] = useState(STARTUP_COLORS[0]);
 
-  // Custom workflow input state
-  const [customWorkflowName, setCustomWorkflowName] = useState('');
+  // Workflow Library Tab: 'templates' | 'builder'
+  const [libraryMode, setLibraryMode] = useState<'templates' | 'builder'>('templates');
+
+  // Custom workflow builder state (Inside Workflow Library)
+  const [builderName, setBuilderName] = useState('');
+  const [builderCustomText, setBuilderCustomText] = useState('');
+  const [builderAssignedUsers, setBuilderAssignedUsers] = useState<string[]>([]);
+  const [builderTasks, setBuilderTasks] = useState<string[]>([]);
+  const [builderNewTaskInput, setBuilderNewTaskInput] = useState('');
 
   // Interactive selection & linking
   const [selectedNode, setSelectedNode] = useState<{ id: string; type: 'startup' | 'workflow' } | null>(null);
@@ -94,8 +109,11 @@ export const PlaygroundView: React.FC = () => {
   const [statusBoardFilter, setStatusBoardFilter] = useState<string>('all');
   const [statusBoardExpanded, setStatusBoardExpanded] = useState<boolean>(true);
 
-  // Modals
+  // Modals & Details Inspector
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [editingWorkflow, setEditingWorkflow] = useState<PlaygroundWorkflow | null>(null);
+  const [inspectorNewTaskInput, setInspectorNewTaskInput] = useState('');
+
   const [prereqWarning, setPrereqWarning] = useState<{
     open: boolean;
     workflowId: string;
@@ -121,13 +139,13 @@ export const PlaygroundView: React.FC = () => {
 
   // ----------------------------------------------------
   // KEYBOARD SHORTCUTS
-  // Delete removes selected node, Esc cancels linking mode
   // ----------------------------------------------------
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape cancels linking mode or selection
       if (e.key === 'Escape') {
-        if (linkingSourceId) {
+        if (editingWorkflow) {
+          setEditingWorkflow(null);
+        } else if (linkingSourceId) {
           sound.click();
           setLinkingSourceId(null);
         } else if (selectedNode) {
@@ -135,7 +153,6 @@ export const PlaygroundView: React.FC = () => {
         }
       }
 
-      // Delete or Backspace deletes selected node (if not inside an input)
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const activeTag = (document.activeElement?.tagName || '').toLowerCase();
         if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
@@ -156,7 +173,7 @@ export const PlaygroundView: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [linkingSourceId, selectedNode, deleteStartup, deleteWorkflow]);
+  }, [linkingSourceId, selectedNode, editingWorkflow, deleteStartup, deleteWorkflow]);
 
   // ----------------------------------------------------
   // NODE DRAGGING HANDLERS (MOUSE & TOUCH)
@@ -266,7 +283,6 @@ export const PlaygroundView: React.FC = () => {
     }
   };
 
-  // Next status cycle: todo -> doing -> done -> todo
   const cycleWorkflowStatus = (e: React.MouseEvent, wf: PlaygroundWorkflow) => {
     e.stopPropagation();
     let nextStatus: WorkflowStatus = 'todo';
@@ -295,12 +311,18 @@ export const PlaygroundView: React.FC = () => {
   };
 
   // ----------------------------------------------------
-  // ADD WORKFLOW FROM TEMPLATE OR CUSTOM
+  // ADD WORKFLOW FROM TEMPLATE OR CUSTOM BUILDER
   // ----------------------------------------------------
-  const handleAddWorkflowItem = (name: string) => {
+  const handleAddWorkflowItem = (
+    name: string,
+    options?: {
+      customText?: string;
+      assignedUserIds?: string[];
+      tasks?: string[];
+    }
+  ) => {
     if (!name.trim()) return;
 
-    // Place near active highlighted startup if selected
     let targetStartupId: string | undefined = undefined;
     let placeX = 380;
     let placeY = 100;
@@ -310,14 +332,24 @@ export const PlaygroundView: React.FC = () => {
       if (highlighted) {
         targetStartupId = highlighted.id;
         placeX = highlighted.x + 300;
-        placeY = highlighted.y + (workflows.filter(w => w.startupId === highlighted.id).length * 100);
+        placeY = highlighted.y + (workflows.filter(w => w.startupId === highlighted.id).length * 110);
       }
     }
+
+    const taskObjects: PlaygroundWorkflowTask[] = (options?.tasks || []).map((tTitle, i) => ({
+      id: 'task_' + Date.now() + '_' + i + '_' + Math.random().toString(36).substring(2, 6),
+      title: tTitle,
+      completed: false
+    }));
 
     const created = addWorkflow({
       name: name.trim(),
       status: 'todo',
       startupId: targetStartupId,
+      notes: options?.customText,
+      customText: options?.customText,
+      assignedUserIds: options?.assignedUserIds || [],
+      tasks: taskObjects,
       x: placeX,
       y: placeY
     });
@@ -325,6 +357,46 @@ export const PlaygroundView: React.FC = () => {
     if (targetStartupId) {
       addEdge(targetStartupId, created.id);
     }
+  };
+
+  // Submit Handler for the Detailed Custom Workflow Builder inside Library
+  const handleBuilderSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!builderName.trim()) return;
+
+    handleAddWorkflowItem(builderName.trim(), {
+      customText: builderCustomText.trim() || undefined,
+      assignedUserIds: builderAssignedUsers,
+      tasks: builderTasks
+    });
+
+    // Reset Builder Form
+    setBuilderName('');
+    setBuilderCustomText('');
+    setBuilderAssignedUsers([]);
+    setBuilderTasks([]);
+    setBuilderNewTaskInput('');
+  };
+
+  // Quick Add a Task into Builder list
+  const handleAddBuilderTask = () => {
+    if (!builderNewTaskInput.trim()) return;
+    setBuilderTasks(prev => [...prev, builderNewTaskInput.trim()]);
+    setBuilderNewTaskInput('');
+  };
+
+  // Toggle User Selection in Builder
+  const toggleBuilderUser = (userId: string) => {
+    setBuilderAssignedUsers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  // Customize a Template into the Builder
+  const handleCustomizeTemplate = (templateName: string) => {
+    setBuilderName(templateName);
+    setBuilderCustomText(`Standard operating workflow for ${templateName}.`);
+    setLibraryMode('builder');
   };
 
   // ----------------------------------------------------
@@ -339,7 +411,6 @@ export const PlaygroundView: React.FC = () => {
   const doingWorkflows = useMemo(() => filteredWorkflows.filter(w => w.status === 'doing'), [filteredWorkflows]);
   const doneWorkflows = useMemo(() => filteredWorkflows.filter(w => w.status === 'done'), [filteredWorkflows]);
 
-  // Map connected upstream and downstream workflow names for cards
   const getNodeName = useCallback(
     (nodeId: string) => {
       const sup = startups.find(s => s.id === nodeId);
@@ -360,14 +431,12 @@ export const PlaygroundView: React.FC = () => {
     [edges, getNodeName]
   );
 
-  // Check if a node is dimmed during startup highlight
   const isNodeDimmed = useCallback(
     (nodeId: string, nodeType: 'startup' | 'workflow') => {
       if (!highlightedStartupId) return false;
       if (nodeType === 'startup') {
         return nodeId !== highlightedStartupId;
       }
-      // Workflow: check if assigned or connected to highlighted startup
       const targetWf = workflows.find(w => w.id === nodeId);
       if (targetWf?.startupId === highlightedStartupId) return false;
 
@@ -378,6 +447,12 @@ export const PlaygroundView: React.FC = () => {
     },
     [highlightedStartupId, workflows, edges]
   );
+
+  // Sync current editing workflow state with live workflows array
+  const activeEditingWorkflow = useMemo(() => {
+    if (!editingWorkflow) return null;
+    return workflows.find(w => w.id === editingWorkflow.id) || editingWorkflow;
+  }, [editingWorkflow, workflows]);
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -393,7 +468,7 @@ export const PlaygroundView: React.FC = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-black">Playground</h1>
               <p className="text-xs text-[#6E6E73] mt-0.5">
-                Startup flow diagrams, dependency chains & status tracking
+                Startup flow diagrams, task assignments & status board
               </p>
             </div>
           </div>
@@ -542,65 +617,211 @@ export const PlaygroundView: React.FC = () => {
             </form>
           </div>
 
-          {/* 1.2 Workflow Library (Templates & Custom) */}
+          {/* 1.2 Workflow Library (Templates & Custom Builder with Custom Text, Users & Tasks) */}
           <div className="bg-white border border-[#E5E5E7] rounded-3xl p-5 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-black tracking-tight">Workflow Library</h2>
-              <span className="text-[10px] text-[#6E6E73] bg-[#F5F5F7] px-2 py-0.5 rounded-full font-mono">
-                {WORKFLOW_TEMPLATES.length} Templates
-              </span>
-            </div>
-            <p className="text-xs text-[#6E6E73] mb-3">
-              Click any workflow template to drop it on the canvas.
-            </p>
-
-            {/* Custom Workflow Input */}
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="text"
-                placeholder="Custom workflow name..."
-                value={customWorkflowName}
-                onChange={e => setCustomWorkflowName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (customWorkflowName.trim()) {
-                      handleAddWorkflowItem(customWorkflowName.trim());
-                      setCustomWorkflowName('');
-                    }
-                  }
-                }}
-                className="flex-1 px-3 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-black focus:bg-white transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (customWorkflowName.trim()) {
-                    handleAddWorkflowItem(customWorkflowName.trim());
-                    setCustomWorkflowName('');
-                  }
-                }}
-                className="p-2 rounded-xl bg-black text-white hover:bg-neutral-800 transition-all text-xs font-medium"
-                title="Add custom workflow to canvas"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-
-            {/* Grid of Templates */}
-            <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
-              {WORKFLOW_TEMPLATES.map(tpl => (
+              <div className="flex items-center bg-[#F5F5F7] p-0.5 rounded-xl border border-[#E5E5E7]">
                 <button
-                  key={tpl.name}
                   type="button"
-                  onClick={() => handleAddWorkflowItem(tpl.name)}
-                  className="flex items-center gap-2 p-2 rounded-xl border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-white hover:border-black text-left text-xs font-medium transition-all group"
+                  onClick={() => setLibraryMode('templates')}
+                  className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all ${
+                    libraryMode === 'templates' ? 'bg-white text-black shadow-2xs font-semibold' : 'text-[#6E6E73] hover:text-black'
+                  }`}
                 >
-                  <span className="text-sm group-hover:scale-110 transition-transform">{tpl.icon}</span>
-                  <span className="truncate text-black">{tpl.name}</span>
+                  Templates
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => setLibraryMode('builder')}
+                  className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all ${
+                    libraryMode === 'builder' ? 'bg-white text-black shadow-2xs font-semibold' : 'text-[#6E6E73] hover:text-black'
+                  }`}
+                >
+                  Custom + Tasks
+                </button>
+              </div>
             </div>
+
+            {/* TAB 1: QUICK TEMPLATES */}
+            {libraryMode === 'templates' ? (
+              <div className="space-y-3">
+                <p className="text-xs text-[#6E6E73]">
+                  Click to drop on canvas, or click <strong>Configure</strong> to add custom text, assigned operators, and tasks.
+                </p>
+
+                <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto pr-1">
+                  {WORKFLOW_TEMPLATES.map(tpl => (
+                    <div
+                      key={tpl.name}
+                      className="flex items-center justify-between p-2 rounded-xl border border-[#E5E5E7] bg-[#F5F5F7] hover:bg-white hover:border-[#D1D1D6] transition-all group"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleAddWorkflowItem(tpl.name)}
+                        className="flex items-center gap-2 text-left flex-1 truncate"
+                        title="Click to drop directly on canvas"
+                      >
+                        <span className="text-sm group-hover:scale-110 transition-transform">{tpl.icon}</span>
+                        <span className="text-xs font-medium text-black truncate">{tpl.name}</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleCustomizeTemplate(tpl.name)}
+                          className="text-[10px] text-[#6E6E73] hover:text-black hover:bg-[#E5E5E7] px-2 py-1 rounded-lg transition-all font-medium"
+                          title="Open in Custom Builder to add tasks, users, and notes"
+                        >
+                          Configure
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAddWorkflowItem(tpl.name)}
+                          className="p-1.5 rounded-lg bg-black text-white hover:bg-neutral-800 transition-all text-xs"
+                          title="Add to canvas"
+                        >
+                          <Plus size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* TAB 2: DETAILED CUSTOM WORKFLOW BUILDER (CUSTOM TEXT, USERS, TASKS) */
+              <form onSubmit={handleBuilderSubmit} className="space-y-3.5">
+                {/* 1. Workflow Title */}
+                <div>
+                  <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider block mb-1">
+                    Workflow Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Compliance Audit, Client Demo..."
+                    value={builderName}
+                    onChange={e => setBuilderName(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-black focus:bg-white transition-all"
+                    required
+                  />
+                </div>
+
+                {/* 2. Custom Text / Instructions / Scope */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider">
+                      Custom Text / Guidelines
+                    </label>
+                    <FileText size={12} className="text-[#6E6E73]" />
+                  </div>
+                  <textarea
+                    rows={2}
+                    placeholder="Enter instructions, notes, SOP, or details for this workflow step..."
+                    value={builderCustomText}
+                    onChange={e => setBuilderCustomText(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
+                  />
+                </div>
+
+                {/* 3. Assign Users / Operators */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider">
+                      Assign Operators ({builderAssignedUsers.length})
+                    </label>
+                    <Users size={12} className="text-[#6E6E73]" />
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap max-h-24 overflow-y-auto p-1 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]">
+                    {users.map(u => {
+                      const isSelected = builderAssignedUsers.includes(u.id);
+                      return (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => toggleBuilderUser(u.id)}
+                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all border ${
+                            isSelected
+                              ? 'bg-black text-white border-black font-medium'
+                              : 'bg-white text-black border-[#E5E5E7] hover:border-[#D1D1D6]'
+                          }`}
+                        >
+                          <PatchAvatar user={u} size="xs" />
+                          <span className="text-[11px] truncate max-w-[80px]">{u.name.split(' ')[0]}</span>
+                          {isSelected && <Check size={10} className="text-white" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Give Tasks Inside This Workflow */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider">
+                      Tasks Checklist ({builderTasks.length})
+                    </label>
+                    <ListTodo size={12} className="text-[#6E6E73]" />
+                  </div>
+
+                  {/* Task Input + Add Button */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <input
+                      type="text"
+                      placeholder="Add a task item..."
+                      value={builderNewTaskInput}
+                      onChange={e => setBuilderNewTaskInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddBuilderTask();
+                        }
+                      }}
+                      className="flex-1 px-2.5 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-black focus:bg-white transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddBuilderTask}
+                      className="px-2.5 py-1.5 rounded-xl bg-black text-white text-xs font-medium hover:bg-neutral-800 transition-all"
+                    >
+                      + Add
+                    </button>
+                  </div>
+
+                  {/* Added Tasks List */}
+                  {builderTasks.length > 0 && (
+                    <div className="space-y-1.5 max-h-28 overflow-y-auto p-1.5 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]">
+                      {builderTasks.map((t, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between gap-1.5 p-1 px-2 rounded-lg bg-white border border-[#E5E5E7] text-xs"
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <span className="text-black truncate text-[11px]">{t}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setBuilderTasks(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-[#8E8E93] hover:text-red-600 p-0.5"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit to Canvas Button */}
+                <button
+                  type="submit"
+                  className="w-full py-2 px-3 rounded-xl bg-black text-white text-xs font-semibold hover:bg-neutral-800 transition-all shadow-sm flex items-center justify-center gap-1.5 mt-2"
+                >
+                  <Plus size={13} />
+                  <span>Drop Custom Workflow on Canvas</span>
+                </button>
+              </form>
+            )}
           </div>
 
           {/* 1.3 "Your Startups" List with Live Progress Bars */}
@@ -703,14 +924,14 @@ export const PlaygroundView: React.FC = () => {
               <div className="flex items-center gap-3 text-[11px] text-[#6E6E73]">
                 <span>Click link icon <LinkIcon size={11} className="inline text-blue-600" /> to connect</span>
                 <span>•</span>
-                <span>Click arrow to delete</span>
+                <span>Click pencil <Edit3 size={11} className="inline text-black" /> to inspect tasks & users</span>
               </div>
             </div>
 
             {/* Dotted Grid Canvas Area */}
             <div
               ref={canvasRef}
-              className="relative w-full h-[620px] overflow-auto select-none rounded-b-2xl cursor-grab active:cursor-grabbing"
+              className="relative w-full h-[640px] overflow-auto select-none rounded-b-2xl cursor-grab active:cursor-grabbing"
               style={{
                 backgroundImage: 'radial-gradient(#D1D1D6 1.2px, transparent 1.2px)',
                 backgroundSize: '24px 24px',
@@ -723,9 +944,7 @@ export const PlaygroundView: React.FC = () => {
             >
               {/* Virtual Infinite Canvas Area (2400px x 1800px) */}
               <div className="relative min-w-[2400px] min-h-[1800px]">
-                {/* ----------------------------------------------------
-                    SVG LAYER FOR CURVED ARROWS WITH ARROWHEADS
-                ---------------------------------------------------- */}
+                {/* SVG LAYER FOR ARROWS */}
                 <svg
                   className="absolute inset-0 pointer-events-none w-full h-full"
                   style={{ minWidth: '2400px', minHeight: '1800px' }}
@@ -753,21 +972,9 @@ export const PlaygroundView: React.FC = () => {
                     >
                       <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563EB" />
                     </marker>
-                    <marker
-                      id="arrowhead-hover"
-                      viewBox="0 0 10 10"
-                      refX="8"
-                      refY="5"
-                      markerWidth="6"
-                      markerHeight="6"
-                      orient="auto-start-reverse"
-                    >
-                      <path d="M 0 1 L 10 5 L 0 9 z" fill="#EF4444" />
-                    </marker>
                   </defs>
 
                   {edges.map(edge => {
-                    // Find fromNode and toNode positions
                     const fromStartup = startups.find(s => s.id === edge.from);
                     const fromWorkflow = workflows.find(w => w.id === edge.from);
                     const toStartup = startups.find(s => s.id === edge.to);
@@ -778,18 +985,16 @@ export const PlaygroundView: React.FC = () => {
 
                     if (!fromNode || !toNode) return null;
 
-                    const fromWidth = fromStartup ? 230 : 200;
-                    const fromHeight = fromStartup ? 110 : 80;
-                    const toWidth = toStartup ? 230 : 200;
-                    const toHeight = toStartup ? 110 : 80;
+                    const fromWidth = fromStartup ? 230 : 220;
+                    const fromHeight = fromStartup ? 110 : 100;
+                    const toWidth = toStartup ? 230 : 220;
+                    const toHeight = toStartup ? 110 : 100;
 
-                    // Coordinates: Connect from right-center of source to left-center of target
                     const x1 = fromNode.x + fromWidth;
                     const y1 = fromNode.y + fromHeight / 2;
                     const x2 = toNode.x;
                     const y2 = toNode.y + toHeight / 2;
 
-                    // Smooth curved bezier line
                     const dx = Math.max(40, Math.abs(x2 - x1) * 0.5);
                     const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
@@ -806,7 +1011,6 @@ export const PlaygroundView: React.FC = () => {
 
                     return (
                       <g key={edge.id} className="pointer-events-auto group">
-                        {/* Wide transparent hover path for easy click-to-delete */}
                         <path
                           d={pathD}
                           stroke="transparent"
@@ -818,7 +1022,6 @@ export const PlaygroundView: React.FC = () => {
                             deleteEdge(edge.id);
                           }}
                         />
-                        {/* Visible Curved Line */}
                         <path
                           d={pathD}
                           stroke={isHighlighted ? '#2563EB' : isDimmed ? '#D1D1D6' : '#000000'}
@@ -840,7 +1043,7 @@ export const PlaygroundView: React.FC = () => {
                 </svg>
 
                 {/* ----------------------------------------------------
-                    STARTUP NODES (Colored Border, Name, Stage, Count, Completed)
+                    STARTUP NODES
                 ---------------------------------------------------- */}
                 {startups.map(sup => {
                   const stat = startupStats.find(s => s.startupId === sup.id) || {
@@ -872,13 +1075,11 @@ export const PlaygroundView: React.FC = () => {
                         isLinkingSource ? 'ring-2 ring-blue-500 animate-pulse' : ''
                       }`}
                     >
-                      {/* Top Header of Startup Node */}
                       <div className="flex items-center justify-between gap-1 mb-2">
                         <span className="text-[10px] font-semibold text-[#6E6E73] uppercase tracking-wider">
                           Startup
                         </span>
                         <div className="flex items-center gap-1">
-                          {/* Connect Link Button */}
                           <button
                             type="button"
                             onClick={e => startLinking(e, sup.id)}
@@ -891,7 +1092,6 @@ export const PlaygroundView: React.FC = () => {
                           >
                             <LinkIcon size={13} />
                           </button>
-                          {/* Delete Node Button */}
                           <button
                             type="button"
                             onClick={e => {
@@ -906,10 +1106,8 @@ export const PlaygroundView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Startup Name */}
                       <div className="font-bold text-sm text-black truncate mb-2">{sup.name}</div>
 
-                      {/* Badges: Stage, Workflows Count, Completed Tag */}
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F5F5F7] text-black border border-[#E5E5E7]">
                           {sup.stage}
@@ -928,13 +1126,17 @@ export const PlaygroundView: React.FC = () => {
                 })}
 
                 {/* ----------------------------------------------------
-                    WORKFLOW NODES (Name, Status Badge, Link, Delete)
+                    WORKFLOW NODES (WITH CUSTOM TEXT, USERS, TASKS)
                 ---------------------------------------------------- */}
                 {workflows.map(wf => {
                   const isDimmed = isNodeDimmed(wf.id, 'workflow');
                   const isSelected = selectedNode?.id === wf.id;
                   const isLinkingSource = linkingSourceId === wf.id;
                   const assignedStartup = startups.find(s => s.id === wf.startupId);
+
+                  const assignedUsers = users.filter(u => wf.assignedUserIds?.includes(u.id));
+                  const wfTasks = wf.tasks || [];
+                  const doneTasks = wfTasks.filter(t => t.completed).length;
 
                   return (
                     <div
@@ -949,13 +1151,14 @@ export const PlaygroundView: React.FC = () => {
                         e.stopPropagation();
                         handleNodeClick(wf.id);
                       }}
-                      className={`absolute w-[200px] p-3 rounded-2xl bg-white border border-[#E5E5E7] shadow-sm transition-opacity duration-200 cursor-move ${
+                      className={`absolute w-[220px] p-3 rounded-2xl bg-white border border-[#E5E5E7] shadow-sm transition-opacity duration-200 cursor-move space-y-2 ${
                         isDimmed ? 'opacity-30' : 'opacity-100'
                       } ${isSelected ? 'ring-2 ring-black ring-offset-2' : ''} ${
                         isLinkingSource ? 'ring-2 ring-blue-500 animate-pulse' : ''
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1 mb-1.5">
+                      {/* Node Top Row: Startup dot & Action Icons */}
+                      <div className="flex items-center justify-between gap-1">
                         {assignedStartup ? (
                           <div className="flex items-center gap-1 truncate">
                             <span
@@ -971,6 +1174,20 @@ export const PlaygroundView: React.FC = () => {
                         )}
 
                         <div className="flex items-center gap-1">
+                          {/* Inspect / Edit Button */}
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.stopPropagation();
+                              sound.click();
+                              setEditingWorkflow(wf);
+                            }}
+                            className="p-1 rounded-md text-[#6E6E73] hover:text-black hover:bg-[#F5F5F7] text-xs transition-all"
+                            title="Edit details, custom text, users & tasks"
+                          >
+                            <Edit3 size={11} />
+                          </button>
+                          {/* Connect Link Button */}
                           <button
                             type="button"
                             onClick={e => startLinking(e, wf.id)}
@@ -981,8 +1198,9 @@ export const PlaygroundView: React.FC = () => {
                             }`}
                             title="Draw connection arrow from this workflow"
                           >
-                            <LinkIcon size={12} />
+                            <LinkIcon size={11} />
                           </button>
+                          {/* Delete Node Button */}
                           <button
                             type="button"
                             onClick={e => {
@@ -990,17 +1208,86 @@ export const PlaygroundView: React.FC = () => {
                               deleteWorkflow(wf.id);
                             }}
                             className="p-1 rounded-md text-[#6E6E73] hover:text-red-600 hover:bg-red-50 text-xs transition-all"
-                            title="Delete workflow node and remove its arrows"
+                            title="Delete workflow node"
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={11} />
                           </button>
                         </div>
                       </div>
 
                       {/* Workflow Name */}
-                      <div className="text-xs font-semibold text-black truncate mb-2">{wf.name}</div>
+                      <div className="text-xs font-bold text-black truncate">{wf.name}</div>
 
-                      {/* Clickable Status Badge (Click to cycle To Do -> In Progress -> Done) */}
+                      {/* Custom Text / Description Snippet if present */}
+                      {(wf.customText || wf.notes) && (
+                        <div
+                          onClick={e => {
+                            e.stopPropagation();
+                            setEditingWorkflow(wf);
+                          }}
+                          className="flex items-start gap-1 p-1.5 bg-[#F5F5F7] rounded-xl text-[10px] text-[#6E6E73] leading-snug cursor-pointer hover:bg-[#EBEBED] transition-all"
+                          title="Click to view/edit custom text"
+                        >
+                          <FileText size={10} className="flex-shrink-0 mt-0.5 text-black" />
+                          <span className="line-clamp-2 truncate">{wf.customText || wf.notes}</span>
+                        </div>
+                      )}
+
+                      {/* Assigned Users Avatars */}
+                      {assignedUsers.length > 0 && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="text-[9px] text-[#8E8E93] uppercase font-semibold">Assigned:</span>
+                          <div className="flex items-center -space-x-1">
+                            {assignedUsers.map(u => (
+                              <div key={u.id} title={`${u.name} (${u.role})`}>
+                                <PatchAvatar user={u} size="xs" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tasks Checklist with Interactive Clickable Checkboxes */}
+                      {wfTasks.length > 0 && (
+                        <div className="space-y-1 pt-1 border-t border-[#F5F5F7]">
+                          <div className="flex items-center justify-between text-[10px] text-[#6E6E73]">
+                            <span className="font-medium">Tasks</span>
+                            <span className="font-mono text-[9px] text-black">
+                              {doneTasks}/{wfTasks.length} ({Math.round((doneTasks / wfTasks.length) * 100)}%)
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 max-h-20 overflow-y-auto pr-0.5">
+                            {wfTasks.map(task => (
+                              <div
+                                key={task.id}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  toggleWorkflowTask(wf.id, task.id);
+                                }}
+                                className="flex items-center gap-1.5 p-1 rounded-md hover:bg-[#F5F5F7] cursor-pointer transition-colors"
+                              >
+                                <span
+                                  className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center flex-shrink-0 transition-all ${
+                                    task.completed ? 'bg-black border-black text-white' : 'border-[#D1D1D6] bg-white'
+                                  }`}
+                                >
+                                  {task.completed && <Check size={10} />}
+                                </span>
+                                <span
+                                  className={`text-[10px] truncate ${
+                                    task.completed ? 'line-through text-[#8E8E93]' : 'text-black'
+                                  }`}
+                                >
+                                  {task.title}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Status Button */}
                       <button
                         type="button"
                         onClick={e => cycleWorkflowStatus(e, wf)}
@@ -1065,7 +1352,6 @@ export const PlaygroundView: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Filter by Startup Dropdown */}
                 <div className="flex items-center gap-2">
                   <Filter size={13} className="text-[#6E6E73]" />
                   <span className="text-xs text-[#6E6E73] font-medium">Filter:</span>
@@ -1106,28 +1392,39 @@ export const PlaygroundView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[360px] pr-1">
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1">
                     {todoWorkflows.map(wf => {
                       const sup = startups.find(s => s.id === wf.startupId);
                       const { upstream, downstream } = getWorkflowConnections(wf.id);
+                      const assignedUsers = users.filter(u => wf.assignedUserIds?.includes(u.id));
+                      const wfTasks = wf.tasks || [];
 
                       return (
                         <div
                           key={wf.id}
                           draggable
                           onDragStart={e => e.dataTransfer.setData('text/plain', wf.id)}
-                          className="p-3 bg-white border border-[#E5E5E7] hover:border-black rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2"
+                          className="p-3.5 bg-white border border-[#E5E5E7] hover:border-black rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2.5"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-black truncate">{wf.name}</span>
-                            <button
-                              onClick={() => handleStatusChangeRequest(wf.id, 'doing')}
-                              className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold px-2 py-0.5 rounded-md hover:bg-blue-50 transition-all flex items-center gap-1"
-                              title="Move to In Progress"
-                            >
-                              <span>Start</span>
-                              <ArrowRight size={10} />
-                            </button>
+                            <span className="text-xs font-bold text-black truncate">{wf.name}</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingWorkflow(wf)}
+                                className="p-1 rounded text-[#8E8E93] hover:text-black hover:bg-neutral-100"
+                                title="Edit details & tasks"
+                              >
+                                <Edit3 size={11} />
+                              </button>
+                              <button
+                                onClick={() => handleStatusChangeRequest(wf.id, 'doing')}
+                                className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold px-2 py-0.5 rounded-md hover:bg-blue-50 transition-all flex items-center gap-1"
+                                title="Move to In Progress"
+                              >
+                                <span>Start</span>
+                                <ArrowRight size={10} />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Startup Dot */}
@@ -1140,6 +1437,55 @@ export const PlaygroundView: React.FC = () => {
                               {sup?.name || 'Unassigned'}
                             </span>
                           </div>
+
+                          {/* Custom Text Snippet */}
+                          {(wf.customText || wf.notes) && (
+                            <div className="text-[10px] text-[#6E6E73] bg-[#F5F5F7] p-1.5 rounded-lg line-clamp-2">
+                              {wf.customText || wf.notes}
+                            </div>
+                          )}
+
+                          {/* Assigned Operators */}
+                          {assignedUsers.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] text-[#8E8E93]">Assigned:</span>
+                              <div className="flex items-center -space-x-1">
+                                {assignedUsers.map(u => (
+                                  <div key={u.id} title={`${u.name} (${u.role})`}>
+                                    <PatchAvatar user={u} size="xs" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Checklist Items */}
+                          {wfTasks.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-[#F5F5F7]">
+                              {wfTasks.map(t => (
+                                <div
+                                  key={t.id}
+                                  onClick={() => toggleWorkflowTask(wf.id, t.id)}
+                                  className="flex items-center gap-1.5 cursor-pointer text-[10px]"
+                                >
+                                  <span
+                                    className={`w-3 h-3 rounded-xs border flex items-center justify-center flex-shrink-0 ${
+                                      t.completed ? 'bg-black border-black text-white' : 'border-[#D1D1D6] bg-white'
+                                    }`}
+                                  >
+                                    {t.completed && <Check size={8} />}
+                                  </span>
+                                  <span
+                                    className={`truncate ${
+                                      t.completed ? 'line-through text-[#8E8E93]' : 'text-black'
+                                    }`}
+                                  >
+                                    {t.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Upstream / Downstream Connections */}
                           {(upstream.length > 0 || downstream.length > 0) && (
@@ -1178,21 +1524,30 @@ export const PlaygroundView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[360px] pr-1">
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1">
                     {doingWorkflows.map(wf => {
                       const sup = startups.find(s => s.id === wf.startupId);
                       const { upstream, downstream } = getWorkflowConnections(wf.id);
+                      const assignedUsers = users.filter(u => wf.assignedUserIds?.includes(u.id));
+                      const wfTasks = wf.tasks || [];
 
                       return (
                         <div
                           key={wf.id}
                           draggable
                           onDragStart={e => e.dataTransfer.setData('text/plain', wf.id)}
-                          className="p-3 bg-white border border-blue-200 hover:border-blue-400 rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2"
+                          className="p-3.5 bg-white border border-blue-200 hover:border-blue-400 rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2.5"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-black truncate">{wf.name}</span>
+                            <span className="text-xs font-bold text-black truncate">{wf.name}</span>
                             <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingWorkflow(wf)}
+                                className="p-1 rounded text-[#8E8E93] hover:text-black hover:bg-neutral-100"
+                                title="Edit details & tasks"
+                              >
+                                <Edit3 size={11} />
+                              </button>
                               <button
                                 onClick={() => handleStatusChangeRequest(wf.id, 'todo')}
                                 className="text-[10px] text-[#6E6E73] hover:text-black px-1.5 py-0.5 rounded hover:bg-neutral-100"
@@ -1220,6 +1575,52 @@ export const PlaygroundView: React.FC = () => {
                               {sup?.name || 'Unassigned'}
                             </span>
                           </div>
+
+                          {(wf.customText || wf.notes) && (
+                            <div className="text-[10px] text-[#6E6E73] bg-[#F5F5F7] p-1.5 rounded-lg line-clamp-2">
+                              {wf.customText || wf.notes}
+                            </div>
+                          )}
+
+                          {assignedUsers.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] text-[#8E8E93]">Assigned:</span>
+                              <div className="flex items-center -space-x-1">
+                                {assignedUsers.map(u => (
+                                  <div key={u.id} title={`${u.name} (${u.role})`}>
+                                    <PatchAvatar user={u} size="xs" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {wfTasks.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-[#F5F5F7]">
+                              {wfTasks.map(t => (
+                                <div
+                                  key={t.id}
+                                  onClick={() => toggleWorkflowTask(wf.id, t.id)}
+                                  className="flex items-center gap-1.5 cursor-pointer text-[10px]"
+                                >
+                                  <span
+                                    className={`w-3 h-3 rounded-xs border flex items-center justify-center flex-shrink-0 ${
+                                      t.completed ? 'bg-black border-black text-white' : 'border-[#D1D1D6] bg-white'
+                                    }`}
+                                  >
+                                    {t.completed && <Check size={8} />}
+                                  </span>
+                                  <span
+                                    className={`truncate ${
+                                      t.completed ? 'line-through text-[#8E8E93]' : 'text-black'
+                                    }`}
+                                  >
+                                    {t.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {(upstream.length > 0 || downstream.length > 0) && (
                             <div className="text-[10px] text-[#8E8E93] space-y-0.5 pt-1 border-t border-[#F5F5F7]">
@@ -1257,29 +1658,40 @@ export const PlaygroundView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[360px] pr-1">
+                  <div className="space-y-3 flex-1 overflow-y-auto max-h-[420px] pr-1">
                     {doneWorkflows.map(wf => {
                       const sup = startups.find(s => s.id === wf.startupId);
                       const { upstream, downstream } = getWorkflowConnections(wf.id);
+                      const assignedUsers = users.filter(u => wf.assignedUserIds?.includes(u.id));
+                      const wfTasks = wf.tasks || [];
 
                       return (
                         <div
                           key={wf.id}
                           draggable
                           onDragStart={e => e.dataTransfer.setData('text/plain', wf.id)}
-                          className="p-3 bg-white border border-emerald-200 hover:border-emerald-400 rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2"
+                          className="p-3.5 bg-white border border-emerald-200 hover:border-emerald-400 rounded-xl shadow-2xs transition-all cursor-grab active:cursor-grabbing space-y-2.5"
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-semibold text-black truncate line-through text-[#6E6E73]">
+                            <span className="text-xs font-bold text-black truncate line-through text-[#6E6E73]">
                               {wf.name}
                             </span>
-                            <button
-                              onClick={() => handleStatusChangeRequest(wf.id, 'doing')}
-                              className="text-[10px] text-[#6E6E73] hover:text-black px-1.5 py-0.5 rounded hover:bg-neutral-100"
-                              title="Reopen to In Progress"
-                            >
-                              Reopen
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setEditingWorkflow(wf)}
+                                className="p-1 rounded text-[#8E8E93] hover:text-black hover:bg-neutral-100"
+                                title="Edit details & tasks"
+                              >
+                                <Edit3 size={11} />
+                              </button>
+                              <button
+                                onClick={() => handleStatusChangeRequest(wf.id, 'doing')}
+                                className="text-[10px] text-[#6E6E73] hover:text-black px-1.5 py-0.5 rounded hover:bg-neutral-100"
+                                title="Reopen to In Progress"
+                              >
+                                Reopen
+                              </button>
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-1.5">
@@ -1291,6 +1703,52 @@ export const PlaygroundView: React.FC = () => {
                               {sup?.name || 'Unassigned'}
                             </span>
                           </div>
+
+                          {(wf.customText || wf.notes) && (
+                            <div className="text-[10px] text-[#6E6E73] bg-[#F5F5F7] p-1.5 rounded-lg line-clamp-2">
+                              {wf.customText || wf.notes}
+                            </div>
+                          )}
+
+                          {assignedUsers.length > 0 && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] text-[#8E8E93]">Assigned:</span>
+                              <div className="flex items-center -space-x-1">
+                                {assignedUsers.map(u => (
+                                  <div key={u.id} title={`${u.name} (${u.role})`}>
+                                    <PatchAvatar user={u} size="xs" />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {wfTasks.length > 0 && (
+                            <div className="space-y-1 pt-1 border-t border-[#F5F5F7]">
+                              {wfTasks.map(t => (
+                                <div
+                                  key={t.id}
+                                  onClick={() => toggleWorkflowTask(wf.id, t.id)}
+                                  className="flex items-center gap-1.5 cursor-pointer text-[10px]"
+                                >
+                                  <span
+                                    className={`w-3 h-3 rounded-xs border flex items-center justify-center flex-shrink-0 ${
+                                      t.completed ? 'bg-black border-black text-white' : 'border-[#D1D1D6] bg-white'
+                                    }`}
+                                  >
+                                    {t.completed && <Check size={8} />}
+                                  </span>
+                                  <span
+                                    className={`truncate ${
+                                      t.completed ? 'line-through text-[#8E8E93]' : 'text-black'
+                                    }`}
+                                  >
+                                    {t.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
 
                           {(upstream.length > 0 || downstream.length > 0) && (
                             <div className="text-[10px] text-[#8E8E93] space-y-0.5 pt-1 border-t border-[#F5F5F7]">
@@ -1312,6 +1770,187 @@ export const PlaygroundView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ====================================================
+          MODAL: WORKFLOW DETAILS & TASKS INSPECTOR
+      ==================================================== */}
+      {activeEditingWorkflow && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-[#E5E5E7] p-6 max-w-lg w-full shadow-2xl animate-in fade-in zoom-in-95 duration-150 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E5E5E7]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center">
+                  <Edit3 size={15} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-black">Workflow Inspector</h3>
+                  <p className="text-[11px] text-[#6E6E73]">Edit custom text, assign operators & manage tasks</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingWorkflow(null)}
+                className="p-1.5 rounded-full hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-black transition-all"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* 1. Workflow Name */}
+            <div>
+              <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider block mb-1">
+                Workflow Name
+              </label>
+              <input
+                type="text"
+                value={activeEditingWorkflow.name}
+                onChange={e => updateWorkflow(activeEditingWorkflow.id, { name: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all font-semibold"
+              />
+            </div>
+
+            {/* 2. Custom Text / Guidelines / Notes */}
+            <div>
+              <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider block mb-1">
+                Custom Text / Instructions / Scope
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Enter scope, guidelines, or procedures..."
+                value={activeEditingWorkflow.customText || activeEditingWorkflow.notes || ''}
+                onChange={e =>
+                  updateWorkflow(activeEditingWorkflow.id, {
+                    customText: e.target.value,
+                    notes: e.target.value
+                  })
+                }
+                className="w-full px-3 py-2 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black focus:outline-none focus:border-black focus:bg-white transition-all resize-none"
+              />
+            </div>
+
+            {/* 3. Assign Operators */}
+            <div>
+              <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider block mb-1.5">
+                Assign Operators
+              </label>
+              <div className="flex items-center gap-1.5 flex-wrap p-1.5 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]">
+                {users.map(u => {
+                  const isAssigned = (activeEditingWorkflow.assignedUserIds || []).includes(u.id);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => toggleUserAssignment(activeEditingWorkflow.id, u.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all border ${
+                        isAssigned
+                          ? 'bg-black text-white border-black font-medium'
+                          : 'bg-white text-black border-[#E5E5E7] hover:border-[#D1D1D6]'
+                      }`}
+                    >
+                      <PatchAvatar user={u} size="xs" />
+                      <span className="text-[11px]">{u.name}</span>
+                      {isAssigned && <Check size={11} className="text-white" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 4. Task Checklist */}
+            <div>
+              <label className="text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider block mb-1.5">
+                Tasks Inside Workflow ({activeEditingWorkflow.tasks?.length || 0})
+              </label>
+
+              <div className="flex items-center gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Add a new task..."
+                  value={inspectorNewTaskInput}
+                  onChange={e => setInspectorNewTaskInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (inspectorNewTaskInput.trim()) {
+                        addWorkflowTask(activeEditingWorkflow.id, inspectorNewTaskInput.trim());
+                        setInspectorNewTaskInput('');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-[#F5F5F7] border border-[#E5E5E7] rounded-xl text-xs text-black placeholder:text-[#8E8E93] focus:outline-none focus:border-black focus:bg-white transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (inspectorNewTaskInput.trim()) {
+                      addWorkflowTask(activeEditingWorkflow.id, inspectorNewTaskInput.trim());
+                      setInspectorNewTaskInput('');
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-black text-white text-xs font-semibold hover:bg-neutral-800 transition-all"
+                >
+                  + Add
+                </button>
+              </div>
+
+              <div className="space-y-1.5 max-h-36 overflow-y-auto p-2 bg-[#F5F5F7] rounded-xl border border-[#E5E5E7]">
+                {(activeEditingWorkflow.tasks || []).length === 0 ? (
+                  <p className="text-center text-[11px] text-[#8E8E93] py-2">No tasks added yet.</p>
+                ) : (
+                  (activeEditingWorkflow.tasks || []).map(task => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between gap-2 p-1.5 px-2 bg-white rounded-lg border border-[#E5E5E7]"
+                    >
+                      <div
+                        onClick={() => toggleWorkflowTask(activeEditingWorkflow.id, task.id)}
+                        className="flex items-center gap-2 cursor-pointer flex-1 truncate"
+                      >
+                        <span
+                          className={`w-3.5 h-3.5 rounded-xs border flex items-center justify-center flex-shrink-0 ${
+                            task.completed ? 'bg-black border-black text-white' : 'border-[#D1D1D6] bg-white'
+                          }`}
+                        >
+                          {task.completed && <Check size={10} />}
+                        </span>
+                        <span
+                          className={`text-xs truncate ${
+                            task.completed ? 'line-through text-[#8E8E93]' : 'text-black'
+                          }`}
+                        >
+                          {task.title}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeWorkflowTask(activeEditingWorkflow.id, task.id)}
+                        className="text-[#8E8E93] hover:text-red-600 p-0.5"
+                        title="Delete task"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <div className="flex items-center justify-end pt-2 border-t border-[#E5E5E7]">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.click();
+                  setEditingWorkflow(null);
+                }}
+                className="px-5 py-2 rounded-xl bg-black hover:bg-neutral-800 text-xs font-semibold text-white transition-all shadow-sm"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ====================================================
           MODAL: PREREQUISITE RULE WARNING & OVERRIDE
