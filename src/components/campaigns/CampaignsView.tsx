@@ -67,7 +67,8 @@ export const CampaignsView: React.FC = () => {
     deleteCampaign,
     deleteTrackingLink,
     getCampaignMetrics,
-    ingestAppEvent
+    ingestAppEvent,
+    refreshAnalytics
   } = useWorkspace();
 
   // Primary subnavigation tabs: 'campaigns' | 'channels' | 'projects' | 'overview' | 'conversions' | 'diagnostics'
@@ -136,16 +137,67 @@ export const CampaignsView: React.FC = () => {
     return getCampaignMetrics(reportingMode);
   }, [reportingMode, getCampaignMetrics]);
 
-  // Aggregate totals
+  // Helper to check if timestamp falls within the selected dateRange
+  const isWithinDateRange = (timestamp?: string) => {
+    if (!timestamp || dateRange === 'all') return true;
+    const t = new Date(timestamp).getTime();
+    if (isNaN(t)) return true;
+    const now = Date.now();
+    if (dateRange === 'today') {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      return t >= startOfToday.getTime();
+    }
+    if (dateRange === '7d') return t >= now - 7 * 24 * 60 * 60 * 1000;
+    if (dateRange === '30d') return t >= now - 30 * 24 * 60 * 60 * 1000;
+    return true;
+  };
+
+  // Helper to check if click / event matches selectedPlatform
+  const isMatchingPlatform = (item: { platform?: string; os?: string; userAgent?: string }) => {
+    if (selectedPlatform === 'all') return true;
+    const p = (item.platform || '').toLowerCase();
+    const os = (item.os || '').toLowerCase();
+    const ua = (item.userAgent || '').toLowerCase();
+    if (selectedPlatform === 'android') {
+      return p === 'android' || os === 'android' || ua.includes('android');
+    }
+    if (selectedPlatform === 'ios') {
+      return p === 'ios' || os === 'ios' || ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod');
+    }
+    return true;
+  };
+
+  // Aggregate totals with project, date, and platform filtering across all campaign & standalone clicks
   const totals = useMemo(() => {
-    const rawClicks = campaignMetrics.reduce((acc, c) => acc + c.rawClicks, 0);
-    const filteredClicks = campaignMetrics.reduce((acc, c) => acc + c.filteredClicks, 0);
-    const suspectedBots = campaignMetrics.reduce((acc, c) => acc + c.suspectedBots, 0);
-    const uniqueClicks = campaignMetrics.reduce((acc, c) => acc + c.estimatedUniqueClicks, 0);
-    const firstOpens = campaignMetrics.reduce((acc, c) => acc + c.attributedFirstOpens, 0);
-    const signups = campaignMetrics.reduce((acc, c) => acc + c.signups, 0);
-    const verifiedConversions = campaignMetrics.reduce((acc, c) => acc + c.verifiedConversions, 0);
-    const totalSpend = campaignMetrics.reduce((acc, c) => acc + c.spend, 0);
+    const relevantClicks = clickEvents.filter(c => {
+      if (selectedProjectId !== 'all' && c.appId && c.appId !== selectedProjectId) return false;
+      if (!isWithinDateRange(c.timestamp)) return false;
+      if (!isMatchingPlatform(c)) return false;
+      return true;
+    });
+
+    const rawClicks = relevantClicks.length;
+    const suspectedBots = relevantClicks.filter(c => c.isSuspectedBot).length;
+    const filteredClicks = rawClicks - suspectedBots;
+    const uniqueClicks = new Set(relevantClicks.filter(c => !c.isSuspectedBot).map(c => c.ipHash)).size;
+
+    const relevantEvents = appEvents.filter(e => {
+      if (selectedProjectId !== 'all' && e.appId !== selectedProjectId) return false;
+      if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+      return true;
+    });
+
+    const firstOpens = relevantEvents.filter(e => e.eventName === 'first_open').length;
+    const signups = relevantEvents.filter(e => e.eventName === 'signup_completed').length;
+    const verifiedConversions = relevantEvents.filter(
+      e => e.eventName === 'purchase_completed' || e.eventName === 'kyc_verified'
+    ).length;
+
+    const relevantCampaigns = selectedProjectId === 'all'
+      ? campaigns
+      : campaigns.filter(c => c.appId === selectedProjectId);
+    const totalSpend = relevantCampaigns.reduce((acc, c) => acc + (c.spend || 0), 0);
     const overallConversionRate = filteredClicks > 0 ? ((firstOpens / filteredClicks) * 100).toFixed(1) : '0.0';
 
     return {
@@ -159,12 +211,15 @@ export const CampaignsView: React.FC = () => {
       totalSpend,
       overallConversionRate
     };
-  }, [campaignMetrics]);
+  }, [clickEvents, appEvents, campaigns, selectedProjectId, dateRange, selectedPlatform]);
 
   // Handle Sync Refresh
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     sound.click();
     setIsSyncing(true);
+    if (refreshAnalytics) {
+      await refreshAnalytics();
+    }
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -173,7 +228,7 @@ export const CampaignsView: React.FC = () => {
     setLastSyncedTime(`${formattedHours}:${minutes} ${ampm}`);
     setTimeout(() => {
       setIsSyncing(false);
-    }, 600);
+    }, 400);
   };
 
   // 5-character clean alphanumeric campaign code generator (e.g. WPkAs)
@@ -405,6 +460,26 @@ export const CampaignsView: React.FC = () => {
       if (campLinks.length === 0) {
         const defaultCode = camp.utmCampaign || camp.name.toLowerCase().replace(/[^a-z0-9]/g, '');
         const defaultTrackingUrl = `${projectBaseUrl}/?c=${defaultCode}`;
+        const campClicks = clickEvents.filter(c => {
+          if (!isWithinDateRange(c.timestamp)) return false;
+          if (!isMatchingPlatform(c)) return false;
+          return c.campaignId === camp.id;
+        });
+        const campClickCount = campClicks.length;
+        const campOpens = appEvents.filter(e => {
+          if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+          const tokenMatch = e.attributionToken && campClicks.some(c => c.attributionToken === e.attributionToken);
+          return (tokenMatch || e.attributedCampaignId === camp.id) && e.eventName === 'first_open';
+        });
+        const campSignups = appEvents.filter(e => {
+          if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+          const tokenMatch = e.attributionToken && campClicks.some(c => c.attributionToken === e.attributionToken);
+          return (tokenMatch || e.attributedCampaignId === camp.id) && e.eventName === 'signup_completed';
+        });
+        const iCount = campOpens.length;
+        const sCount = campSignups.length;
+        const conv = campClickCount > 0 ? `${((iCount / campClickCount) * 100).toFixed(1)}%` : '0.0%';
+
         rows.push({
           id: `cmp_${camp.id}`,
           campaignId: camp.id,
@@ -412,11 +487,11 @@ export const CampaignsView: React.FC = () => {
           name: camp.name,
           content: defaultTrackingUrl,
           destinationUrl: projectBaseUrl,
-          clicks: metrics?.filteredClicks ?? '-',
+          clicks: campClickCount,
           impressions: '-',
-          installs: metrics?.attributedFirstOpens ?? '-',
-          signups: metrics?.signups ?? '-',
-          conversion: metrics?.conversionRate !== null && metrics?.conversionRate !== undefined ? `${metrics.conversionRate}%` : '-',
+          installs: iCount,
+          signups: sCount,
+          conversion: conv,
           revenue: '-',
           source: camp.source
         });
@@ -425,19 +500,40 @@ export const CampaignsView: React.FC = () => {
           const linkApp = campaignApps.find(a => a.id === link.appId) || matchedApp;
           const linkBaseUrl = (link.webFallbackUrl || linkApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
           const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
-          const linkClicks = clickEvents.filter(
-            c => c.trackingLinkId === link.id || c.trackingLinkId === link.slug
-          );
-          const linkOpens = appEvents.filter(
-            e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
-          );
-          const linkSignups = appEvents.filter(
-            e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'signup_completed'
-          );
+          const linkClicks = clickEvents.filter(c => {
+            if (!isWithinDateRange(c.timestamp)) return false;
+            if (!isMatchingPlatform(c)) return false;
+            const idMatch = c.trackingLinkId === link.id;
+            const slugMatch = !!link.slug && (
+              c.trackingLinkId?.toLowerCase() === link.slug.toLowerCase() ||
+              (c.attributionToken && c.attributionToken.toLowerCase().includes(link.slug.toLowerCase()))
+            );
+            const campMatch = !!link.campaignId && c.campaignId === link.campaignId && (
+              !c.trackingLinkId ||
+              c.trackingLinkId === link.id ||
+              c.trackingLinkId.startsWith('trk_syn_') ||
+              c.trackingLinkId?.toLowerCase() === link.slug?.toLowerCase()
+            );
+            return idMatch || slugMatch || campMatch;
+          });
+          const linkOpens = appEvents.filter(e => {
+            if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+            const tokenMatch = e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken);
+            const idMatch = e.attributedLinkId === link.id;
+            const campMatch = e.attributedCampaignId === camp.id;
+            return (tokenMatch || idMatch || campMatch) && e.eventName === 'first_open';
+          });
+          const linkSignups = appEvents.filter(e => {
+            if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+            const tokenMatch = e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken);
+            const idMatch = e.attributedLinkId === link.id;
+            const campMatch = e.attributedCampaignId === camp.id;
+            return (tokenMatch || idMatch || campMatch) && e.eventName === 'signup_completed';
+          });
           const cCount = linkClicks.length;
           const iCount = linkOpens.length;
           const sCount = linkSignups.length;
-          const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '-';
+          const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '0.0%';
 
           rows.push({
             id: `lnk_${link.id}`,
@@ -448,10 +544,10 @@ export const CampaignsView: React.FC = () => {
             name: link.title || camp.name,
             content: canonicalUrl,
             destinationUrl: link.webFallbackUrl || linkBaseUrl,
-            clicks: cCount > 0 ? cCount : '-',
+            clicks: cCount,
             impressions: '-',
-            installs: iCount > 0 ? iCount : '-',
-            signups: sCount > 0 ? sCount : '-',
+            installs: iCount,
+            signups: sCount,
             conversion: conv,
             revenue: '-',
             source: camp.source,
@@ -471,19 +567,32 @@ export const CampaignsView: React.FC = () => {
       const matchedApp = campaignApps.find(a => a.id === link.appId);
       const linkBaseUrl = (link.webFallbackUrl || matchedApp?.webFallbackUrl || window.location.origin).replace(/\/+$/, '');
       const canonicalUrl = `${linkBaseUrl}/?c=${link.slug}`;
-      const linkClicks = clickEvents.filter(
-        c => c.trackingLinkId === link.id || c.trackingLinkId === link.slug
-      );
-      const linkOpens = appEvents.filter(
-        e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'first_open'
-      );
-      const linkSignups = appEvents.filter(
-        e => e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken) && e.eventName === 'signup_completed'
-      );
+      const linkClicks = clickEvents.filter(c => {
+        if (!isWithinDateRange(c.timestamp)) return false;
+        if (!isMatchingPlatform(c)) return false;
+        const idMatch = c.trackingLinkId === link.id;
+        const slugMatch = !!link.slug && (
+          c.trackingLinkId?.toLowerCase() === link.slug.toLowerCase() ||
+          (c.attributionToken && c.attributionToken.toLowerCase().includes(link.slug.toLowerCase()))
+        );
+        return idMatch || slugMatch;
+      });
+      const linkOpens = appEvents.filter(e => {
+        if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+        const tokenMatch = e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken);
+        const idMatch = e.attributedLinkId === link.id;
+        return (tokenMatch || idMatch) && e.eventName === 'first_open';
+      });
+      const linkSignups = appEvents.filter(e => {
+        if (!isWithinDateRange(e.occurredAt || e.ingestedAt)) return false;
+        const tokenMatch = e.attributionToken && linkClicks.some(c => c.attributionToken === e.attributionToken);
+        const idMatch = e.attributedLinkId === link.id;
+        return (tokenMatch || idMatch) && e.eventName === 'signup_completed';
+      });
       const cCount = linkClicks.length;
       const iCount = linkOpens.length;
       const sCount = linkSignups.length;
-      const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '-';
+      const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '0.0%';
 
       rows.push({
         id: `lnk_${link.id}`,
@@ -492,10 +601,10 @@ export const CampaignsView: React.FC = () => {
         name: link.title || 'Tracking Link',
         content: canonicalUrl,
         destinationUrl: link.webFallbackUrl || linkBaseUrl,
-        clicks: cCount > 0 ? cCount : '-',
+        clicks: cCount,
         impressions: '-',
-        installs: iCount > 0 ? iCount : '-',
-        signups: sCount > 0 ? sCount : '-',
+        installs: iCount,
+        signups: sCount,
         conversion: conv,
         revenue: '-',
         source: 'custom',
@@ -504,11 +613,11 @@ export const CampaignsView: React.FC = () => {
     }
 
     return rows;
-  }, [campaigns, trackingLinks, clickEvents, appEvents, campaignMetrics, campaignApps, selectedProjectId]);
+  }, [campaigns, trackingLinks, clickEvents, appEvents, campaignApps, selectedProjectId, dateRange, selectedPlatform]);
 
-  // Apply filters & search
+  // Apply filters, search, and sorting
   const filteredRows = useMemo(() => {
-    return tableRows.filter(r => {
+    let result = tableRows.filter(r => {
       if (searchQuery.trim().length > 0) {
         const q = searchQuery.toLowerCase();
         const matchesName = r.name.toLowerCase().includes(q);
@@ -522,7 +631,34 @@ export const CampaignsView: React.FC = () => {
       }
       return true;
     });
-  }, [tableRows, searchQuery, selectedChannel]);
+
+    result = [...result].sort((a, b) => {
+      if (a.isOrganic && !b.isOrganic) return -1;
+      if (!a.isOrganic && b.isOrganic) return 1;
+
+      if (sortBy === 'clicks') {
+        const aVal = typeof a.clicks === 'number' ? a.clicks : parseInt(String(a.clicks), 10) || 0;
+        const bVal = typeof b.clicks === 'number' ? b.clicks : parseInt(String(b.clicks), 10) || 0;
+        return bVal - aVal;
+      }
+      if (sortBy === 'installs') {
+        const aVal = typeof a.installs === 'number' ? a.installs : parseInt(String(a.installs), 10) || 0;
+        const bVal = typeof b.installs === 'number' ? b.installs : parseInt(String(b.installs), 10) || 0;
+        return bVal - aVal;
+      }
+      if (sortBy === 'conversion') {
+        const aVal = parseFloat(String(a.conversion).replace('%', '')) || 0;
+        const bVal = parseFloat(String(b.conversion).replace('%', '')) || 0;
+        return bVal - aVal;
+      }
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name);
+      }
+      return 0;
+    });
+
+    return result;
+  }, [tableRows, searchQuery, selectedChannel, sortBy]);
 
   return (
     <div className="space-y-4 max-w-[1400px] mx-auto pb-12 font-sans text-neutral-900">

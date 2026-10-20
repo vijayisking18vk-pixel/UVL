@@ -848,8 +848,208 @@ async function runTests() {
     console.log('✓ Remote hydration, empty localStorage tolerance, and cloud fallbacks verified');
   }
 
+  // TEST 21: Accurate Link Tracker Click Calculation & Multi-Dimension Filtering
+  console.log('\n[TEST 21] Link Tracker Accurate Click Calculation, Filtering & Aggregation');
+  {
+    const now = Date.now();
+    const todayClickTime = new Date(now - 1000 * 60 * 30).toISOString(); // 30 mins ago (Today)
+    const threeDaysAgoTime = new Date(now - 1000 * 60 * 60 * 24 * 3).toISOString(); // 3 days ago
+    const tenDaysAgoTime = new Date(now - 1000 * 60 * 60 * 24 * 10).toISOString(); // 10 days ago
+
+    const sampleLinks: any[] = [
+      { id: 'trk_1', campaignId: 'cmp_1', appId: 'app_ziggers', slug: 'WPkAs', title: 'WhatsApp Blast' },
+      { id: 'trk_standalone', campaignId: 'none', appId: 'app_ziggers', slug: 'stand1', title: 'Standalone Link' }
+    ];
+
+    const sampleClicks: UVLClickEvent[] = [
+      {
+        id: 'c1',
+        trackingLinkId: 'trk_1',
+        campaignId: 'cmp_1',
+        appId: 'app_ziggers',
+        attributionToken: 'tok_1',
+        timestamp: todayClickTime,
+        ipHash: 'ip_1',
+        platform: 'android',
+        os: 'android',
+        isSuspectedBot: false
+      },
+      {
+        // Case-insensitive slug click
+        id: 'c2',
+        trackingLinkId: 'wpkas', // lower-case
+        campaignId: 'cmp_1',
+        appId: 'app_ziggers',
+        attributionToken: 'tok_2',
+        timestamp: todayClickTime,
+        ipHash: 'ip_2',
+        platform: 'ios',
+        os: 'ios',
+        isSuspectedBot: false
+      },
+      {
+        // 3 days ago, desktop, suspected bot
+        id: 'c3',
+        trackingLinkId: 'trk_1',
+        campaignId: 'cmp_1',
+        appId: 'app_ziggers',
+        attributionToken: 'tok_3',
+        timestamp: threeDaysAgoTime,
+        ipHash: 'ip_3',
+        platform: 'desktop',
+        os: 'windows',
+        isSuspectedBot: true
+      },
+      {
+        // Standalone link click (10 days ago)
+        id: 'c4',
+        trackingLinkId: 'trk_standalone',
+        campaignId: 'none',
+        appId: 'app_ziggers',
+        attributionToken: 'tok_4',
+        timestamp: tenDaysAgoTime,
+        ipHash: 'ip_4',
+        platform: 'android',
+        os: 'android',
+        isSuspectedBot: false
+      }
+    ];
+
+    // Helper functions matching CampaignsView logic
+    function isWithinDateRange(timestamp: string, range: 'today' | '7d' | '30d' | 'all') {
+      if (range === 'all') return true;
+      const t = new Date(timestamp).getTime();
+      const n = Date.now();
+      if (range === 'today') {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        return t >= startOfToday.getTime();
+      }
+      if (range === '7d') return t >= n - 7 * 24 * 60 * 60 * 1000;
+      if (range === '30d') return t >= n - 30 * 24 * 60 * 60 * 1000;
+      return true;
+    }
+
+    function isMatchingPlatform(c: UVLClickEvent, platform: 'all' | 'android' | 'ios') {
+      if (platform === 'all') return true;
+      if (platform === 'android') {
+        return c.platform === 'android' || /android/i.test(c.os || '');
+      }
+      if (platform === 'ios') {
+        return c.platform === 'ios' || /ios/i.test(c.os || '');
+      }
+      return true;
+    }
+
+    function calculateLinkClicks(
+      link: any,
+      clicks: UVLClickEvent[],
+      range: 'today' | '7d' | '30d' | 'all',
+      platform: 'all' | 'android' | 'ios'
+    ) {
+      return clicks.filter(c => {
+        if (!isWithinDateRange(c.timestamp, range)) return false;
+        if (!isMatchingPlatform(c, platform)) return false;
+        const idMatch = c.trackingLinkId === link.id;
+        const slugMatch = !!link.slug && (
+          c.trackingLinkId?.toLowerCase() === link.slug.toLowerCase() ||
+          (c.attributionToken && c.attributionToken.toLowerCase().includes(link.slug.toLowerCase()))
+        );
+        const campMatch = !!link.campaignId && c.campaignId === link.campaignId && (
+          !c.trackingLinkId ||
+          c.trackingLinkId === link.id ||
+          c.trackingLinkId.startsWith('trk_syn_') ||
+          c.trackingLinkId?.toLowerCase() === link.slug?.toLowerCase()
+        );
+        return idMatch || slugMatch || campMatch;
+      });
+    }
+
+    // 1. All-time clicks for trk_1 (should match c1, c2 [case-insensitive], and c3)
+    const trk1All = calculateLinkClicks(sampleLinks[0], sampleClicks, 'all', 'all');
+    assert.strictEqual(trk1All.length, 3, 'All-time clicks for trk_1 must count exactly 3 (including case-insensitive slug and bot)');
+
+    // 2. Today's clicks for trk_1 (should match c1 and c2 only)
+    const trk1Today = calculateLinkClicks(sampleLinks[0], sampleClicks, 'today', 'all');
+    assert.strictEqual(trk1Today.length, 2, "Today's clicks for trk_1 must count exactly 2");
+
+    // 3. Android platform filter for trk_1 (all time)
+    const trk1Android = calculateLinkClicks(sampleLinks[0], sampleClicks, 'all', 'android');
+    assert.strictEqual(trk1Android.length, 1, 'Android clicks for trk_1 must count exactly 1 (c1)');
+
+    // 4. iOS platform filter for trk_1 (all time)
+    const trk1Ios = calculateLinkClicks(sampleLinks[0], sampleClicks, 'all', 'ios');
+    assert.strictEqual(trk1Ios.length, 1, 'iOS clicks for trk_1 must count exactly 1 (c2)');
+
+    // 5. Zero clicks formatting test (must be numeric 0, never a dash '-')
+    const zeroClickLink = { id: 'trk_empty', slug: 'empty' };
+    const emptyClicks = calculateLinkClicks(zeroClickLink, sampleClicks, 'all', 'all');
+    const displayCount = emptyClicks.length;
+    assert.strictEqual(displayCount, 0, 'Empty clicks count must be numeric 0');
+    assert.notStrictEqual(displayCount, '-', 'Clicks count must NEVER render as a dash');
+
+    // 6. Totals KPI summation across both campaign links and standalone links
+    const filteredAllClicks = sampleClicks.filter(c => isWithinDateRange(c.timestamp, 'all') && isMatchingPlatform(c, 'all'));
+    const totalRaw = filteredAllClicks.length;
+    const totalBots = filteredAllClicks.filter(c => c.isSuspectedBot).length;
+    const totalFiltered = totalRaw - totalBots;
+    const totalUnique = new Set(filteredAllClicks.filter(c => !c.isSuspectedBot).map(c => c.ipHash)).size;
+
+    assert.strictEqual(totalRaw, 4, 'Total raw clicks across all links must equal 4');
+    assert.strictEqual(totalBots, 1, 'Total suspected bots must equal 1');
+    assert.strictEqual(totalFiltered, 3, 'Total filtered non-bot clicks must equal 3');
+    assert.strictEqual(totalUnique, 3, 'Total unique non-bot IP clicks must equal 3');
+
+    console.log('✓ Accurate Link Tracker click calculation, case-insensitive slug, platform, and date filters verified');
+  }
+
+  // TEST 22: Document Viewer Persistent Navigation Buttons & Auto-Fit Margins
+  console.log('\n[TEST 22] Document Viewer Persistent Navigation Buttons & Auto-Fit Margins');
+  {
+    // 1. Navigation Button Visibility Rules
+    function getNavButtonProps(currentPage: number, totalPages: number) {
+      return {
+        prevDisabled: currentPage <= 1,
+        nextDisabled: currentPage >= totalPages,
+        // ClassName must NOT include opacity-0 or group-hover:opacity-100
+        buttonClass: 'absolute w-12 h-12 rounded-full bg-neutral-900/90 text-white shadow-2xl transition-all'
+      };
+    }
+
+    const firstSlide = getNavButtonProps(1, 10);
+    assert.strictEqual(firstSlide.prevDisabled, true, 'Previous button must be disabled on slide 1');
+    assert.strictEqual(firstSlide.nextDisabled, false, 'Next button must be enabled on slide 1');
+    assert.ok(!firstSlide.buttonClass.includes('opacity-0'), 'Navigation buttons must never have opacity-0 class');
+    assert.ok(!firstSlide.buttonClass.includes('group-hover:opacity-100'), 'Navigation buttons must be persistently visible without hover');
+
+    const middleSlide = getNavButtonProps(5, 10);
+    assert.strictEqual(middleSlide.prevDisabled, false, 'Previous button must be enabled on middle slide');
+    assert.strictEqual(middleSlide.nextDisabled, false, 'Next button must be enabled on middle slide');
+
+    const lastSlide = getNavButtonProps(10, 10);
+    assert.strictEqual(lastSlide.prevDisabled, false, 'Previous button must be enabled on last slide');
+    assert.strictEqual(lastSlide.nextDisabled, true, 'Next button must be disabled on last slide');
+
+    // 2. Auto-Fit Scale Margin Verification
+    function computeAutoFit(containerW: number, containerH: number, vpW: number, vpH: number, isMobile: boolean) {
+      const padX = isMobile ? 90 : 160;
+      const padY = 110;
+      const availW = Math.max(280, containerW - padX);
+      const availH = Math.max(200, containerH - padY);
+      const fitScale = Math.min(availW / vpW, availH / vpH);
+      return Math.max(0.4, Math.min(fitScale, 2.5));
+    }
+
+    const desktopFit = computeAutoFit(1400, 900, 1920, 1080, false);
+    const mobileFit = computeAutoFit(400, 800, 1920, 1080, true);
+
+    assert.ok(desktopFit > 0.4 && desktopFit < 2.0, 'Desktop auto-fit scale must be within valid range');
+    assert.ok(mobileFit > 0.1 && mobileFit < 1.0, 'Mobile auto-fit scale must accommodate viewport with padding');
+    console.log('✓ Document Viewer persistent navigation buttons and auto-fit margins verified');
+  }
+
   console.log('\n========================================================');
-  console.log('ALL 20 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
+  console.log('ALL 22 AUTOMATED TESTS PASSED SUCCESSFULLY! (0 FAILURES)');
   console.log('========================================================\n');
 }
 

@@ -500,7 +500,7 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
     }
   }, [totalPages, currentPage, flushActiveTime, ingestDocumentHeartbeat]);
 
-  // Auto-fit slide scale to viewport
+  // Auto-fit slide scale to viewport with generous breathing margins for navigation controls
   const updateAutoFitScale = useCallback(async () => {
     if (!isAutoFit || !pdfDoc || !containerRef.current) return;
     try {
@@ -509,11 +509,13 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
       const containerW = containerRef.current.clientWidth || window.innerWidth;
       const containerH = containerRef.current.clientHeight || (window.innerHeight - 100);
 
-      // Deduct space for rails and padding
-      const padX = showThumbnails ? 140 : 50;
-      const padY = isPresentationMode ? 40 : 80;
+      // Deduct space for thumbnails drawer, navigation buttons, and comfortable margins
+      const padX = showThumbnails
+        ? 200
+        : (typeof window !== 'undefined' && window.innerWidth < 640 ? 90 : 160);
+      const padY = isPresentationMode ? 50 : 110;
 
-      const availW = Math.max(300, containerW - padX);
+      const availW = Math.max(280, containerW - padX);
       const availH = Math.max(200, containerH - padY);
 
       const scaleX = availW / vp.width;
@@ -1107,29 +1109,29 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
           </aside>
         )}
 
-        {/* Center Canvas Viewport with Watermark and Floating Chevrons */}
-        <main className="flex-1 overflow-auto p-2 sm:p-6 flex items-center justify-center relative group">
-          {/* Floating Left Arrow (Hover / Touch) */}
-          {currentPage > 1 && (
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md shadow-2xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center cursor-pointer border border-white/10"
-              title="Previous Slide (Left Arrow)"
-            >
-              <ChevronLeft size={26} />
-            </button>
-          )}
+        {/* Center Canvas Viewport with Centered Slide and Always-Visible Navigation Chevrons */}
+        <main className="flex-1 overflow-auto p-3 sm:p-8 flex items-center justify-center relative select-none">
+          {/* Always-Visible Floating Left Arrow */}
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+            aria-label="Previous Slide"
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-neutral-900/90 hover:bg-black text-white hover:text-white backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.6)] transition-all flex items-center justify-center cursor-pointer border border-white/20 hover:scale-105 active:scale-95 disabled:opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"
+            title="Previous Slide (Left Arrow, PageUp)"
+          >
+            <ChevronLeft size={28} />
+          </button>
 
-          {/* Floating Right Arrow (Hover / Touch) */}
-          {currentPage < totalPages && (
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 z-30 p-3 sm:p-4 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-white backdrop-blur-md shadow-2xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center justify-center cursor-pointer border border-white/10"
-              title="Next Slide (Right Arrow, Space)"
-            >
-              <ChevronRight size={26} />
-            </button>
-          )}
+          {/* Always-Visible Floating Right Arrow */}
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            aria-label="Next Slide"
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-neutral-900/90 hover:bg-black text-white hover:text-white backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.6)] transition-all flex items-center justify-center cursor-pointer border border-white/20 hover:scale-105 active:scale-95 disabled:opacity-20 disabled:pointer-events-none disabled:cursor-not-allowed"
+            title="Next Slide (Right Arrow, Space, PageDown)"
+          >
+            <ChevronRight size={28} />
+          </button>
 
           {isLoading ? (
             <div className="flex flex-col items-center gap-3 text-neutral-400 py-20">
@@ -1143,9 +1145,9 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
               <p className="text-xs text-neutral-400">{loadError}</p>
             </div>
           ) : (
-            <div className="relative shadow-2xl rounded-xl overflow-hidden bg-white border border-neutral-800/80 transition-all">
+            <div className="relative shadow-[0_25px_60px_rgba(0,0,0,0.85)] rounded-xl overflow-hidden bg-white border border-neutral-800 transition-all flex items-center justify-center m-auto">
               {/* PDF Canvas */}
-              <canvas ref={canvasRef} className="block max-w-full h-auto" />
+              <canvas ref={canvasRef} className="block max-w-full max-h-[calc(100vh-140px)] w-auto h-auto object-contain mx-auto" />
 
               {/* Diagonal Watermark Overlay */}
               {watermarkText && (
@@ -1180,10 +1182,32 @@ export const DocumentPublicViewer: React.FC<DocumentPublicViewerProps> = ({ toke
           ))}
         </div>
 
-        {/* Footer Info Row */}
+        {/* Footer Info Row with Guaranteed Instant-Access Navigation */}
         <div className="flex items-center justify-between max-w-3xl mx-auto w-full">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-white">Slide {currentPage} of {totalPages}</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="px-2.5 py-1 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 text-xs cursor-pointer transition-all"
+              title="Previous Slide"
+            >
+              <ChevronLeft size={14} />
+              <span className="hidden sm:inline">Prev</span>
+            </button>
+
+            <span className="font-semibold text-white px-1">
+              Slide {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="px-2.5 py-1 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300 hover:text-white disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 text-xs cursor-pointer transition-all"
+              title="Next Slide"
+            >
+              <span className="hidden sm:inline">Next</span>
+              <ChevronRight size={14} />
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline text-neutral-500">Shortcuts: ← → / Space / F</span>

@@ -255,6 +255,7 @@ interface WorkspaceContextType {
   }>;
   ingestAppEvent: (eventData: Omit<UVLAppEvent, 'id' | 'ingestedAt' | 'attributionConfidence' | 'attributionSource'>) => Promise<UVLAppEvent>;
   getCampaignMetrics: (reportingMode: 'cohort' | 'event_time', dateRange?: { start: string; end: string }) => CampaignMetricsRow[];
+  refreshAnalytics: () => Promise<void>;
 
   // Audit Logs
   auditLogs: UVLAuditLog[];

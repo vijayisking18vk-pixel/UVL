@@ -562,6 +562,109 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
     };
   }, []);
 
+  // Multi-tab real-time storage event synchronization
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (!e.newValue) return;
+      try {
+        if (e.key === CAMPAIGNS_STORAGE_KEY + '_CLICKS') {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setClickEvents(parsed);
+        } else if (e.key === CAMPAIGNS_STORAGE_KEY + '_EVENTS') {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setAppEvents(parsed);
+        } else if (e.key === CAMPAIGNS_STORAGE_KEY + '_LINKS') {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setTrackingLinks(parsed);
+        } else if (e.key === CAMPAIGNS_STORAGE_KEY + '_CAMPAIGNS') {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setCampaigns(parsed);
+        } else if (e.key === DOCS_STORAGE_KEY + '_SESSIONS') {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) setDocumentSessions(parsed);
+        }
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Real-time remote and local analytics refresh
+  const refreshAnalytics = useCallback(async (): Promise<void> => {
+    try {
+      // 1. Fetch latest clicks from dedicated table
+      const { data: dbClicks } = await supabase.from('campaign_clicks').select('*');
+      // 2. Fetch latest clicks from cloud entity notes store
+      const { data: cloudNotes } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('type', 'uvl_click_event');
+
+      const allClicksMap = new Map<string, UVLClickEvent>();
+
+      if (dbClicks && dbClicks.length > 0) {
+        dbClicks.forEach(ck => {
+          allClicksMap.set(ck.id, {
+            id: ck.id,
+            trackingLinkId: ck.tracking_link_id,
+            campaignId: ck.campaign_id,
+            appId: ck.app_id,
+            attributionToken: ck.attribution_token,
+            timestamp: ck.timestamp,
+            ipHash: ck.ip_hash,
+            userAgent: ck.user_agent,
+            browser: ck.browser,
+            os: ck.os,
+            platform: ck.platform,
+            referrer: ck.referrer,
+            coarseGeo: ck.coarse_geo,
+            isSuspectedBot: ck.is_suspected_bot
+          });
+        });
+      }
+
+      if (cloudNotes && cloudNotes.length > 0) {
+        cloudNotes.forEach(n => {
+          try {
+            const parsed = JSON.parse(n.content);
+            if (parsed && parsed.id) allClicksMap.set(parsed.id, parsed);
+          } catch {}
+        });
+      }
+
+      if (allClicksMap.size > 0) {
+        setClickEvents(Array.from(allClicksMap.values()));
+      }
+
+      // Also sync app events
+      const { data: dbEvents } = await supabase.from('campaign_app_events').select('*');
+      if (dbEvents && dbEvents.length > 0) {
+        setAppEvents(
+          dbEvents.map(ae => ({
+            id: ae.id,
+            appId: ae.app_id,
+            eventName: ae.event_name,
+            environment: ae.environment,
+            appInstanceId: ae.app_instance_id,
+            userId: ae.user_id,
+            occurredAt: ae.occurred_at,
+            ingestedAt: ae.ingested_at,
+            attributionToken: ae.attribution_token,
+            attributedCampaignId: ae.attributed_campaign_id,
+            attributedLinkId: ae.attributed_link_id,
+            attributionSource: ae.attribution_source,
+            attributionConfidence: ae.attribution_confidence,
+            properties: ae.properties || {},
+            sdkVersion: ae.sdk_version || '1.0.0'
+          }))
+        );
+      }
+    } catch (err) {
+      console.warn('Analytics refresh warning:', err);
+    }
+  }, []);
+
   // Helper: Persist entity to Supabase Cloud Entity Store in notes table
   const saveCloudEntity = useCallback(
     async (id: string, type: string, data: any, tags: string[] = []) => {
@@ -2142,6 +2245,30 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       const ipHash = hashIpAddress(meta.ip || 'anonymous_ip');
       const now = new Date().toISOString();
 
+      // Deterministic user-agent platform, OS, and browser detection
+      const ua = meta.userAgent || '';
+      let detectedPlatform = 'desktop';
+      let detectedOs = 'other';
+      if (/Android/i.test(ua)) {
+        detectedPlatform = 'android';
+        detectedOs = 'android';
+      } else if (/iPhone|iPad|iPod/i.test(ua)) {
+        detectedPlatform = 'ios';
+        detectedOs = 'ios';
+      } else if (/Macintosh|Mac OS/i.test(ua)) {
+        detectedOs = 'macos';
+      } else if (/Windows/i.test(ua)) {
+        detectedOs = 'windows';
+      } else if (/Linux/i.test(ua)) {
+        detectedOs = 'linux';
+      }
+
+      let detectedBrowser = 'other';
+      if (/Chrome/i.test(ua) && !/Edge|Edg|OPR/i.test(ua)) detectedBrowser = 'chrome';
+      else if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) detectedBrowser = 'safari';
+      else if (/Firefox/i.test(ua)) detectedBrowser = 'firefox';
+      else if (/Edge|Edg/i.test(ua)) detectedBrowser = 'edge';
+
       const clickRecord: UVLClickEvent = {
         id: 'clk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
         trackingLinkId: link.id,
@@ -2151,6 +2278,9 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
         timestamp: now,
         ipHash,
         userAgent: meta.userAgent,
+        browser: detectedBrowser,
+        os: detectedOs,
+        platform: detectedPlatform,
         referrer: meta.referrer,
         isSuspectedBot: isBot
       };
@@ -2169,6 +2299,9 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
             timestamp: clickRecord.timestamp,
             ip_hash: clickRecord.ipHash,
             user_agent: clickRecord.userAgent,
+            browser: clickRecord.browser,
+            os: clickRecord.os,
+            platform: clickRecord.platform,
             referrer: clickRecord.referrer,
             is_suspected_bot: clickRecord.isSuspectedBot
           }
@@ -2319,6 +2452,7 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
     ingestClick,
     ingestAppEvent,
     getCampaignMetrics,
+    refreshAnalytics,
 
     // Audit
     auditLogs
