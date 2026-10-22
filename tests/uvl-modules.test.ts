@@ -332,7 +332,9 @@ async function runTests() {
       'get_attribution_breakdown',
       'get_app_integration_status',
       'get_recent_tracking_errors',
-      'diagnose_tracking_link'
+      'diagnose_tracking_link',
+      'ingest_click',
+      'ingest_event'
     ];
 
     for (const tool of requiredTools) {

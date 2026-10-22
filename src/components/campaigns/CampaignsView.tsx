@@ -32,7 +32,14 @@ import {
   Layers,
   CheckCircle2,
   Filter,
-  ArrowUpRight
+  ArrowUpRight,
+  X,
+  Code,
+  Terminal,
+  HelpCircle,
+  Send,
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { sound } from '../../utils/sound';
 
@@ -68,6 +75,7 @@ export const CampaignsView: React.FC = () => {
     deleteTrackingLink,
     getCampaignMetrics,
     ingestAppEvent,
+    ingestClick,
     refreshAnalytics
   } = useWorkspace();
 
@@ -81,13 +89,18 @@ export const CampaignsView: React.FC = () => {
   const [selectedChannel, setSelectedChannel] = useState<string>('all');
   const [channelDropdownOpen, setChannelDropdownOpen] = useState<boolean>(false);
   const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'android' | 'ios'>('all');
-  const [dateRange, setDateRange] = useState<'today' | '7d' | '30d' | 'all'>('today');
+  const [dateRange, setDateRange] = useState<'today' | '7d' | '30d' | 'all'>('all');
   const [dateDropdownOpen, setDateDropdownOpen] = useState<boolean>(false);
   const [attributionType, setAttributionType] = useState<'install' | 'cohort' | 'event_time'>('install');
   const [attributionDropdownOpen, setAttributionDropdownOpen] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<'clicks' | 'installs' | 'conversion' | 'name'>('clicks');
   const [sortDropdownOpen, setSortDropdownOpen] = useState<boolean>(false);
   const [showKpiCards, setShowKpiCards] = useState<boolean>(false);
+  const [mcpGuideModalOpen, setMcpGuideModalOpen] = useState<boolean>(false);
+  const [mcpModalTab, setMcpModalTab] = useState<'explanation' | 'mcp' | 'snippet' | 'tester'>('explanation');
+  const [testSlugInput, setTestSlugInput] = useState<string>('');
+  const [testStatus, setTestStatus] = useState<string | null>(null);
+  const [testIsLoading, setTestIsLoading] = useState<boolean>(false);
 
   // Sync state
   const [lastSyncedTime, setLastSyncedTime] = useState<string>('02:59 PM');
@@ -171,7 +184,10 @@ export const CampaignsView: React.FC = () => {
   // Aggregate totals with project, date, and platform filtering across all campaign & standalone clicks
   const totals = useMemo(() => {
     const relevantClicks = clickEvents.filter(c => {
-      if (selectedProjectId !== 'all' && c.appId && c.appId !== selectedProjectId) return false;
+      if (selectedProjectId !== 'all') {
+        const linkAppId = c.appId || trackingLinks.find(l => l.id === c.trackingLinkId)?.appId || campaigns.find(cmp => cmp.id === c.campaignId)?.appId;
+        if (linkAppId && linkAppId !== selectedProjectId) return false;
+      }
       if (!isWithinDateRange(c.timestamp)) return false;
       if (!isMatchingPlatform(c)) return false;
       return true;
@@ -414,6 +430,7 @@ export const CampaignsView: React.FC = () => {
       isOrganic?: boolean;
       name: string;
       content: string;
+      trackedUrl?: string;
       destinationUrl?: string;
       clicks: string | number;
       impressions: string | number;
@@ -480,12 +497,14 @@ export const CampaignsView: React.FC = () => {
         const sCount = campSignups.length;
         const conv = campClickCount > 0 ? `${((iCount / campClickCount) * 100).toFixed(1)}%` : '0.0%';
 
+        const defaultTrackedRedirect = `${window.location.origin}/?c=${defaultCode}`;
         rows.push({
           id: `cmp_${camp.id}`,
           campaignId: camp.id,
           campaignName: camp.name,
           name: camp.name,
           content: defaultTrackingUrl,
+          trackedUrl: defaultTrackedRedirect,
           destinationUrl: projectBaseUrl,
           clicks: campClickCount,
           impressions: '-',
@@ -535,6 +554,7 @@ export const CampaignsView: React.FC = () => {
           const sCount = linkSignups.length;
           const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '0.0%';
 
+          const linkTrackedRedirect = `${window.location.origin}/?c=${link.slug}`;
           rows.push({
             id: `lnk_${link.id}`,
             campaignId: camp.id,
@@ -543,6 +563,7 @@ export const CampaignsView: React.FC = () => {
             slug: link.slug,
             name: link.title || camp.name,
             content: canonicalUrl,
+            trackedUrl: linkTrackedRedirect,
             destinationUrl: link.webFallbackUrl || linkBaseUrl,
             clicks: cCount,
             impressions: '-',
@@ -594,12 +615,14 @@ export const CampaignsView: React.FC = () => {
       const sCount = linkSignups.length;
       const conv = cCount > 0 ? `${((iCount / cCount) * 100).toFixed(1)}%` : '0.0%';
 
+      const linkTrackedRedirect = `${window.location.origin}/?c=${link.slug}`;
       rows.push({
         id: `lnk_${link.id}`,
         linkId: link.id,
         slug: link.slug,
         name: link.title || 'Tracking Link',
         content: canonicalUrl,
+        trackedUrl: linkTrackedRedirect,
         destinationUrl: link.webFallbackUrl || linkBaseUrl,
         clicks: cCount,
         impressions: '-',
@@ -1082,6 +1105,18 @@ export const CampaignsView: React.FC = () => {
             <Plus size={13} />
             <span>Campaign</span>
           </button>
+
+          <button
+            onClick={() => {
+              sound.click();
+              setMcpGuideModalOpen(true);
+            }}
+            className="p-1.5 px-2.5 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-xs font-medium text-blue-700 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+            title="Connect MCP Server or In-App Web SDK for Live Tracking"
+          >
+            <Cpu size={13} className="text-blue-600" />
+            <span>Connect MCP / SDK</span>
+          </button>
         </div>
       </div>
 
@@ -1136,7 +1171,7 @@ export const CampaignsView: React.FC = () => {
                       <span>Campaign</span>
                     </div>
                   </th>
-                  <th className="py-3 px-4 font-medium whitespace-nowrap">Content</th>
+                  <th className="py-3 px-4 font-medium whitespace-nowrap">Link & Destination</th>
                   <th className="py-3 px-4 font-medium whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       <MousePointerClick size={13} className="text-neutral-500" />
@@ -1222,20 +1257,30 @@ export const CampaignsView: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Content Column (Displays canonical tracking URL formatted as https://<domain>/?c=<campaign_code>) */}
+                      {/* Link & Destination Column (Displays shareable tracked link & destination target) */}
                       <td className="py-3 px-4 text-neutral-600 font-mono text-[11px]">
                         {row.content ? (
-                          <div className="flex items-center gap-1.5 group max-w-[280px]">
-                            <span className="truncate font-semibold text-neutral-800" title={row.content}>
-                              {row.content}
-                            </span>
-                            <button
-                              onClick={() => handleCopyLink(row.content)}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-opacity"
-                              title="Copy tracking link"
-                            >
-                              {copiedSlug === row.content ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                            </button>
+                          <div className="flex flex-col gap-1 max-w-[320px]">
+                            <div className="flex items-center gap-1.5 group">
+                              <span className="truncate font-semibold text-neutral-900" title={row.trackedUrl || row.content}>
+                                {row.trackedUrl || row.content}
+                              </span>
+                              <button
+                                onClick={() => handleCopyLink(row.trackedUrl || row.content)}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-200 rounded text-neutral-500 transition-opacity cursor-pointer shrink-0"
+                                title="Copy Live Tracked Link"
+                              >
+                                {copiedSlug === (row.trackedUrl || row.content) ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                              </button>
+                            </div>
+                            {row.destinationUrl && (
+                              <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-sans truncate">
+                                <span className="text-neutral-400 shrink-0">↳ Target:</span>
+                                <span className="truncate font-mono text-neutral-500" title={row.destinationUrl}>
+                                  {row.destinationUrl}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="text-neutral-300">—</span>
@@ -1266,17 +1311,17 @@ export const CampaignsView: React.FC = () => {
                           {row.content && (
                             <>
                               <button
-                                onClick={() => handleCopyLink(row.content)}
-                                className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
-                                title="Copy link"
+                                onClick={() => handleCopyLink(row.trackedUrl || row.content)}
+                                className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors cursor-pointer"
+                                title="Copy Live Tracked Link"
                               >
-                                {copiedSlug === row.content ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                                {copiedSlug === (row.trackedUrl || row.content) ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
                               </button>
 
                               {row.qrCodeDataUrl && (
                                 <button
                                   onClick={() => setQrModalDataUrl(row.qrCodeDataUrl!)}
-                                  className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
+                                  className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors cursor-pointer"
                                   title="View QR Code"
                                 >
                                   <QrCode size={13} />
@@ -1284,10 +1329,10 @@ export const CampaignsView: React.FC = () => {
                               )}
 
                               <a
-                                href={row.slug ? `${window.location.origin}/?c=${row.slug}` : row.content}
+                                href={row.trackedUrl || (row.slug ? `${window.location.origin}/?c=${row.slug}` : row.content)}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-1 rounded hover:bg-neutral-100 text-neutral-500 hover:text-black transition-colors"
+                                className="p-1 rounded hover:bg-blue-50 text-neutral-500 hover:text-blue-600 transition-colors cursor-pointer"
                                 title={`Test live tracking redirect (Records click & redirects to ${row.destinationUrl || 'destination'})`}
                               >
                                 <ExternalLink size={13} />
@@ -2008,18 +2053,336 @@ export const CampaignsView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSimModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                  className="px-4 py-2 rounded-lg border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-semibold shadow-xs"
+                  className="px-4 py-2 rounded-lg bg-neutral-900 hover:bg-black text-white text-xs font-semibold shadow-xs cursor-pointer"
                 >
                   Ingest Simulated Event
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: MCP SERVER & LIVE TRACKING GUIDE */}
+      {mcpGuideModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full border border-neutral-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <Cpu size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-neutral-900">Connect MCP Server & Live Tracking Guide</h3>
+                  <p className="text-[11px] text-neutral-500">Accurate click calculations, MCP integration, and external tracking</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMcpGuideModalOpen(false)}
+                className="p-1 rounded-lg text-neutral-400 hover:text-neutral-700 hover:bg-neutral-200/50 cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Subtabs */}
+            <div className="flex border-b border-neutral-200 bg-neutral-100/50 px-6 gap-2 pt-2 text-xs">
+              <button
+                onClick={() => setMcpModalTab('explanation')}
+                className={`pb-2.5 px-2 font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                  mcpModalTab === 'explanation'
+                    ? 'border-blue-600 text-blue-600 font-semibold'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                }`}
+              >
+                <HelpCircle size={13} />
+                <span>How Tracking Works</span>
+              </button>
+              <button
+                onClick={() => setMcpModalTab('mcp')}
+                className={`pb-2.5 px-2 font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                  mcpModalTab === 'mcp'
+                    ? 'border-blue-600 text-blue-600 font-semibold'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                }`}
+              >
+                <Terminal size={13} />
+                <span>MCP Server Config</span>
+              </button>
+              <button
+                onClick={() => setMcpModalTab('snippet')}
+                className={`pb-2.5 px-2 font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                  mcpModalTab === 'snippet'
+                    ? 'border-blue-600 text-blue-600 font-semibold'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                }`}
+              >
+                <Code size={13} />
+                <span>Direct Web Snippet</span>
+              </button>
+              <button
+                onClick={() => setMcpModalTab('tester')}
+                className={`pb-2.5 px-2 font-medium border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                  mcpModalTab === 'tester'
+                    ? 'border-blue-600 text-blue-600 font-semibold'
+                    : 'border-transparent text-neutral-500 hover:text-neutral-800'
+                }`}
+              >
+                <Zap size={13} />
+                <span>Live Test Click</span>
+              </button>
+            </div>
+
+            {/* Modal Content Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-neutral-700 leading-relaxed flex-1">
+              {mcpModalTab === 'explanation' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 space-y-2">
+                    <div className="font-semibold text-blue-900 flex items-center gap-1.5">
+                      <CheckCircle2 size={14} className="text-blue-600" />
+                      <span>Why clicks were showing 0 previously & how it's fixed:</span>
+                    </div>
+                    <p className="text-neutral-700 text-[11px] leading-relaxed">
+                      Previously, copying a link copied the <strong>Destination Landing URL</strong> (e.g. <code className="bg-white/80 px-1 py-0.5 rounded font-mono text-neutral-900">https://app.ziggers.in/?c=WPkAs</code>). When users clicked that link, their browser navigated directly to the destination site without ever hitting UVL, completely bypassing the click counter!
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="border border-emerald-200 bg-emerald-50/40 rounded-xl p-3 space-y-1.5">
+                      <div className="font-semibold text-emerald-800 flex items-center gap-1">
+                        <Check size={13} className="text-emerald-600" />
+                        <span>Tracked Redirect Link (Share this!)</span>
+                      </div>
+                      <div className="font-mono text-[11px] bg-white p-2 rounded border border-emerald-200 break-all text-neutral-900 font-medium">
+                        {window.location.origin}/?c=WPkAs
+                      </div>
+                      <p className="text-[10px] text-neutral-600">
+                        When clicked, UVL logs the click timestamp, platform, IP hash, generates an attribution token, and immediately redirects the visitor to your destination.
+                      </p>
+                    </div>
+
+                    <div className="border border-neutral-200 bg-neutral-50/50 rounded-xl p-3 space-y-1.5">
+                      <div className="font-semibold text-neutral-700">
+                        Target Destination (Where visitors land)
+                      </div>
+                      <div className="font-mono text-[11px] bg-white p-2 rounded border border-neutral-200 break-all text-neutral-600">
+                        https://app.ziggers.in/?c=WPkAs
+                      </div>
+                      <p className="text-[10px] text-neutral-500">
+                        The final landing page. The Copy buttons in your table now automatically copy the <strong>Tracked Redirect Link</strong> so every single click is counted.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-neutral-100 pt-3 flex items-center justify-between text-[11px] text-neutral-500">
+                    <span>Date filter is set to <strong>All Time</strong> by default so all historical clicks remain visible.</span>
+                  </div>
+                </div>
+              )}
+
+              {mcpModalTab === 'mcp' && (
+                <div className="space-y-3.5">
+                  <p className="text-neutral-600">
+                    The UVL MCP Server runs via stdio transport and exposes tools to inspect tracking links, query live click analytics, diagnose routing issues, and report clicks/events directly from any AI coding tool.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <span className="font-semibold text-neutral-800 block">1. Configuration for Cursor (<code className="font-mono text-[11px]">.cursor/mcp.json</code>):</span>
+                    <pre className="p-3 bg-neutral-900 text-neutral-100 rounded-xl font-mono text-[11px] overflow-x-auto">
+{`{
+  "mcpServers": {
+    "uvl-tracker": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "c:/Users/HP/Desktop/UVL/src/mcp/uvl-mcp-server.ts"
+      ]
+    }
+  }
+}`}
+                    </pre>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="font-semibold text-neutral-800 block">2. Configuration for Claude Desktop (<code className="font-mono text-[11px]">claude_desktop_config.json</code>):</span>
+                    <pre className="p-3 bg-neutral-900 text-neutral-100 rounded-xl font-mono text-[11px] overflow-x-auto">
+{`{
+  "mcpServers": {
+    "uvl-tracker": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tsx",
+        "c:/Users/HP/Desktop/UVL/src/mcp/uvl-mcp-server.ts"
+      ]
+    }
+  }
+}`}
+                    </pre>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="font-semibold text-neutral-800 block">3. Available MCP Tools:</span>
+                    <ul className="list-disc pl-5 space-y-1 text-neutral-600">
+                      <li><code className="font-mono text-neutral-900 font-semibold">ingest_click</code>: Ingests a click for any code (e.g. <code className="font-mono text-[11px]">WPkAs</code>) and returns attribution token.</li>
+                      <li><code className="font-mono text-neutral-900 font-semibold">ingest_event</code>: Records an in-app conversion event (<code className="font-mono text-[11px]">first_open</code>, <code className="font-mono text-[11px]">signup_completed</code>).</li>
+                      <li><code className="font-mono text-neutral-900 font-semibold">list_tracking_links</code> & <code className="font-mono text-neutral-900 font-semibold">get_campaign_metrics</code>: Fetches live clicks and conversions.</li>
+                      <li><code className="font-mono text-neutral-900 font-semibold">diagnose_tracking_link</code>: Inspects health, bot flags, and redirect safety.</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {mcpModalTab === 'snippet' && (
+                <div className="space-y-3.5">
+                  <p className="text-neutral-600">
+                    If you prefer sharing direct links to <code className="font-mono text-neutral-900">https://app.ziggers.in/?c=WPkAs</code> without routing through UVL's redirector, paste this 5-line script into the HTML or root component of your website:
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-neutral-800">Direct Ingestion Script:</span>
+                      <button
+                        onClick={() => handleCopyLink(`(function() {
+  const code = new URLSearchParams(window.location.search).get('c');
+  if (code) {
+    fetch('https://winapknggfwotdazsqla.supabase.co/rest/v1/campaign_clicks', {
+      method: 'POST',
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        id: 'clk_' + Date.now(),
+        tracking_link_id: code,
+        timestamp: new Date().toISOString(),
+        platform: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : /Android/i.test(navigator.userAgent) ? 'android' : 'web',
+        user_agent: navigator.userAgent
+      })
+    }).catch(function() {});
+  }
+})();`)}
+                        className="text-[11px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy size={11} />
+                        <span>Copy Script</span>
+                      </button>
+                    </div>
+                    <pre className="p-3 bg-neutral-900 text-neutral-100 rounded-xl font-mono text-[11px] overflow-x-auto leading-normal">
+{`// Add to index.html or root component on app.ziggers.in:
+(function() {
+  const code = new URLSearchParams(window.location.search).get('c');
+  if (code) {
+    fetch('https://winapknggfwotdazsqla.supabase.co/rest/v1/campaign_clicks', {
+      method: 'POST',
+      headers: {
+        'apikey': 'YOUR_SUPABASE_ANON_KEY',
+        'Authorization': 'Bearer YOUR_SUPABASE_ANON_KEY',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        id: 'clk_' + Date.now(),
+        tracking_link_id: code,
+        timestamp: new Date().toISOString(),
+        platform: /iPhone|iPad|iPod/i.test(navigator.userAgent) ? 'ios' : /Android/i.test(navigator.userAgent) ? 'android' : 'web',
+        user_agent: navigator.userAgent
+      })
+    }).catch(function() {});
+  }
+})();`}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {mcpModalTab === 'tester' && (
+                <div className="space-y-4">
+                  <p className="text-neutral-600">
+                    Test live click ingestion right now. Enter any tracking slug or campaign code (e.g. <code className="font-mono text-neutral-900">WPkAs</code>) and press <strong>Send Test Click</strong>. You will immediately see the click counter increment on your dashboard!
+                  </p>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!testSlugInput.trim()) return;
+                      setTestIsLoading(true);
+                      setTestStatus(null);
+                      try {
+                        const res = await ingestClick(testSlugInput.trim(), {
+                          userAgent: navigator.userAgent,
+                          referrer: document.referrer
+                        });
+                        if (res.error) {
+                          setTestStatus(`Error: ${res.error}`);
+                        } else {
+                          sound.patchStamp();
+                          setTestStatus(`Success! Recorded click for "${testSlugInput.trim()}". Target: ${res.redirectUrl || 'N/A'}`);
+                          await refreshAnalytics();
+                        }
+                      } catch (err: any) {
+                        setTestStatus(`Error: ${err?.message || 'Failed to record click'}`);
+                      } finally {
+                        setTestIsLoading(false);
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <div>
+                      <label className="text-xs font-semibold text-neutral-800 block mb-1">
+                        Campaign Code / Slug to Click
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. WPkAs"
+                        value={testSlugInput}
+                        onChange={e => setTestSlugInput(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg border border-neutral-200 bg-neutral-50 text-xs text-neutral-900 outline-none font-mono focus:ring-1 focus:ring-blue-500 focus:bg-white"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={testIsLoading || !testSlugInput.trim()}
+                      className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Send size={13} />
+                      <span>{testIsLoading ? 'Sending...' : 'Send Test Click'}</span>
+                    </button>
+                  </form>
+
+                  {testStatus && (
+                    <div className={`p-3 rounded-xl border text-xs font-mono break-all ${
+                      testStatus.startsWith('Success')
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                    }`}>
+                      {testStatus}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3 border-t border-neutral-100 bg-neutral-50/50 flex items-center justify-end">
+              <button
+                onClick={() => setMcpGuideModalOpen(false)}
+                className="px-4 py-2 rounded-lg border border-neutral-200 text-xs font-medium text-neutral-700 hover:bg-neutral-100 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

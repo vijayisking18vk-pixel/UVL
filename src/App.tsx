@@ -64,6 +64,12 @@ const AppContent: React.FC = () => {
     campaignSlug = hash.replace('#/r/', '').split('/')[0].split('?')[0];
   } else if (hash.startsWith('#/c/')) {
     campaignSlug = hash.replace('#/c/', '').split('/')[0].split('?')[0];
+  } else if (hash.includes('?c=') || hash.includes('&c=')) {
+    const splitIndex = hash.includes('?c=') ? hash.indexOf('?c=') + 1 : hash.indexOf('&c=') + 1;
+    const hashParams = new URLSearchParams(hash.substring(splitIndex));
+    if (hashParams.has('c')) {
+      campaignSlug = hashParams.get('c');
+    }
   }
 
   if (campaignSlug) {

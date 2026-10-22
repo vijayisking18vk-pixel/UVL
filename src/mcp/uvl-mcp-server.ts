@@ -339,6 +339,36 @@ export function createUVLMCPServer() {
               customUrl: { type: 'string', description: 'Direct URL to test against SSRF, scheme, and loop filters' }
             }
           }
+        },
+        {
+          name: 'ingest_click',
+          description: 'Records and attributes a live campaign click event from an app, website, or marketing channel. Updates real-time click analytics, enforces bot filtering, and returns the destination redirect URL and attribution token.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              slug: { type: 'string', description: 'Campaign code (e.g. "WPkAs"), link slug, or tracking link ID' },
+              userAgent: { type: 'string', description: 'Optional visitor User-Agent string for device/browser detection' },
+              ip: { type: 'string', description: 'Optional visitor IP address for unique click attribution' },
+              referrer: { type: 'string', description: 'Optional HTTP referrer URL' },
+              platform: { type: 'string', enum: ['web', 'android', 'ios', 'flutter', 'react_native', 'desktop'], description: 'Optional visitor platform' }
+            },
+            required: ['slug']
+          }
+        },
+        {
+          name: 'ingest_event',
+          description: 'Records an in-app conversion event (first_open, signup_completed, purchase_completed, etc.) and links it to earlier clicks using attribution tokens.',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              appId: { type: 'string', description: 'Target registered application ID' },
+              eventName: { type: 'string', description: 'Event name (e.g. "first_open", "signup_completed", "purchase_completed")' },
+              attributionToken: { type: 'string', description: 'Optional uvl_attr_... token from link click' },
+              userId: { type: 'string', description: 'Optional user identifier' },
+              properties: { type: 'object', description: 'Optional key-value metadata properties' }
+            },
+            required: ['appId', 'eventName']
+          }
         }
       ]
     };
@@ -1142,6 +1172,207 @@ export function createUVLMCPServer() {
                   syntheticTestIsolated: true,
                   hops,
                   notes
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'ingest_click': {
+          const { slug, userAgent, ip, referrer, platform } = a;
+          if (!slug) throw new Error('Missing required argument: slug');
+
+          const cleanSlug = String(slug).trim().replace(/^\/+|\/+$/g, '').split('?')[0].split('#')[0];
+
+          // 1. Find link in campaign_tracking_links
+          const { data: dbLink } = await supabase
+            .from('campaign_tracking_links')
+            .select('*')
+            .or(`slug.ilike.${cleanSlug},id.eq.${cleanSlug}`)
+            .maybeSingle();
+
+          let resolvedLink = dbLink;
+          let campaignId = dbLink?.campaign_id;
+          let appId = dbLink?.app_id;
+
+          // 2. If not found in table, check notes table
+          if (!resolvedLink) {
+            const { data: cloudNotes } = await supabase
+              .from('notes')
+              .select('*')
+              .eq('type', 'uvl_tracking_link')
+              .limit(100);
+
+            if (cloudNotes && cloudNotes.length > 0) {
+              const allLinks = cloudNotes.map(n => {
+                try { return JSON.parse(n.content); } catch { return null; }
+              }).filter(Boolean);
+              const found = allLinks.find(
+                (l: any) => l.slug?.toLowerCase() === cleanSlug.toLowerCase() || l.id === cleanSlug
+              );
+              if (found) {
+                resolvedLink = {
+                  id: found.id,
+                  slug: found.slug,
+                  campaign_id: found.campaignId,
+                  app_id: found.appId,
+                  web_fallback_url: found.webFallbackUrl,
+                  destination_route: found.destinationRoute,
+                  deep_link_enabled: found.deepLinkEnabled,
+                  is_active: found.isActive
+                };
+                campaignId = found.campaignId;
+                appId = found.appId;
+              }
+            }
+          }
+
+          // 3. Check if cleanSlug matches a campaign utm_campaign
+          if (!resolvedLink) {
+            const { data: dbCamp } = await supabase
+              .from('campaigns')
+              .select('*')
+              .or(`utm_campaign.ilike.${cleanSlug},id.eq.${cleanSlug}`)
+              .maybeSingle();
+
+            if (dbCamp) {
+              campaignId = dbCamp.id;
+              appId = dbCamp.app_id;
+              resolvedLink = {
+                id: 'trk_syn_' + dbCamp.id,
+                slug: cleanSlug,
+                campaign_id: dbCamp.id,
+                app_id: dbCamp.app_id,
+                web_fallback_url: 'https://app.ziggers.in',
+                destination_route: 'home',
+                deep_link_enabled: false,
+                is_active: true
+              };
+            }
+          }
+
+          if (!resolvedLink) {
+            return {
+              isError: true,
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify({
+                    error: 'not_found',
+                    message: `No active tracking link or campaign found matching code "${cleanSlug}".`
+                  }, null, 2)
+                }
+              ]
+            };
+          }
+
+          // 4. Resolve destination URL
+          let redirectUrl = resolvedLink.web_fallback_url || 'https://app.ziggers.in';
+          if (appId) {
+            const { data: appData } = await supabase.from('campaign_apps').select('web_fallback_url').eq('id', appId).maybeSingle();
+            if (appData?.web_fallback_url) {
+              redirectUrl = appData.web_fallback_url;
+            }
+          }
+
+          const ua = userAgent || '';
+          const isBot = /bot|spider|crawl|slurp|facebookexternalhit|whatsapp|preview/i.test(ua);
+          const clickId = 'clk_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          const token = 'uvl_attr_' + Math.random().toString(36).substring(2, 14);
+          const now = new Date().toISOString();
+
+          // 5. Ingest into Supabase
+          const clickRecord = {
+            id: clickId,
+            tracking_link_id: resolvedLink.id,
+            campaign_id: campaignId || '',
+            app_id: appId || '',
+            attribution_token: token,
+            timestamp: now,
+            ip_hash: ip ? 'ip_' + ip.split('.').slice(0, 3).join('_') : 'ip_anonymous',
+            user_agent: ua,
+            platform: platform || 'web',
+            referrer: referrer || '',
+            is_suspected_bot: isBot
+          };
+
+          await supabase.from('campaign_clicks').insert([clickRecord]);
+
+          // Also save in cloud entity notes store for dual resilience
+          await supabase.from('notes').upsert([
+            {
+              id: clickId,
+              title: 'uvl_click_' + clickId,
+              content: JSON.stringify(clickRecord),
+              type: 'uvl_click_event',
+              tags: [cleanSlug.toLowerCase(), token, campaignId || ''],
+              author_id: 'mcp-server',
+              updated_at: now
+            }
+          ]);
+
+          const { count } = await supabase
+            .from('campaign_clicks')
+            .select('*', { count: 'exact', head: true })
+            .eq('tracking_link_id', resolvedLink.id);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  clickId,
+                  trackingLinkId: resolvedLink.id,
+                  campaignId,
+                  slug: resolvedLink.slug,
+                  attributionToken: token,
+                  redirectUrl,
+                  isSuspectedBot: isBot,
+                  totalClicksRecorded: (count || 0) + 1,
+                  message: `Click successfully recorded for code "${cleanSlug}". Destination: ${redirectUrl}`
+                }, null, 2)
+              }
+            ]
+          };
+        }
+
+        case 'ingest_event': {
+          const { appId, eventName, attributionToken, userId, properties } = a;
+          if (!appId || !eventName) throw new Error('Missing required arguments: appId, eventName');
+
+          const eventId = 'evt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+          const now = new Date().toISOString();
+
+          const eventRecord = {
+            id: eventId,
+            app_id: appId,
+            event_name: eventName,
+            environment: 'production',
+            app_instance_id: 'inst_mcp',
+            user_id: userId || null,
+            occurred_at: now,
+            ingested_at: now,
+            attribution_token: attributionToken || null,
+            attribution_source: attributionToken ? 'deterministic_token' : 'unattributed',
+            attribution_confidence: attributionToken ? 'high' : 'unattributed',
+            properties: properties || {},
+            sdk_version: 'mcp-1.0.0'
+          };
+
+          await supabase.from('campaign_app_events').insert([eventRecord]);
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  eventId,
+                  eventName,
+                  appId,
+                  attributionToken,
+                  message: `In-app event "${eventName}" recorded.`
                 }, null, 2)
               }
             ]

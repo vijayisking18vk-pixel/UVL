@@ -586,8 +586,22 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       } catch {}
     };
 
+    const handleLocalClick = () => {
+      try {
+        const raw = localStorage.getItem(CAMPAIGNS_STORAGE_KEY + '_CLICKS');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setClickEvents(parsed);
+        }
+      } catch {}
+    };
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('uvl_click_event_ingested', handleLocalClick);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('uvl_click_event_ingested', handleLocalClick);
+    };
   }, []);
 
   // Real-time remote and local analytics refresh
@@ -2286,6 +2300,16 @@ export function useDocumentsAndCampaigns(currentUserId: string, isVijayrajkumar:
       };
 
       setClickEvents(prev => [clickRecord, ...prev]);
+
+      // Immediate synchronous persistence to localStorage before window.location redirect unloads page
+      try {
+        const key = CAMPAIGNS_STORAGE_KEY + '_CLICKS';
+        const raw = localStorage.getItem(key);
+        const existing = raw ? JSON.parse(raw) : [];
+        const nextList = [clickRecord, ...existing.filter((c: any) => c.id !== clickRecord.id)];
+        localStorage.setItem(key, JSON.stringify(nextList));
+        window.dispatchEvent(new CustomEvent('uvl_click_event_ingested', { detail: clickRecord }));
+      } catch {}
 
       // Durable Supabase ingestion with bounded failure handling
       try {
